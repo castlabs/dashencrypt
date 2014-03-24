@@ -96,7 +96,7 @@ public class DashFileSetEncrypt extends DashFileSet {
     }
 
     @Override
-    Mp4Builder getFileBuilder(FragmentIntersectionFinder fragmentIntersectionFinder, Movie m) {
+    protected Mp4Builder getFileBuilder(FragmentIntersectionFinder fragmentIntersectionFinder, Movie m) {
         DashEncryptedBuilder dashBuilder = new DashEncryptedBuilder();
         for (Track track : m.getTracks()) {
             dashBuilder.getKeyIds().put(track, UUIDConverter.convert(this.keyid));
