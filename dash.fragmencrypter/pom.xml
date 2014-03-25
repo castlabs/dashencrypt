@@ -39,6 +39,7 @@
                                 </transformer>
                             </transformers>
                             <shadedArtifactAttached>false</shadedArtifactAttached>
+                            <shadedClassifierName>exe</shadedClassifierName>
                         </configuration>
                     </execution>
                 </executions>
