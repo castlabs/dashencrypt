@@ -24,8 +24,8 @@ import java.util.UUID;
 
 public class DashFileSetEncrypt extends DashFileSet {
 
-    UUID keyid;
-    SecretKey key;
+    protected UUID keyid;
+    protected SecretKey key;
 
     @Option(name = "--uuid",
             aliases = "-u",
