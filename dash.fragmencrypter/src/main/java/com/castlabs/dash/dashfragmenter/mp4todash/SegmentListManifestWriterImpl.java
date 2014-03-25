@@ -1,5 +1,7 @@
 /*
- * Copyright 2014 castLabs GmbH, Berlin
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 package com.castlabs.dash.dashfragmenter.mp4todash;
 
@@ -78,7 +80,8 @@ public class SegmentListManifestWriterImpl extends AbstractManifestWriter {
                         Box mdat = boxes.next();
                         segmentURL.setMediaRange(
                                 String.format("%s-%s",
-                                        offset, offset + moof.getSize() + mdat.getSize()));
+                                        offset, offset + moof.getSize() + mdat.getSize())
+                        );
 
                         offset += moof.getSize() + mdat.getSize();
                     } else {
