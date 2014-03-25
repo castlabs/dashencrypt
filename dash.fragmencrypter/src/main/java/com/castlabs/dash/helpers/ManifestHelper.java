@@ -33,7 +33,11 @@ public class ManifestHelper {
 
     public static String convertFramerate(double vrate) {
         String frameRate = null;
-        if ((vrate > 23) && (vrate < 24)) {
+        if ((vrate > 14) && (vrate < 15)) {
+            frameRate = "15000/1001";
+        } else if ((vrate == 15)) {
+            frameRate = "15000/1000";
+        } else if ((vrate > 23) && (vrate < 24)) {
             frameRate = "24000/1001";
         } else if (vrate == 24) {
             frameRate = "24000/1000";

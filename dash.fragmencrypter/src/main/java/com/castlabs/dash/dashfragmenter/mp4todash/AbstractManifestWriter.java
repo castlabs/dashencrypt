@@ -51,7 +51,7 @@ public abstract class AbstractManifestWriter {
         createPeriod(periodType);
 
 
-        mpd.setProfiles("urn:mpeg:dash:profile:isoff-main:2011");
+        mpd.setProfiles("urn:mpeg:dash:profile:isoff-on-demand:2011");
         mpd.setType(PresentationType.STATIC); // no mpd update strategy implemented yet, could be dynamic
         mpd.setMinBufferTime(new GDuration(1, 0, 0, 0, 0, 0, 2, BigDecimal.ZERO));
         mpd.setMediaPresentationDuration(periodType.getDuration());
