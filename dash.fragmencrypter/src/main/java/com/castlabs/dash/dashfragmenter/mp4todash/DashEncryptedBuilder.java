@@ -41,7 +41,7 @@ public class DashEncryptedBuilder extends DashBuilder {
     private Random random = new Random(5);
     private Map<Track, byte[]> keyIds = new HashMap<Track, byte[]>();
     private Map<Track, SecretKey> keys = new HashMap<Track, SecretKey>();
-    private Map<byte[], byte[]> psshBoxes;
+    private Map<byte[], byte[]> psshBoxes = Collections.emptyMap();
     private Map<Integer, SoftReference<List<Sample>>> sampleListCache = new WeakHashMap<Integer, SoftReference<List<Sample>>>();
 
     public Map<Track, byte[]> getKeyIds() {
