@@ -6,7 +6,7 @@ DASH fragmenter and encrypter.
 Usage
 --------
 
-  1. Download https://github.com/castlabs/dashencrypt/releases/download/dash.encrypt-1.0/dash.fragmencrypter-1.0.jar
+  1. Download https://github.com/castlabs/dashencrypt/releases/download/dash.encrypt-1.0.6/dash.fragmencrypter-1.0.6.jar
   2. Prepare a movie:
     1. Download source file:
 
