@@ -69,7 +69,7 @@
         <dependency>
             <groupId>com.googlecode.mp4parser</groupId>
             <artifactId>isoparser</artifactId>
-            <version>1.0-RC-37</version>
+            <version>1.0.0</version>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
@@ -90,32 +90,8 @@
 
     <repositories>
         <repository>
-            <id>3rdparty</id>
-            <url>https://repository.castlabs.com/content/repositories/3rdparty</url>
-            <name>castLabs Software</name>
-            <snapshots>
-                <enabled>false</enabled>
-                <updatePolicy>never</updatePolicy>
-            </snapshots>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
+            <id>isoparser1.0.0</id>
+            <url>https://oss.sonatype.org/content/repositories/comgooglecodemp4parser-1018</url>
         </repository>
-        <repository>
-            <id>releases</id>
-            <url>https://repository.castlabs.com/content/repositories/releases</url>
-            <name>castLabs Software</name>
-            <snapshots>
-                <enabled>false</enabled>
-                <updatePolicy>never</updatePolicy>
-            </snapshots>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-        </repository>
-        <!--repository>
-            <id>central</id>
-            <url>file://C:\Users\user\.m2</url>
-        </repository-->
     </repositories>
 </project>
