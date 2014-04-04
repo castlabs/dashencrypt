@@ -7,6 +7,7 @@
 package com.castlabs.dash.dashfragmenter.mp4todash;
 
 import com.coremedia.iso.boxes.Box;
+import com.coremedia.iso.boxes.CompositionTimeToSample;
 import com.coremedia.iso.boxes.EditListBox;
 import com.coremedia.iso.boxes.FileTypeBox;
 import com.coremedia.iso.boxes.fragment.MovieFragmentBox;
@@ -73,8 +74,12 @@ public class DashBuilder extends FragmentedMp4Builder {
                 newboxes.add(moofsMdats.get(i));
             }
         }
-
-        sidx.setEarliestPresentationTime(sidx_boxes.get(0).getEarliestPresentationTime());
+        long earliestPresentationTime = sidx_boxes.get(0).getEarliestPresentationTime();
+        if ( earliestPresentationTime < 0) {
+            System.err.println("negative earlist_presentation_time in sidx. Setting to 0. May cause sync issues");
+            earliestPresentationTime = 0;
+        }
+        sidx.setEarliestPresentationTime(earliestPresentationTime);
         sidx.setFirstOffset(sidx_boxes.get(0).getFirstOffset());
         sidx.setReferenceId(sidx_boxes.get(0).getReferenceId());
         sidx.setTimeScale(sidx_boxes.get(0).getTimeScale());
