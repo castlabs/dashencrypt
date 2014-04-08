@@ -50,7 +50,7 @@ public class SegmentListManifestWriterImpl extends AbstractManifestWriter {
             for (Track track : tracks) {
                 RepresentationType representation = createRepresentation(adaptationSet, track);
 
-                representation.setStartWithSAP(1);
+
                 representation.setBandwidth(trackBitrates.get(track));
                 representation.addNewBaseURL().setStringValue(trackFilenames.get(track));
                 long offset = 0;

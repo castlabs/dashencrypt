@@ -53,7 +53,7 @@ public class SegmentBaseSingleSidxManifestWriterImpl extends AbstractManifestWri
                 segBaseType.setIndexRange(calculateIndexRange(trackContainer.get(track)));
 
                 representation.setId(trackFilenames.get(track));
-                representation.setStartWithSAP(1);
+
                 representation.setBandwidth(trackBitrates.get(track));
                 representation.addNewBaseURL().setStringValue(trackFilenames.get(track));
 
