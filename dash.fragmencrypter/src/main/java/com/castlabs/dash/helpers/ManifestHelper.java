@@ -38,6 +38,7 @@ import java.util.List;
 public class ManifestHelper {
 
     public static String convertFramerate(double vrate) {
+        vrate = (double)Math.round(vrate * 1000) / 1000;
         String frameRate = null;
         if ((vrate > 14) && (vrate < 15)) {
             frameRate = "15000/1001";
