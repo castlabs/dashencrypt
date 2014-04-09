@@ -50,8 +50,7 @@
                                     <mainClass>com.castlabs.dash.dashfragmenter.Main</mainClass>
                                 </transformer>
                             </transformers>
-                            <shadedArtifactAttached>false</shadedArtifactAttached>
-                            <shadedClassifierName>exe</shadedClassifierName>
+                            <outputFile>${project.build.directory}/${project.build.finalName}-exe.jar</outputFile>
                         </configuration>
                     </execution>
                 </executions>
