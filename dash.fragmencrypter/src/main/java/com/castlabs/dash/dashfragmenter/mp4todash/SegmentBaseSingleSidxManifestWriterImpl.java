@@ -7,10 +7,7 @@ package com.castlabs.dash.dashfragmenter.mp4todash;
 
 import com.coremedia.iso.boxes.Container;
 import com.googlecode.mp4parser.authoring.Track;
-import mpegDASHSchemaMPD2011.AdaptationSetType;
-import mpegDASHSchemaMPD2011.PeriodType;
-import mpegDASHSchemaMPD2011.RepresentationType;
-import mpegDASHSchemaMPD2011.SegmentBaseType;
+import mpegDashSchemaMpd2011.*;
 import org.apache.xmlbeans.GDuration;
 
 import java.io.IOException;

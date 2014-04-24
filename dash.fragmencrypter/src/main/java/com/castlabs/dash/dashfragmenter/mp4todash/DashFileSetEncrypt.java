@@ -13,7 +13,7 @@ import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.builder.FragmentIntersectionFinder;
 import com.googlecode.mp4parser.authoring.builder.Mp4Builder;
 import com.googlecode.mp4parser.util.UUIDConverter;
-import mpegDASHSchemaMPD2011.MPDDocument;
+import mpegDashSchemaMpd2011.MPDDocument;
 import org.apache.commons.io.FileUtils;
 import org.apache.xmlbeans.XmlOptions;
 import org.kohsuke.args4j.Option;

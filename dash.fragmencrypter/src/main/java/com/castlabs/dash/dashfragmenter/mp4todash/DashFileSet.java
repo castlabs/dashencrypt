@@ -20,7 +20,7 @@ import com.googlecode.mp4parser.authoring.tracks.DTSTrackImpl;
 import com.googlecode.mp4parser.authoring.tracks.EC3TrackImpl;
 import com.googlecode.mp4parser.boxes.mp4.ESDescriptorBox;
 import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.AudioSpecificConfig;
-import mpegDASHSchemaMPD2011.MPDDocument;
+import mpegDashSchemaMpd2011.MPDDocument;
 import org.apache.xmlbeans.XmlOptions;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;

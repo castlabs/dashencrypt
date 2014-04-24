@@ -10,11 +10,12 @@ import com.coremedia.iso.boxes.Container;
 import com.coremedia.iso.boxes.fragment.MovieFragmentBox;
 import com.coremedia.iso.boxes.fragment.TrackRunBox;
 import com.googlecode.mp4parser.authoring.Track;
-import mpegDASHSchemaMPD2011.*;
+import mpegDashSchemaMpd2011.*;
 import org.apache.xmlbeans.GDuration;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -72,8 +73,8 @@ public class SegmentListManifestWriterImpl extends AbstractManifestWriter {
                         for (TrackRunBox.Entry entry : trun.getEntries()) {
                             segmentDuration += entry.getSampleDuration();
                         }
-                        s.setD(segmentDuration);
-                        s.setT(time);
+                        s.setD((BigInteger.valueOf(segmentDuration)));
+                        s.setT(BigInteger.valueOf(time));
                         time += segmentDuration;
 
                         SegmentURLType segmentURL = segmentList.addNewSegmentURL();

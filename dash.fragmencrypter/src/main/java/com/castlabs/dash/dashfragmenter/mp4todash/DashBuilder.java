@@ -213,7 +213,7 @@ public class DashBuilder extends FragmentedMp4Builder {
         minorBrands.add("dash");
         minorBrands.add("msdh");
         minorBrands.add("msix");
-        minorBrands.add("iso5");
+        minorBrands.add("iso6");
         minorBrands.add("avc1");
         minorBrands.add("isom");
 

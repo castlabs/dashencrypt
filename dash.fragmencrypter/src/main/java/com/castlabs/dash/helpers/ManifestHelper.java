@@ -24,9 +24,9 @@ import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.AudioSpecificConfig;
 import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.DecoderConfigDescriptor;
 import com.googlecode.mp4parser.boxes.threegpp26244.SegmentIndexBox;
 import com.googlecode.mp4parser.util.Path;
-import mpegDASHSchemaMPD2011.AdaptationSetType;
-import mpegDASHSchemaMPD2011.DescriptorType;
-import mpegDASHSchemaMPD2011.RepresentationType;
+import mpegDashSchemaMpd2011.AdaptationSetType;
+import mpegDashSchemaMpd2011.DescriptorType;
+import mpegDashSchemaMpd2011.RepresentationType;
 import org.apache.commons.lang.math.Fraction;
 
 import java.io.IOException;

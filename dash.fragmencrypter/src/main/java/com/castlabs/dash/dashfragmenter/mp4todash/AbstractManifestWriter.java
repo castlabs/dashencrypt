@@ -10,7 +10,7 @@ import com.coremedia.iso.boxes.Box;
 import com.coremedia.iso.boxes.Container;
 import com.googlecode.mp4parser.authoring.Track;
 import mpegCenc2013.DefaultKIDAttribute;
-import mpegDASHSchemaMPD2011.*;
+import mpegDashSchemaMpd2011.*;
 import org.apache.xmlbeans.GDuration;
 
 import java.io.IOException;
