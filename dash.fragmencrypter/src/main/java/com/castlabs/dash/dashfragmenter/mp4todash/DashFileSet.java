@@ -14,10 +14,7 @@ import com.googlecode.mp4parser.authoring.Sample;
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.builder.*;
 import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
-import com.googlecode.mp4parser.authoring.tracks.AACTrackImpl;
-import com.googlecode.mp4parser.authoring.tracks.AC3TrackImpl;
-import com.googlecode.mp4parser.authoring.tracks.DTSTrackImpl;
-import com.googlecode.mp4parser.authoring.tracks.EC3TrackImpl;
+import com.googlecode.mp4parser.authoring.tracks.*;
 import com.googlecode.mp4parser.boxes.mp4.ESDescriptorBox;
 import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.AudioSpecificConfig;
 import mpegDashSchemaMpd2011.MPDDocument;
@@ -34,7 +31,7 @@ import java.util.*;
 
 
 public class DashFileSet implements Command {
-    static Set<String> supportedTypes = new HashSet<String>(Arrays.asList("ac-3", "ec-3", "dtsl", "dtsh", "dtse", "avc1", "mp4a"));
+    static Set<String> supportedTypes = new HashSet<String>(Arrays.asList("ac-3", "ec-3", "dtsl", "dtsh", "dtse", "avc1", "mp4a", "h264"));
 
     @Argument(required = true, multiValued = true, handler = FileOptionHandler.class, usage = "MP4 and bitstream input files", metaVar = "vid1.mp4, vid2.mp4, aud1.mp4, aud2.ec3 ...")
     protected List<File> inputFiles;
@@ -310,6 +307,9 @@ public class DashFileSet implements Command {
                 }
             } else if (inputFile.getName().endsWith(".aac")) {
                 Track track = new AACTrackImpl(new FileDataSourceImpl(inputFile));
+                track2File.put(track, inputFile.getName());
+            } else if (inputFile.getName().endsWith(".h264")) {
+                Track track = new H264TrackImpl(new FileDataSourceImpl(inputFile));
                 track2File.put(track, inputFile.getName());
             } else if (inputFile.getName().endsWith(".ac3")) {
                 Track track = new AC3TrackImpl(new FileDataSourceImpl(inputFile));
