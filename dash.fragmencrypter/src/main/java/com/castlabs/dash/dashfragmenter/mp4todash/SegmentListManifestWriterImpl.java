@@ -51,12 +51,12 @@ public class SegmentListManifestWriterImpl extends AbstractManifestWriter {
             for (Track track : tracks) {
                 RepresentationType representation = createRepresentation(adaptationSet, track);
 
-
                 representation.setBandwidth(trackBitrates.get(track));
                 representation.addNewBaseURL().setStringValue(trackFilenames.get(track));
                 long offset = 0;
                 Iterator<Box> boxes = trackContainer.get(track).getBoxes().iterator();
                 SegmentListType segmentList = representation.addNewSegmentList();
+                segmentList.setTimescale(track.getTrackMetaData().getTimescale());
                 SegmentTimelineType segmentTimeline = segmentList.addNewSegmentTimeline();
                 createInitialization(segmentList.addNewInitialization(), track);
                 long time = 0;
