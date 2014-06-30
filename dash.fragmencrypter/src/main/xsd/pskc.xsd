@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:pskc="urn:ietf:params:xml:ns:keyprov:pskc"
+           xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+           xmlns:xenc="http://www.w3.org/2001/04/xmlenc#"
+           targetNamespace="urn:ietf:params:xml:ns:keyprov:pskc"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+    <xs:import namespace="http://www.w3.org/2000/09/xmldsig#"
+               schemaLocation="xmldsig-core-schema.xsd"/>
+    <xs:import namespace="http://www.w3.org/2001/04/xmlenc#"
+               schemaLocation="xenc-schema.xsd"/>
+    <xs:import namespace="http://www.w3.org/XML/1998/namespace"/>
+    <xs:complexType name="KeyContainerType">
+        <xs:sequence>
+            <xs:element name="EncryptionKey"
+                        type="ds:KeyInfoType" minOccurs="0"/>
+            <xs:element name="MACMethod"
+                        type="pskc:MACMethodType" minOccurs="0"/>
+            <xs:element name="KeyPackage"
+                        type="pskc:KeyPackageType" maxOccurs="unbounded"/>
+            <xs:element name="Signature"
+                        type="ds:SignatureType" minOccurs="0"/>
+            <xs:element name="Extensions"
+                        type="pskc:ExtensionsType"
+                        minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="Version"
+                      type="pskc:VersionType" use="required"/>
+        <xs:attribute name="Id"
+                      type="xs:ID" use="optional"/>
+    </xs:complexType>
+    <xs:simpleType name="VersionType" final="restriction">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="\d{1,2}\.\d{1,3}"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:complexType name="KeyType">
+        <xs:sequence>
+            <xs:element name="Issuer"
+                        type="xs:string" minOccurs="0"/>
+            <xs:element name="AlgorithmParameters"
+                        type="pskc:AlgorithmParametersType"
+                        minOccurs="0"/>
+            <xs:element name="KeyProfileId"
+                        type="xs:string" minOccurs="0"/>
+            <xs:element name="KeyReference"
+                        type="xs:string" minOccurs="0"/>
+            <xs:element name="FriendlyName"
+                        type="xs:string" minOccurs="0"/>
+            <xs:element name="Data"
+                        type="pskc:KeyDataType" minOccurs="0"/>
+            <xs:element name="UserId"
+                        type="xs:string" minOccurs="0"/>
+            <xs:element name="Policy"
+                        type="pskc:PolicyType" minOccurs="0"/>
+            <xs:element name="Extensions"
+                        type="pskc:ExtensionsType" minOccurs="0"
+                        maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="Id"
+                      type="xs:string" use="required"/>
+        <xs:attribute name="Algorithm"
+                      type="pskc:KeyAlgorithmType" use="optional"/>
+    </xs:complexType>
+    <xs:complexType name="PolicyType">
+        <xs:sequence>
+            <xs:element name="StartDate"
+                        type="xs:dateTime" minOccurs="0"/>
+            <xs:element name="ExpiryDate"
+                        type="xs:dateTime" minOccurs="0"/>
+            <xs:element name="PINPolicy"
+                        type="pskc:PINPolicyType" minOccurs="0"/>
+            <xs:element name="KeyUsage"
+                        type="pskc:KeyUsageType"
+                        minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="NumberOfTransactions"
+                        type="xs:nonNegativeInteger" minOccurs="0"/>
+            <xs:any namespace="##other"
+                    minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="KeyDataType">
+        <xs:sequence>
+            <xs:element name="Secret"
+                        type="pskc:binaryDataType" minOccurs="0"/>
+            <xs:element name="Counter"
+                        type="pskc:longDataType" minOccurs="0"/>
+            <xs:element name="Time"
+                        type="pskc:intDataType" minOccurs="0"/>
+            <xs:element name="TimeInterval"
+                        type="pskc:intDataType" minOccurs="0"/>
+            <xs:element name="TimeDrift"
+                        type="pskc:intDataType" minOccurs="0"/>
+            <xs:any namespace="##other"
+                    processContents="lax"
+                    minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="binaryDataType">
+        <xs:sequence>
+            <xs:choice>
+                <xs:element name="PlainValue"
+                            type="xs:base64Binary"/>
+                <xs:element name="EncryptedValue"
+                            type="xenc:EncryptedDataType"/>
+            </xs:choice>
+            <xs:element name="ValueMAC"
+                        type="xs:base64Binary" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="intDataType">
+        <xs:sequence>
+            <xs:choice>
+                <xs:element name="PlainValue" type="xs:int"/>
+                <xs:element name="EncryptedValue"
+                            type="xenc:EncryptedDataType"/>
+            </xs:choice>
+            <xs:element name="ValueMAC"
+                        type="xs:base64Binary" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="stringDataType">
+        <xs:sequence>
+            <xs:choice>
+                <xs:element name="PlainValue" type="xs:string"/>
+                <xs:element name="EncryptedValue"
+                            type="xenc:EncryptedDataType"/>
+            </xs:choice>
+            <xs:element name="ValueMAC"
+                        type="xs:base64Binary" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="longDataType">
+        <xs:sequence>
+            <xs:choice>
+                <xs:element name="PlainValue" type="xs:long"/>
+                <xs:element name="EncryptedValue"
+                            type="xenc:EncryptedDataType"/>
+            </xs:choice>
+            <xs:element name="ValueMAC"
+                        type="xs:base64Binary" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="PINPolicyType">
+        <xs:attribute name="PINKeyId"
+                      type="xs:string" use="optional"/>
+        <xs:attribute name="PINUsageMode"
+                      type="pskc:PINUsageModeType"/>
+        <xs:attribute name="MaxFailedAttempts"
+                      type="xs:unsignedInt" use="optional"/>
+        <xs:attribute name="MinLength"
+                      type="xs:unsignedInt" use="optional"/>
+        <xs:attribute name="MaxLength"
+                      type="xs:unsignedInt" use="optional"/>
+        <xs:attribute name="PINEncoding"
+                      type="pskc:ValueFormatType" use="optional"/>
+        <xs:anyAttribute namespace="##other"/>
+    </xs:complexType>
+    <xs:simpleType name="PINUsageModeType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="Local"/>
+            <xs:enumeration value="Prepend"/>
+            <xs:enumeration value="Append"/>
+            <xs:enumeration value="Algorithmic"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="KeyUsageType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="OTP"/>
+            <xs:enumeration value="CR"/>
+            <xs:enumeration value="Encrypt"/>
+            <xs:enumeration value="Integrity"/>
+            <xs:enumeration value="Verify"/>
+            <xs:enumeration value="Unlock"/>
+            <xs:enumeration value="Decrypt"/>
+            <xs:enumeration value="KeyWrap"/>
+            <xs:enumeration value="Unwrap"/>
+            <xs:enumeration value="Derive"/>
+            <xs:enumeration value="Generate"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:complexType name="DeviceInfoType">
+        <xs:sequence>
+            <xs:element name="Manufacturer"
+                        type="xs:string" minOccurs="0"/>
+            <xs:element name="SerialNo"
+                        type="xs:string" minOccurs="0"/>
+            <xs:element name="Model"
+                        type="xs:string" minOccurs="0"/>
+            <xs:element name="IssueNo"
+                        type="xs:string" minOccurs="0"/>
+            <xs:element name="DeviceBinding"
+                        type="xs:string" minOccurs="0"/>
+            <xs:element name="StartDate"
+                        type="xs:dateTime" minOccurs="0"/>
+            <xs:element name="ExpiryDate"
+                        type="xs:dateTime" minOccurs="0"/>
+            <xs:element name="UserId"
+                        type="xs:string" minOccurs="0"/>
+            <xs:element name="Extensions"
+                        type="pskc:ExtensionsType" minOccurs="0"
+                        maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="CryptoModuleInfoType">
+        <xs:sequence>
+            <xs:element name="Id" type="xs:string"/>
+            <xs:element name="Extensions"
+                        type="pskc:ExtensionsType" minOccurs="0"
+                        maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="KeyPackageType">
+        <xs:sequence>
+            <xs:element name="DeviceInfo"
+                        type="pskc:DeviceInfoType" minOccurs="0"/>
+            <xs:element name="CryptoModuleInfo"
+                        type="pskc:CryptoModuleInfoType" minOccurs="0"/>
+            <xs:element name="Key"
+                        type="pskc:KeyType" minOccurs="0"/>
+            <xs:element name="Extensions"
+                        type="pskc:ExtensionsType" minOccurs="0"
+                        maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="AlgorithmParametersType">
+        <xs:choice>
+            <xs:element name="Suite" type="xs:string" minOccurs="0"/>
+            <xs:element name="ChallengeFormat" minOccurs="0">
+                <xs:complexType>
+                    <xs:attribute name="Encoding"
+                                  type="pskc:ValueFormatType"
+                                  use="required"/>
+                    <xs:attribute name="Min"
+                                  type="xs:unsignedInt" use="required"/>
+                    <xs:attribute name="Max"
+                                  type="xs:unsignedInt" use="required"/>
+                    <xs:attribute name="CheckDigits"
+                                  type="xs:boolean" default="false"/>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="ResponseFormat" minOccurs="0">
+                <xs:complexType>
+                    <xs:attribute name="Encoding"
+                                  type="pskc:ValueFormatType"
+                                  use="required"/>
+                    <xs:attribute name="Length"
+                                  type="xs:unsignedInt" use="required"/>
+                    <xs:attribute name="CheckDigits"
+                                  type="xs:boolean" default="false"/>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="Extensions"
+                        type="pskc:ExtensionsType" minOccurs="0"
+                        maxOccurs="unbounded"/>
+        </xs:choice>
+    </xs:complexType>
+    <xs:complexType name="ExtensionsType">
+        <xs:sequence>
+            <xs:any namespace="##other"
+                    processContents="lax" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="definition"
+                      type="xs:anyURI" use="optional"/>
+    </xs:complexType>
+    <xs:simpleType name="KeyAlgorithmType">
+        <xs:restriction base="xs:anyURI"/>
+    </xs:simpleType>
+    <xs:simpleType name="ValueFormatType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="DECIMAL"/>
+            <xs:enumeration value="HEXADECIMAL"/>
+            <xs:enumeration value="ALPHANUMERIC"/>
+            <xs:enumeration value="BASE64"/>
+            <xs:enumeration value="BINARY"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:complexType name="MACMethodType">
+        <xs:sequence>
+            <xs:choice>
+                <xs:element name="MACKey"
+                            type="xenc:EncryptedDataType" minOccurs="0"/>
+                <xs:element name="MACKeyReference"
+                            type="xs:string" minOccurs="0"/>
+            </xs:choice>
+            <xs:any namespace="##other"
+                    processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="Algorithm" type="xs:anyURI" use="required"/>
+    </xs:complexType>
+    <xs:element name="KeyContainer"
+                type="pskc:KeyContainerType"/>
+</xs:schema>
