@@ -11,6 +11,7 @@ import com.coremedia.iso.boxes.CompositionTimeToSample;
 import com.coremedia.iso.boxes.EditListBox;
 import com.coremedia.iso.boxes.FileTypeBox;
 import com.coremedia.iso.boxes.fragment.MovieFragmentBox;
+import com.coremedia.iso.boxes.fragment.TrackFragmentHeaderBox;
 import com.coremedia.iso.boxes.fragment.TrackRunBox;
 import com.googlecode.mp4parser.authoring.Movie;
 import com.googlecode.mp4parser.authoring.Track;
@@ -25,6 +26,12 @@ import java.util.*;
 public class DashBuilder extends FragmentedMp4Builder {
 
     public DashBuilder() {
+    }
+
+    protected Box createTfhd(long startSample, long endSample, Track track, int sequenceNumber) {
+        TrackFragmentHeaderBox tfhd = (TrackFragmentHeaderBox) super.createTfhd(startSample, endSample, track, sequenceNumber);
+        tfhd.setDefaultBaseIsMoof(true);
+        return tfhd;
     }
 
     @Override
