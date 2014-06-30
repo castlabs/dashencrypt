@@ -38,7 +38,7 @@ import java.util.List;
 public class ManifestHelper {
 
     public static String convertFramerate(double vrate) {
-        vrate = (double)Math.round(vrate * 1000) / 1000;
+        vrate = (double) Math.round(vrate * 1000) / 1000;
         String frameRate = null;
         if ((vrate > 14) && (vrate < 15)) {
             frameRate = "15000/1001";
@@ -78,7 +78,7 @@ public class ManifestHelper {
             }
         }
         // long start = sidx.getOffset(); getOffset works for parsed files only
-        long end = sidx.getSize() + start;
+        long end = sidx.getSize() - 1 + start; // start & end are inclusive!
         return String.format("%s-%s", start, end);
     }
 
