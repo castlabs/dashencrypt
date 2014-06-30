@@ -49,7 +49,7 @@ public class DashFileSetEncrypt extends DashFileSet {
             aliases = "-u",
             usage = "UUID (KeyID)"
     )
-    String encKid = null;
+    protected String encKid = null;
 
     @Option(name = "--secretKey",
             aliases = "-k",
@@ -57,17 +57,17 @@ public class DashFileSetEncrypt extends DashFileSet {
             depends = {"--uuid"}
 
     )
-    String encKeySecretKey = null;
+    protected String encKeySecretKey = null;
 
     @Option(name = "--secretKeyFile",
             aliases = "-f",
             usage = "Path to file",
             depends = {"--uuid"}
     )
-    String encKeySecretKeyFile = null;
+    protected String encKeySecretKeyFile = null;
 
     @Option(name = "--certificate", aliases = "-c", usage = "X509 certificate for generation of KDF documents")
-    List<File> certificates = new LinkedList<File>();
+    protected List<File> certificates = new LinkedList<File>();
 
     @Override
     public int run() throws IOException {
