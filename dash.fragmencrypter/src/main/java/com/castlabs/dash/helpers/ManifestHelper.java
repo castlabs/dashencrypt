@@ -108,7 +108,7 @@ public class ManifestHelper {
             adaptationSet.setPar("1:1");
             // too hard to find it out. Ignoring even though it should be set according to DASH-AVC-264-v2.00-hd-mca.pdf
 
-            representation.setMimeType("video/mp4");
+            //representation.setMimeType("video/mp4");
             representation.setCodecs(getVideoCodecs(track));
             representation.setWidth(videoWidth);
             representation.setHeight(videoHeight);
@@ -122,7 +122,7 @@ public class ManifestHelper {
             AudioQuality audioQ = getAudioQuality(track);
 
 
-            representation.setMimeType("audio/mp4");
+            //representation.setMimeType("audio/mp4");
             representation.setCodecs(audioQ.fourCC);
             representation.setAudioSamplingRate(String.valueOf(audioQ.samplingRate));
 

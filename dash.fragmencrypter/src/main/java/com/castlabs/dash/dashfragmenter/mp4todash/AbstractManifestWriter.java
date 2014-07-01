@@ -69,6 +69,7 @@ public abstract class AbstractManifestWriter {
         UUID keyId = null;
         String language = null;
         for (Track track : tracks) {
+
             if (keyId != null && !keyId.equals(trackKeyIds.get(track))) {
                 throw new RuntimeException("The ManifestWriter cannot deal with more than ONE key per adaptation set.");
             }
@@ -86,6 +87,13 @@ public abstract class AbstractManifestWriter {
         adaptationSet.setStartWithSAP(1);
         adaptationSet.setLang(language);
         adaptationSet.setBitstreamSwitching(true);
+        if (tracks.get(0).getHandler().equals("soun")) {
+            adaptationSet.setMimeType("audio/mp4");
+        } else if (tracks.get(0).getHandler().equals("vide")) {
+            adaptationSet.setMimeType("video/mp4");
+        } else {
+            throw new RuntimeException("Don't know what to do with handler type = " + tracks.get(0).getHandler());
+        }
 
         if (keyId != null) {
             DescriptorType contentProtection = adaptationSet.addNewContentProtection();
