@@ -7,6 +7,7 @@
 package com.castlabs.dash.dashfragmenter.mp4todash;
 
 import com.castlabs.dash.dashfragmenter.Command;
+import com.coremedia.iso.boxes.Box;
 import com.coremedia.iso.boxes.Container;
 import com.googlecode.mp4parser.FileDataSourceImpl;
 import com.googlecode.mp4parser.authoring.Movie;
@@ -23,14 +24,17 @@ import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.FileOptionHandler;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.channels.WritableByteChannel;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 
 
 public class DashFileSet implements Command {
+    Logger l;
+
     static Set<String> supportedTypes = new HashSet<String>(Arrays.asList("ac-3", "ec-3", "dtsl", "dtsh", "dtse", "avc1", "mp4a", "h264"));
 
     @Argument(required = true, multiValued = true, handler = FileOptionHandler.class, usage = "MP4 and bitstream input files", metaVar = "vid1.mp4, vid2.mp4, aud1.mp4, aud2.ec3 ...")
@@ -42,11 +46,15 @@ public class DashFileSet implements Command {
             metaVar = "PATH")
     protected File outputDirectory = new File("");
 
+    @Option(name ="--verbose", aliases = "-v", usage = "use switch to produce log output")
+    protected boolean verbose = false;
+
 
     @Override
     public int run() throws IOException {
+        l = setupLogger();
         if (!(outputDirectory.exists() ^ outputDirectory.mkdirs())) {
-            System.err.println("Output directory does not exist and cannot be created.");
+            l.severe("Output directory does not exist and cannot be created.");
         }
 
         long start = System.currentTimeMillis();
@@ -76,7 +84,7 @@ public class DashFileSet implements Command {
 
         writeManifest(trackFamilies, trackBitrate, trackFilename, dashedFiles);
 
-        System.out.println("Finished write in " + (System.currentTimeMillis() - start) + "ms");
+        l.info("Finished write in " + (System.currentTimeMillis() - start) + "ms");
         return 0;
     }
 
@@ -102,13 +110,13 @@ public class DashFileSet implements Command {
         xmlOptions.setUseDefaultNamespace();
         xmlOptions.setSavePrettyPrint();
         File manifest1 = new File(outputDirectory, "Manifest.mpd");
-        System.out.print("Writing " + manifest1 + "... ");
+        l.info("Writing " + manifest1 + "... ");
         mpdDocument1.save(manifest1, xmlOptions);
-        System.out.println("Done.");
+        l.info("Done.");
         File manifest2 = new File(outputDirectory, "Manifest-segment-list.mpd");
-        System.out.print("Writing " + manifest2 + "... ");
+        l.info("Writing " + manifest2 + "... ");
         mpdDocument2.save(manifest2, xmlOptions);
-        System.out.println("Done.");
+        l.info("Done.");
 
     }
 
@@ -118,7 +126,27 @@ public class DashFileSet implements Command {
         return dashBuilder;
     }
 
-    private HashMap<Track, Container> writeSingleTrackDashedMp4s(
+    protected Logger setupLogger() {
+        Logger logger = Logger.getLogger("dash");
+        InputStream stream;
+        if (verbose) {
+            stream = DashFileSet.class.getResourceAsStream("/log-verbose.properties");
+        } else {
+            stream = DashFileSet.class.getResourceAsStream("/log.properties");
+        }
+        try {
+            LogManager.getLogManager().readConfiguration(stream);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        logger.setLevel(Level.FINE);
+        logger.addHandler(new java.util.logging.ConsoleHandler());
+        logger.setUseParentHandlers(false);
+
+        return logger;
+    }
+
+    protected HashMap<Track, Container> writeSingleTrackDashedMp4s(
             Map<Track, long[]> fragmentStartSamples,
             Map<Track, String> filenames) throws IOException {
 
@@ -128,22 +156,26 @@ public class DashFileSet implements Command {
             Movie movie = new Movie();
             movie.addTrack(trackEntry.getKey());
 
-            System.out.print("Creating model for " + filename + "... ");
+            l.info("Creating model for " + filename + "... ");
             Mp4Builder mp4Builder = getFileBuilder(
                     new StaticFragmentIntersectionFinderImpl(fragmentStartSamples),
                     movie);
             Container isoFile = mp4Builder.build(movie);
 
-            System.out.print("Writing... ");
+            l.info("Writing... ");
             WritableByteChannel wbc = new FileOutputStream(
                     new File(outputDirectory, filename)).getChannel();
             try {
-                isoFile.writeContainer(wbc);
+                List<Box> boxes = isoFile.getBoxes();
+                for (int i = 0; i < boxes.size(); i++) {
+                    l.fine("Writing... " + boxes.get(i).getType() + " [" + i + " of " + boxes.size()+"]");
+                    boxes.get(i).getBox(wbc);
+                }
                 containers.put(trackEntry.getKey(), isoFile);
             } finally {
                 wbc.close();
             }
-            System.out.println("Done.");
+            l.info("Done.");
         }
         return containers;
     }
@@ -254,38 +286,6 @@ public class DashFileSet implements Command {
         return fragmentStartSamples;
     }
 
-    private long[] checkMaxFragmentDuration(Track track, long[] sampleNumbers) {
-        ArrayList<Long> tweakedFragmentStartSampleNumbers = new ArrayList<Long>(sampleNumbers.length);
-        for (int i = 0; i < sampleNumbers.length - 1; i++) {
-            long startSampleNum = sampleNumbers[i];
-            long endSampleNum = sampleNumbers[i + 1];
-            long fragmentDuration = getFragmentDuration(track, startSampleNum, endSampleNum);
-            tweakedFragmentStartSampleNumbers.add(sampleNumbers[i]);
-            final long timescale = track.getTrackMetaData().getTimescale();
-            if (fragmentDuration > 10 * timescale) {
-                System.err.println("Warning: fragment " + i + 1 + " has a duration of >10 sec (" + fragmentDuration / timescale + ")");
-//                //insert fragment start sample in between the original fragment start samples
-                tweakedFragmentStartSampleNumbers.add(sampleNumbers[i] +
-                        (sampleNumbers[i + 1] - sampleNumbers[i]) / 2);
-            }
-        }
-        long[] returnvalue = new long[tweakedFragmentStartSampleNumbers.size()];
-        for (int i = 0; i < tweakedFragmentStartSampleNumbers.size(); i++) {
-            Long sampleNumber = tweakedFragmentStartSampleNumbers.get(i);
-            returnvalue[i] = sampleNumber;
-        }
-        return returnvalue;
-    }
-
-    private long getFragmentDuration(Track track, long startSampleNum, long endSampleNum) {
-        final long[] sampleDurations = track.getSampleDurations();
-        long fragmentDuration = 0;
-        for (int i = (int) startSampleNum - 1; i < endSampleNum - 1; i++) {
-            fragmentDuration += sampleDurations[i];
-        }
-        return fragmentDuration;
-    }
-
     /**
      * Creates a Map with Track as key and originating filename as value.
      *
@@ -300,7 +300,7 @@ public class DashFileSet implements Command {
                 for (Track track : movie.getTracks()) {
                     String codec = track.getSampleDescriptionBox().getSampleEntry().getType();
                     if (!supportedTypes.contains(codec)) {
-                        System.out.println("Excluding " + inputFile + " track " + track.getTrackMetaData().getTrackId() + " as its codec " + codec + " is not yet supported");
+                        l.warning("Excluding " + inputFile + " track " + track.getTrackMetaData().getTrackId() + " as its codec " + codec + " is not yet supported");
                         break;
                     }
                     track2File.put(track, inputFile.getName());
@@ -308,20 +308,25 @@ public class DashFileSet implements Command {
             } else if (inputFile.getName().endsWith(".aac")) {
                 Track track = new AACTrackImpl(new FileDataSourceImpl(inputFile));
                 track2File.put(track, inputFile.getName());
+                l.fine("Created AAC Track from " + inputFile.getName());
             } else if (inputFile.getName().endsWith(".h264")) {
                 Track track = new H264TrackImpl(new FileDataSourceImpl(inputFile));
                 track2File.put(track, inputFile.getName());
+                l.fine("Created H264 Track from " + inputFile.getName());
             } else if (inputFile.getName().endsWith(".ac3")) {
                 Track track = new AC3TrackImpl(new FileDataSourceImpl(inputFile));
                 track2File.put(track, inputFile.getName());
+                l.fine("Created AC3 Track from " + inputFile.getName());
             } else if (inputFile.getName().endsWith(".ec3")) {
                 Track track = new EC3TrackImpl(new FileDataSourceImpl(inputFile));
                 track2File.put(track, inputFile.getName());
+                l.fine("Created EC3 Track from " + inputFile.getName());
             } else if (inputFile.getName().endsWith(".dtshd")) {
                 Track track = new DTSTrackImpl(new FileDataSourceImpl(inputFile));
                 track2File.put(track, inputFile.getName());
+                l.fine("Created DTS HD Track from " + inputFile.getName());
             } else {
-                System.err.println("Cannot identify type of " + inputFile + ". Extensions mp4, aac, ac3, ec3 or dtshd are known.");
+                l.warning("Cannot identify type of " + inputFile + ". Extensions mp4, aac, ac3, ec3 or dtshd are known.");
             }
         }
 
