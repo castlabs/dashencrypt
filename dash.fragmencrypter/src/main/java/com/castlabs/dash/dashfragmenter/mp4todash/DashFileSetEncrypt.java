@@ -12,6 +12,7 @@ import com.googlecode.mp4parser.authoring.Movie;
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.builder.FragmentIntersectionFinder;
 import com.googlecode.mp4parser.authoring.builder.Mp4Builder;
+import com.googlecode.mp4parser.authoring.tracks.CencEncryptingTrackImpl;
 import com.googlecode.mp4parser.util.UUIDConverter;
 import ietfParamsXmlNsKeyprovPskc.*;
 import mpegDashSchemaMpd2011.MPDDocument;
@@ -91,6 +92,22 @@ public class DashFileSetEncrypt extends DashFileSet {
         createKdf();
 
         return 0;
+    }
+
+    @Override
+    protected Map<Track, String> createTracks() throws IOException {
+        Map<Track, String> tracks = super.createTracks();
+        Map<Track, String> encTracks = new HashMap<Track, String>();
+        for (Map.Entry<Track, String> trackStringEntry : tracks.entrySet()) {
+            String hdlr = trackStringEntry.getKey().getHandler();
+            if ("vide".equals(hdlr) || "soun".equals(hdlr)) {
+                CencEncryptingTrackImpl cencTrack = new CencEncryptingTrackImpl(trackStringEntry.getKey(), keyid, key );
+                encTracks.put(cencTrack, trackStringEntry.getValue());
+            } else {
+                encTracks.put(trackStringEntry.getKey(), trackStringEntry.getValue());
+            }
+        }
+        return encTracks;
     }
 
     protected void createKdf() {
@@ -195,19 +212,6 @@ public class DashFileSetEncrypt extends DashFileSet {
 
         mpdDocument.save(new File(this.outputDirectory, "Manifest.mpd"), xmlOptions);
     }
-
-    @Override
-    protected Mp4Builder getFileBuilder(FragmentIntersectionFinder fragmentIntersectionFinder, Movie m) {
-        DashEncryptedBuilder dashBuilder = new DashEncryptedBuilder();
-        for (Track track : m.getTracks()) {
-            dashBuilder.getKeyIds().put(track, UUIDConverter.convert(this.keyid));
-            dashBuilder.getKeys().put(track, this.key);
-        }
-        dashBuilder.setIntersectionFinder(fragmentIntersectionFinder);
-        // dashBuilder.setPsshBoxes(Map<byte[], byte[])); ( a map from systemId to drm specific pssh content )
-        return dashBuilder;
-    }
-
 }
 
 

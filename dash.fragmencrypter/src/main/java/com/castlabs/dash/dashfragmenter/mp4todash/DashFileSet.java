@@ -292,7 +292,7 @@ public class DashFileSet implements Command {
      * @return Track too originating file map
      * @throws IOException
      */
-    Map<Track, String> createTracks() throws IOException {
+    protected Map<Track, String> createTracks() throws IOException {
         HashMap<Track, String> track2File = new HashMap<Track, String>();
         for (File inputFile : inputFiles) {
             if (inputFile.getName().endsWith("mp4")) {
