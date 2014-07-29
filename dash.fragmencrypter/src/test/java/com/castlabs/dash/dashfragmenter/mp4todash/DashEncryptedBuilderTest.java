@@ -4,28 +4,21 @@ import com.coremedia.iso.IsoFile;
 import com.coremedia.iso.boxes.Container;
 import com.googlecode.mp4parser.DataSource;
 import com.googlecode.mp4parser.FileDataSourceImpl;
-import com.googlecode.mp4parser.MemoryDataSourceImpl;
 import com.googlecode.mp4parser.authoring.Movie;
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import com.googlecode.mp4parser.authoring.tracks.CencEncryptingTrackImpl;
-import com.googlecode.mp4parser.boxes.piff.UuidBasedProtectionSystemSpecificHeaderBox;
 import com.googlecode.mp4parser.util.UUIDConverter;
-import org.apache.commons.io.IOUtils;
-import org.junit.Assert;
 import org.junit.Test;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.util.UUID;
-
-import static org.junit.Assert.*;
 
 public class DashEncryptedBuilderTest {
     @Test
@@ -43,8 +36,8 @@ public class DashEncryptedBuilderTest {
         Container i1 = dashEncryptedBuilder.build(m2);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         i1.writeContainer( Channels.newChannel(baos));
-        //FileChannel fc = new FileOutputStream("output.mp4").getChannel();
-        //i1.writeContainer(fc);
+        FileChannel fc = new FileOutputStream("v1-reference.mp4").getChannel();
+        i1.writeContainer(fc);
 
         DataSource dataSourceRef = new FileDataSourceImpl(this.getClass().getProtectionDomain().getCodeSource().getLocation().getFile() + "/v1-reference.mp4");
         IsoFile i2 = new IsoFile(dataSourceRef);
