@@ -8,17 +8,22 @@ package com.castlabs.dash.dashfragmenter.mp4todash;
 
 import com.coremedia.iso.boxes.Box;
 import com.coremedia.iso.boxes.Container;
+import com.coremedia.iso.boxes.MediaHeaderBox;
+import com.coremedia.iso.boxes.MovieHeaderBox;
+import com.coremedia.iso.boxes.fragment.MovieFragmentBox;
+import com.coremedia.iso.boxes.fragment.TrackExtendsBox;
+import com.coremedia.iso.boxes.fragment.TrackFragmentHeaderBox;
+import com.coremedia.iso.boxes.fragment.TrackRunBox;
+import com.coremedia.iso.boxes.mdat.MediaDataBox;
 import com.googlecode.mp4parser.authoring.Track;
+import com.googlecode.mp4parser.util.Path;
 import mpegCenc2013.DefaultKIDAttribute;
 import mpegDashSchemaMpd2011.*;
 import org.apache.xmlbeans.GDuration;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public abstract class AbstractManifestWriter {
 
@@ -42,6 +47,92 @@ public abstract class AbstractManifestWriter {
     }
 
 
+
+    class Buffer {
+        final long bandwidth;
+        final long timescale;
+        public Buffer(long bandwidth, long timescale) {
+            this.bandwidth = bandwidth;
+            this.timescale = timescale;
+        }
+
+        long currentBufferFullness = 0;
+        long minBufferFullness = 0;
+
+        void simPlayback(long size, long videoTime) {
+            currentBufferFullness -= size;
+            currentBufferFullness += (double)videoTime / timescale * bandwidth / 8;
+            if (currentBufferFullness<minBufferFullness) {
+                minBufferFullness = currentBufferFullness;
+            }
+
+        }
+
+    }
+
+
+
+    public GDuration getMinBufferTime() {
+        int requiredTimeInS = 0;
+        for (Map.Entry<Track, Container> trackContainerEntry : trackContainer.entrySet()) {
+            long bitrate = trackBitrates.get(trackContainerEntry.getKey());
+            long timescale = ((MediaHeaderBox)Path.getPath(trackContainerEntry.getValue(), "/moov[0]/trak[0]/mdia[0]/mdhd[0]")).getTimescale();
+            long requiredBuffer = 0;
+            Iterator<Box> iterator = trackContainerEntry.getValue().getBoxes().iterator();
+            while (iterator.hasNext()) {
+
+                Box moofCand = iterator.next();
+                if (!moofCand.getType().equals("moof")) {
+                    continue;
+                }
+                MovieFragmentBox moof = (MovieFragmentBox) moofCand;
+                Box mdat = iterator.next();
+
+                Buffer currentBuffer = new Buffer(bitrate, timescale);
+                currentBuffer.simPlayback(moof.getSize(), 0);
+                for (TrackRunBox trun : moof.getTrackRunBoxes()) {
+                    for (TrackRunBox.Entry entry : trun.getEntries()) {
+
+
+                        long sampleDuration;
+                        if (trun.isSampleDurationPresent()) {
+                            sampleDuration = trun.getEntries().get(0).getSampleDuration();
+                        } else {
+                            TrackFragmentHeaderBox tfhd = (TrackFragmentHeaderBox) Path.getPath(moof, "traf[0]/tfhd[0]");
+                            if (tfhd.hasDefaultSampleDuration()) {
+                                sampleDuration = tfhd.getDefaultSampleDuration();
+                            } else {
+                                TrackExtendsBox trex = (TrackExtendsBox) Path.getPath(trackContainerEntry.getValue(), "/moov[0]/mvex[0]/trex[0]");
+                                sampleDuration = trex.getDefaultSampleDuration();
+                            }
+                        }
+
+
+                        long size;
+                        if (trun.isSampleSizePresent()) {
+                            size = entry.getSampleSize();
+                        } else {
+                            TrackFragmentHeaderBox tfhd = (TrackFragmentHeaderBox) Path.getPath(moof, "traf[0]/tfhd[0]");
+                            if (tfhd.hasDefaultSampleSize()) {
+                                size = tfhd.getDefaultSampleSize();
+                            } else {
+                                TrackExtendsBox trex = (TrackExtendsBox) Path.getPath(trackContainerEntry.getValue(), "/moov[0]/mvex[0]/trex[0]");
+                                size = trex.getDefaultSampleSize();
+                            }
+                        }
+                        currentBuffer.simPlayback(size, sampleDuration);
+                    }
+
+                }
+                requiredBuffer = Math.max(requiredBuffer, -(currentBuffer.minBufferFullness + currentBuffer.currentBufferFullness));
+
+            }
+            requiredTimeInS = (int) Math.max(requiredTimeInS, Math.ceil((double)requiredBuffer  / bitrate));
+        }
+        return new GDuration(1, 0, 0, 0, 0, 0, requiredTimeInS, BigDecimal.ZERO);
+    }
+
+
     public MPDDocument getManifest() throws IOException {
 
         MPDDocument mdd = MPDDocument.Factory.newInstance();
@@ -59,7 +150,9 @@ public abstract class AbstractManifestWriter {
 
         mpd.setProfiles("urn:mpeg:dash:profile:isoff-on-demand:2011");
         mpd.setType(PresentationType.STATIC); // no mpd update strategy implemented yet, could be dynamic
-        mpd.setMinBufferTime(new GDuration(1, 0, 0, 0, 0, 0, 2, BigDecimal.ZERO));
+
+
+        mpd.setMinBufferTime(getMinBufferTime());
         mpd.setMediaPresentationDuration(periodType.getDuration());
 
         return mdd;
