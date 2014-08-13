@@ -1,7 +1,7 @@
 dashencrypt
 ===========
 
-DASH fragmenter and encrypter.
+DASH.encrypt is a [DASH](http://dashif.org/) fragmenter and encrypter.
 
 This project is released under the [Mozilla Public License 2.0](http://www.mozilla.org/MPL/2.0/).
 
