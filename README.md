@@ -5,6 +5,8 @@ DASH fragmenter and encrypter.
 
 This project is released under the [Mozilla Public License 2.0](http://www.mozilla.org/MPL/2.0/).
 
+For information, please visit the  [castLabs](http://castlabs.com/products/dash-encrypt/) website.
+
 Usage
 --------
 
