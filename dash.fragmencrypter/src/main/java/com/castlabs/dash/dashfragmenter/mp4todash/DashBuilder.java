@@ -141,7 +141,6 @@ public class DashBuilder extends FragmentedMp4Builder {
         if (movie.getTracks().size() != 1) {
             throw new RuntimeException("Only onetrack allowed");
         }
-        intersectionFinder = new SyncSampleIntersectFinderImpl(movie, movie.getTracks().get(0), -1);
 
         BasicContainer isoFile = new BasicContainer();
         isoFile.addBox(createFtyp(movie));

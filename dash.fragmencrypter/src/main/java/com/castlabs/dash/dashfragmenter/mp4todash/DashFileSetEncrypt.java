@@ -186,7 +186,7 @@ public class DashFileSetEncrypt extends DashFileSet {
 
 
     @Override
-    protected void writeManifest(Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate, Map<Track, String> trackFilename, Map<Track, Container> dashedFiles) throws IOException {
+    protected void writeManifestSingleSidx(Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate, Map<Track, String> trackFilename, Map<Track, Container> dashedFiles) throws IOException {
 
         Map<Track, UUID> trackKeyIds = new HashMap<Track, UUID>();
         for (List<Track> tracks : trackFamilies.values()) {

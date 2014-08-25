@@ -46,14 +46,17 @@ public class DashFileSet implements Command {
             metaVar = "PATH")
     protected File outputDirectory = new File("");
 
-    @Option(name ="--verbose", aliases = "-v", usage = "use switch to produce log output")
+    @Option(name = "--verbose", aliases = "-v", usage = "use switch to produce log output")
     protected boolean verbose = false;
+
+    @Option(name = "--explode", aliases = "-e", usage = "")
+    protected boolean explode = false;
 
 
     @Override
     public int run() throws IOException {
         l = setupLogger();
-        if (!(outputDirectory.exists() ^ outputDirectory.mkdirs())) {
+        if (!(outputDirectory.getAbsoluteFile().exists() ^ outputDirectory.getAbsoluteFile().mkdirs())) {
             l.severe("Output directory does not exist and cannot be created.");
         }
 
@@ -80,18 +83,57 @@ public class DashFileSet implements Command {
         Map<Track, String> trackFilename = generateFilenames(trackOriginalFilename);
 
         // export the dashed single track MP4s
-        Map<Track, Container> dashedFiles = writeSingleTrackDashedMp4s(trackStartSamples, trackFilename);
+        Map<Track, Container> dashedFiles = createSingleTrackDashedMp4s(trackStartSamples, trackFilename);
 
-        writeManifest(trackFamilies, trackBitrate, trackFilename, dashedFiles);
+        if (!explode) {
+            writeFilesSingleSidx(trackFilename, dashedFiles);
+            writeManifestSingleSidx(trackFamilies, trackBitrate, trackFilename, dashedFiles);
+        } else {
+            writeFilesExploded(trackFilename, dashedFiles);
+            writeManifestSingleSidx(trackFamilies, trackBitrate, trackFilename, dashedFiles);
+        }
+
 
         l.info("Finished write in " + (System.currentTimeMillis() - start) + "ms");
         return 0;
     }
 
-    protected void writeManifest(Map<String, List<Track>> trackFamilies,
-                                 Map<Track, Long> trackBitrate,
-                                 Map<Track, String> trackFilename,
-                                 Map<Track, Container> dashedFiles) throws IOException {
+    protected void writeFilesExploded(Map<Track, String> trackFilename, Map<Track, Container> dashedFiles) throws IOException {
+        for (Track t : trackFilename.keySet()) {
+            String filename = trackFilename.get(t);
+            l.info("Writing... " + filename + "/...");
+            File targetDir = new File(outputDirectory, filename);
+            targetDir.mkdir();
+            SingleSidxExplode singleSidxExplode = new SingleSidxExplode();
+            List<File> segments = new ArrayList<File>();
+            singleSidxExplode.doIt(dashedFiles.get(t), new File(targetDir, "init.m4v"), segments, "media-%d.m4v");
+            l.info("Done.");
+        }
+    }
+
+    protected void writeFilesSingleSidx(Map<Track, String> trackFilename, Map<Track, Container> dashedFiles) throws IOException {
+        for (Map.Entry<Track, Container> trackContainerEntry : dashedFiles.entrySet()) {
+            l.info("Writing... ");
+            WritableByteChannel wbc = new FileOutputStream(
+                    new File(outputDirectory, trackFilename.get(trackContainerEntry.getKey()))).getChannel();
+            try {
+                List<Box> boxes = trackContainerEntry.getValue().getBoxes();
+                for (int i = 0; i < boxes.size(); i++) {
+                    l.fine("Writing... " + boxes.get(i).getType() + " [" + i + " of " + boxes.size() + "]");
+                    boxes.get(i).getBox(wbc);
+                }
+
+            } finally {
+                wbc.close();
+            }
+            l.info("Done.");
+        }
+    }
+
+    protected void writeManifestSingleSidx(Map<String, List<Track>> trackFamilies,
+                                           Map<Track, Long> trackBitrate,
+                                           Map<Track, String> trackFilename,
+                                           Map<Track, Container> dashedFiles) throws IOException {
         MPDDocument mpdDocument1 =
                 new SegmentBaseSingleSidxManifestWriterImpl(trackFamilies, dashedFiles, trackBitrate,
                         trackFilename, Collections.<Track, UUID>emptyMap()).getManifest();
@@ -146,7 +188,7 @@ public class DashFileSet implements Command {
         return logger;
     }
 
-    protected HashMap<Track, Container> writeSingleTrackDashedMp4s(
+    protected HashMap<Track, Container> createSingleTrackDashedMp4s(
             Map<Track, long[]> fragmentStartSamples,
             Map<Track, String> filenames) throws IOException {
 
@@ -161,21 +203,8 @@ public class DashFileSet implements Command {
                     new StaticFragmentIntersectionFinderImpl(fragmentStartSamples),
                     movie);
             Container isoFile = mp4Builder.build(movie);
+            containers.put(trackEntry.getKey(), isoFile);
 
-            l.info("Writing... ");
-            WritableByteChannel wbc = new FileOutputStream(
-                    new File(outputDirectory, filename)).getChannel();
-            try {
-                List<Box> boxes = isoFile.getBoxes();
-                for (int i = 0; i < boxes.size(); i++) {
-                    l.fine("Writing... " + boxes.get(i).getType() + " [" + i + " of " + boxes.size()+"]");
-                    boxes.get(i).getBox(wbc);
-                }
-                containers.put(trackEntry.getKey(), isoFile);
-            } finally {
-                wbc.close();
-            }
-            l.info("Done.");
         }
         return containers;
     }
@@ -257,7 +286,11 @@ public class DashFileSet implements Command {
                     originalFilename += "_" + track.getTrackMetaData().getTrackId();
                 }
             }
-            filenames.put(track, String.format("%s.mp4", originalFilename));
+            if (!explode) {
+                filenames.put(track, String.format("%s.mp4", originalFilename));
+            } else {
+                filenames.put(track, originalFilename);
+            }
 
         }
         return filenames;

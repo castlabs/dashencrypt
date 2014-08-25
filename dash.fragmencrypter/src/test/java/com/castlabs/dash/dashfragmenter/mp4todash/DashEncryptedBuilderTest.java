@@ -6,6 +6,7 @@ import com.googlecode.mp4parser.DataSource;
 import com.googlecode.mp4parser.FileDataSourceImpl;
 import com.googlecode.mp4parser.authoring.Movie;
 import com.googlecode.mp4parser.authoring.Track;
+import com.googlecode.mp4parser.authoring.builder.SyncSampleIntersectFinderImpl;
 import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import com.googlecode.mp4parser.authoring.tracks.CencEncryptingTrackImpl;
 import com.googlecode.mp4parser.util.UUIDConverter;
@@ -25,6 +26,8 @@ public class DashEncryptedBuilderTest {
     public void stabilize() throws IOException {
         DashBuilder dashEncryptedBuilder = new DashBuilder();
 
+
+
         Movie m1 = MovieCreator.build(this.getClass().getProtectionDomain().getCodeSource().getLocation().getFile() + "/v1.mp4");
         Movie m2 = new Movie();
         Track t = m1.getTracks().get(0);
@@ -33,7 +36,10 @@ public class DashEncryptedBuilderTest {
         CencEncryptingTrackImpl cencEncryptingTrack = new CencEncryptingTrackImpl(t, keyId, key);
         cencEncryptingTrack.setDummyIvs(true);
         m2.addTrack(cencEncryptingTrack);
+        dashEncryptedBuilder.setIntersectionFinder(new SyncSampleIntersectFinderImpl(m2, null, -1));
+
         Container i1 = dashEncryptedBuilder.build(m2);
+
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         i1.writeContainer( Channels.newChannel(baos));
         FileChannel fc = new FileOutputStream("v1-reference.mp4").getChannel();
