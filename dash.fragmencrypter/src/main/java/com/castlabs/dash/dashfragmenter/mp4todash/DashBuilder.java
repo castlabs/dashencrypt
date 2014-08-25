@@ -47,10 +47,8 @@ public class DashBuilder extends FragmentedMp4Builder {
             final List<Track> sortedTracks = sortTracksInSequence(movie.getTracks(), cycle, intersectionMap);
 
             for (Track track : sortedTracks) {
-                if (getAllowedHandlers().isEmpty() || getAllowedHandlers().contains(track.getHandler())) {
-                    long[] startSamples = intersectionMap.get(track);
-                    sequence = createFragment(moofsMdats, track, startSamples, cycle, sequence);
-                }
+                long[] startSamples = intersectionMap.get(track);
+                sequence = createFragment(moofsMdats, track, startSamples, cycle, sequence);
             }
         }
 
@@ -74,7 +72,7 @@ public class DashBuilder extends FragmentedMp4Builder {
             }
         }
         long earliestPresentationTime = sidx_boxes.get(0).getEarliestPresentationTime();
-        if ( earliestPresentationTime < 0) {
+        if (earliestPresentationTime < 0) {
             System.err.println("negative earlist_presentation_time in sidx. Setting to 0. May cause sync issues");
             earliestPresentationTime = 0;
         }
