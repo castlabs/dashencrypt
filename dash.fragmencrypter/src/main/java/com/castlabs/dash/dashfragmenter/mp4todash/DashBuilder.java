@@ -6,17 +6,20 @@
 
 package com.castlabs.dash.dashfragmenter.mp4todash;
 
-import com.coremedia.iso.boxes.Box;
-import com.coremedia.iso.boxes.EditListBox;
-import com.coremedia.iso.boxes.FileTypeBox;
+import com.coremedia.iso.boxes.*;
 import com.coremedia.iso.boxes.fragment.MovieFragmentBox;
 import com.coremedia.iso.boxes.fragment.TrackRunBox;
+import com.googlecode.mp4parser.BasicContainer;
 import com.googlecode.mp4parser.authoring.Movie;
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.builder.FragmentedMp4Builder;
+import com.googlecode.mp4parser.authoring.builder.SyncSampleIntersectFinderImpl;
 import com.googlecode.mp4parser.boxes.threegpp26244.SegmentIndexBox;
+import com.googlecode.mp4parser.util.Path;
 
 import java.util.*;
+
+import static com.googlecode.mp4parser.util.CastUtils.l2i;
 
 /**
  * Creates a fragmented Dash conforming MP4 file.
@@ -26,100 +29,13 @@ public class DashBuilder extends FragmentedMp4Builder {
     public DashBuilder() {
     }
 
-    @Override
-    protected List<Box> createMoofMdat(Movie movie) {
-        List<Box> moofsMdats = new LinkedList<Box>();
-        HashMap<Track, long[]> intersectionMap = new HashMap<Track, long[]>();
-
-        int maxNumberOfFragments = 0;
-        for (Track track : movie.getTracks()) {
-            long[] intersects = intersectionFinder.sampleNumbers(track);
-            intersectionMap.put(track, intersects);
-            maxNumberOfFragments = Math.max(maxNumberOfFragments, intersects.length);
-        }
-
-
-        int sequence = 1;
-        // this loop has two indices:
-
-        for (int cycle = 0; cycle < maxNumberOfFragments; cycle++) {
-
-            final List<Track> sortedTracks = sortTracksInSequence(movie.getTracks(), cycle, intersectionMap);
-
-            for (Track track : sortedTracks) {
-                long[] startSamples = intersectionMap.get(track);
-                sequence = createFragment(moofsMdats, track, startSamples, cycle, sequence);
-            }
-        }
-
-        List<SegmentIndexBox> sidx_boxes = new LinkedList<SegmentIndexBox>();
-
-        int inserter = 0;
-        List<Box> newboxes = new ArrayList<Box>();
-        int counter = 0;
-        SegmentIndexBox sidx = new SegmentIndexBox();
-
-        for (int i = 0; i < moofsMdats.size(); i++) {
-
-            if (moofsMdats.get(i).getType().equals("sidx")) {
-                sidx_boxes.add((SegmentIndexBox) moofsMdats.get(i));
-                counter++;
-                if (counter == 1) {
-                    inserter = i;
-                }
-            } else {
-                newboxes.add(moofsMdats.get(i));
-            }
-        }
-        long earliestPresentationTime = sidx_boxes.get(0).getEarliestPresentationTime();
-        if (earliestPresentationTime < 0) {
-            System.err.println("negative earlist_presentation_time in sidx. Setting to 0. May cause sync issues");
-            earliestPresentationTime = 0;
-        }
-        sidx.setEarliestPresentationTime(earliestPresentationTime);
-        sidx.setFirstOffset(sidx_boxes.get(0).getFirstOffset());
-        sidx.setReferenceId(sidx_boxes.get(0).getReferenceId());
-        sidx.setTimeScale(sidx_boxes.get(0).getTimeScale());
-        sidx.setFlags(sidx_boxes.get(0).getFlags());
-        List<SegmentIndexBox.Entry> sidxbox_entries = new ArrayList<SegmentIndexBox.Entry>();
-        for (SegmentIndexBox sidxbox : sidx_boxes) {
-            List<SegmentIndexBox.Entry> entryfrag = sidxbox.getEntries();
-            for (SegmentIndexBox.Entry entry : entryfrag) {
-                sidxbox_entries.add(entry);
-            }
-        }
-
-        sidx.setEntries(sidxbox_entries);
-        newboxes.add(inserter, sidx);
-        return newboxes;
-    }
-
-    @Override
-    protected int createFragment(List<Box> moofsMdats, Track track, long[] startSamples, int cycle, int sequence) {
-        List<Box> moofMdat = new ArrayList<Box>();
-        int newSequence = super.createFragment(moofMdat, track, startSamples, cycle, sequence);
-
-        if (moofMdat.isEmpty()) return newSequence;
-
-        final MovieFragmentBox moof = (MovieFragmentBox) moofMdat.get(0);
-        final TrackRunBox trun = moof.getTrackRunBoxes().get(0);
-        final long[] ptss = getPtss(trun);
-        final int firstFrameSapType = getFirstFrameSapType(ptss);
-        long firstOffset = 0;
-        int referencedSize = (int) (moof.getSize() + moofMdat.get(1).getSize());
-        long timeMappingEdit = getTimeMappingEditTime(track);
-        final Box sidx = createSidx(track, ptss[0] - timeMappingEdit, firstOffset, referencedSize, getSegmentDuration(trun), (byte) firstFrameSapType, 0);
-
-        moofsMdats.add(sidx);
-        moofsMdats.addAll(moofMdat);
-
-        return newSequence;
-    }
-
-    private long getTimeMappingEditTime(Track track) {
-        final EditListBox editList = track.getTrackMetaData().getEditList();
+    private long getTimeMappingEditTime(Container file) {
+        final EditListBox editList = Path.getPath(file, "/moov[0]/trak[0]/edts[0]/elst[0]");
         if (editList != null) {
             final List<EditListBox.Entry> entries = editList.getEntries();
+            if (entries.size() > 1) {
+                throw new RuntimeException("CSF shouldn't have more than one entry and I don't know how to deal with it.");
+            }
             for (EditListBox.Entry entry : entries) {
                 if (entry.getMediaTime() > 0) {
                     return entry.getMediaTime();
@@ -130,7 +46,66 @@ public class DashBuilder extends FragmentedMp4Builder {
     }
 
 
-    protected long getSegmentDuration(TrackRunBox trun) {
+    private SegmentIndexBox createSidx(BasicContainer isoFile, List<Box> moofMdats, long offsetBetweenSidxAndFirstMoof) {
+        SegmentIndexBox sidx = new SegmentIndexBox();
+        sidx.setVersion(0);
+        sidx.setFlags(0);
+        sidx.setReserved(0);
+        sidx.setFirstOffset(offsetBetweenSidxAndFirstMoof);
+        List<SegmentIndexBox.Entry> entries = sidx.getEntries();
+        MovieFragmentBox firstMoof = null;
+        for (Box moofMdat : moofMdats) {
+            if (moofMdat.getType().equals("moof")) {
+                firstMoof = (MovieFragmentBox) moofMdat;
+                entries.add(new SegmentIndexBox.Entry());
+            }
+        }
+        TrackHeaderBox tkhd = Path.getPath(isoFile, "/moov[0]/trak[0]/tkhd[0]");
+        MediaHeaderBox mdhd = Path.getPath(isoFile, "/moov[0]/trak[0]/mdia[0]/mdhd[0]");
+        sidx.setReferenceId(tkhd.getTrackId());
+        sidx.setTimeScale(mdhd.getTimescale());
+        // we only have one
+        TrackRunBox trun = firstMoof.getTrackRunBoxes().get(0);
+        long[] ptss = getPtss(trun);
+        Arrays.sort(ptss); // index 0 has now the earliest presentation time stamp!
+        long timeMappingEdit = getTimeMappingEditTime(isoFile);
+        sidx.setEarliestPresentationTime(ptss[0] - timeMappingEdit);
+
+
+        // ugly code ...
+
+        int size = 0;
+        int i = 0;
+        MovieFragmentBox lassMoof = null;
+        for (Box moofMdat : moofMdats) {
+
+            if (moofMdat.getType().equals("moof") && size > 0) {
+                SegmentIndexBox.Entry entry = entries.get(i++);
+                entry.setReferencedSize(size);
+                ptss = getPtss(Path.<TrackRunBox>getPath(lassMoof, "traf[0]/trun[0]"));
+                entry.setSapType(getFirstFrameSapType(ptss));
+                entry.setSubsegmentDuration(getTrunDuration(Path.<TrackRunBox>getPath(lassMoof, "traf[0]/trun[0]")));
+                entry.setStartsWithSap((byte) 1); // we know it - no need to lookup
+                size = l2i(moofMdat.getSize());
+            } else {
+                size += l2i(moofMdat.getSize());
+            }
+            if (moofMdat.getType().equals("moof")) {
+                lassMoof = (MovieFragmentBox) moofMdat;
+            }
+
+        }
+        SegmentIndexBox.Entry entry = entries.get(i);
+        ptss = getPtss(Path.<TrackRunBox>getPath(lassMoof, "traf[0]/trun[0]"));
+        entry.setSapType(getFirstFrameSapType(ptss));
+        entry.setSubsegmentDuration(getTrunDuration(Path.<TrackRunBox>getPath(lassMoof, "traf[0]/trun[0]")));
+        entry.setReferencedSize(size);
+        entry.setStartsWithSap((byte) 1); // we know it - no need to lookup
+
+        return sidx;
+    }
+
+    protected long getTrunDuration(TrackRunBox trun) {
         final List<TrackRunBox.Entry> trunEntries = trun.getEntries();
         long duration = 0;
         for (TrackRunBox.Entry trunEntry : trunEntries) {
@@ -139,7 +114,8 @@ public class DashBuilder extends FragmentedMp4Builder {
         return duration;
     }
 
-    protected int getFirstFrameSapType(long[] ptss) {
+
+    protected byte getFirstFrameSapType(long[] ptss) {
         long idrTimeStamp = ptss[0];
         Arrays.sort(ptss);
         if (idrTimeStamp > ptss[0]) {
@@ -159,49 +135,29 @@ public class DashBuilder extends FragmentedMp4Builder {
         return ptss;
     }
 
+    @Override
+    public Container build(Movie movie) {
 
-    /**
-     * Creates a 'sidx' box
-     */
-    protected Box createSidx(Track track, long earliestPresentationTime, long firstOffset, int referencedSize, long subSegmentDuration, byte sap, int sapDelta) {
-        SegmentIndexBox sidx = new SegmentIndexBox();
-
-        sidx.setEarliestPresentationTime(earliestPresentationTime);
-        sidx.setFirstOffset(firstOffset);
-        sidx.setReferenceId(track.getTrackMetaData().getTrackId());
-        sidx.setTimeScale(track.getTrackMetaData().getTimescale());
-        sidx.setFlags(0);
-        sidx.setReserved(0);
-        SegmentIndexBox.Entry sidxentry = createSidxEntry(referencedSize, subSegmentDuration, sap, sapDelta);
-
-        ArrayList<SegmentIndexBox.Entry> sidxEntries = new ArrayList<SegmentIndexBox.Entry>();
-        sidxEntries.add(sidxentry);
-        sidx.setEntries(sidxEntries);
-        return sidx;
-    }
-
-    private SegmentIndexBox.Entry createSidxEntry(int referencedSize, long subSegmentDuration, byte sapType, int sapDelta) {
-        SegmentIndexBox.Entry sidxentry = new SegmentIndexBox.Entry();
-        byte referenceType = 0; //media
-        byte startWithSAP;
-        int sapDeltaTime;
-        if (sapType == 1) {
-            startWithSAP = 1; // fragments are cut at I-Frames
-            sapDeltaTime = 0;
-        } else {
-            //todo fix
-            //if (true) throw new RuntimeException("can't handle other than sap_type 1 properly");
-            startWithSAP = 0;
-            sapDeltaTime = sapDelta;
+        if (movie.getTracks().size() != 1) {
+            throw new RuntimeException("Only onetrack allowed");
         }
-        sidxentry.setReferenceType(referenceType);
-        sidxentry.setReferencedSize(referencedSize);
-        sidxentry.setSubsegmentDuration(subSegmentDuration);
-        sidxentry.setStartsWithSap(startWithSAP);
-        sidxentry.setSapType(sapType);
-        sidxentry.setSapDeltaTime(sapDeltaTime);
-        return sidxentry;
+        intersectionFinder = new SyncSampleIntersectFinderImpl(movie, movie.getTracks().get(0), -1);
+
+        BasicContainer isoFile = new BasicContainer();
+        isoFile.addBox(createFtyp(movie));
+        isoFile.addBox(createMoov(movie));
+        List<Box> moofMdats = createMoofMdat(movie);
+
+        isoFile.addBox(createSidx(isoFile, moofMdats, 0));
+
+        for (Box box : moofMdats) {
+            isoFile.addBox(box);
+        }
+        isoFile.addBox(createMfra(movie, isoFile));
+
+        return isoFile;
     }
+
 
     @Override
     public Box createFtyp(Movie movie) {
