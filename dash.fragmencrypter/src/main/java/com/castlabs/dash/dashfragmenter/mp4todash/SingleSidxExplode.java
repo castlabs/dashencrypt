@@ -30,12 +30,14 @@ public class SingleSidxExplode {
     public static void main(String[] args) throws IOException {
         SingleSidxExplode singleSidxExplode = new SingleSidxExplode();
         ArrayList<File> segments = new ArrayList<File>();
-        singleSidxExplode.doIt(new IsoFile("C:\\dev\\dashencrypt\\out\\Sintel_180p.mp4"), new File("C:\\dev\\dashencrypt\\outExplode\\init.m4v"), segments, "media-%d.mp4" );
+        singleSidxExplode.doIt(new IsoFile("C:\\dev\\dashencrypt\\out\\Sintel_180p.mp4"), new File("C:\\dev\\dashencrypt\\outExplode\\init.m4v"), segments, "media-%d.mp4");
     }
 
     public void doIt(Container in, File initSegement, List<File> segments, String pattern) throws IOException {
         FileChannel initChannel = new FileOutputStream(initSegement).getChannel();
+        long sidxBase = 0;
         for (Box box : in.getBoxes()) {
+            sidxBase += box.getSize();
             if (box.getType().equals("sidx")) {
                 break;
             }
@@ -46,9 +48,10 @@ public class SingleSidxExplode {
         SegmentIndexBox sidx = Path.getPath(in, "sidx");
         FileTypeBox ftyp = Path.getPath(in, "ftyp");
 
-        long start = sidx.getFirstOffset() + sidx.getOffset() + sidx.getSize();
+        long start = sidxBase + sidx.getFirstOffset();
         long earliestPresentationTime = sidx.getEarliestPresentationTime();
-        for (SegmentIndexBox.Entry entry : sidx.getEntries()) {
+        for (int i = 0; i < sidx.getEntries().size(); i++) {
+            SegmentIndexBox.Entry entry = sidx.getEntries().get(i);
             SegmentTypeBox styp = new SegmentTypeBox();
             styp.setMajorBrand(ftyp.getMajorBrand());
             List<String> compatibleBrands = new ArrayList<String>();
@@ -59,12 +62,19 @@ public class SingleSidxExplode {
             SegmentIndexBox localSidx = new SegmentIndexBox();
             localSidx.getEntries().add(entry);
             localSidx.setEarliestPresentationTime(earliestPresentationTime);
-            FileChannel fc = new FileOutputStream(new File(initSegement.getParentFile(), String.format(pattern, earliestPresentationTime))).getChannel();
+
+            String filename = pattern.replace("$Bandwidth$", "" + trackBitrate.get(t));
+            filename = filename.replace("$Time$", "" + start);
+            filename = filename.replace("Number$", "" + trackBitrate.get(t));
+
+            File segmentFile = new File(initSegement.getParentFile(), String.format(pattern, earliestPresentationTime));
+            FileChannel fc = new FileOutputStream(segmentFile).getChannel();
             styp.getBox(fc);
             localSidx.getBox(fc);
             fc.write(in.getByteBuffer(start, entry.getReferencedSize()));
             earliestPresentationTime += entry.getSubsegmentDuration();
             start += entry.getReferencedSize();
+            segments.add(segmentFile);
         }
 
     }

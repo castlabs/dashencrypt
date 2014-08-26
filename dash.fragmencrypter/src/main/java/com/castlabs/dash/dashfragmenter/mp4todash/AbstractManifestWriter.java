@@ -99,11 +99,11 @@ public abstract class AbstractManifestWriter {
                         if (trun.isSampleDurationPresent()) {
                             sampleDuration = trun.getEntries().get(0).getSampleDuration();
                         } else {
-                            TrackFragmentHeaderBox tfhd = (TrackFragmentHeaderBox) Path.getPath(moof, "traf[0]/tfhd[0]");
+                            TrackFragmentHeaderBox tfhd = Path.getPath(moof, "traf[0]/tfhd[0]");
                             if (tfhd.hasDefaultSampleDuration()) {
                                 sampleDuration = tfhd.getDefaultSampleDuration();
                             } else {
-                                TrackExtendsBox trex = (TrackExtendsBox) Path.getPath(trackContainerEntry.getValue(), "/moov[0]/mvex[0]/trex[0]");
+                                TrackExtendsBox trex = Path.getPath(trackContainerEntry.getValue(), "/moov[0]/mvex[0]/trex[0]");
                                 sampleDuration = trex.getDefaultSampleDuration();
                             }
                         }
@@ -113,11 +113,11 @@ public abstract class AbstractManifestWriter {
                         if (trun.isSampleSizePresent()) {
                             size = entry.getSampleSize();
                         } else {
-                            TrackFragmentHeaderBox tfhd = (TrackFragmentHeaderBox) Path.getPath(moof, "traf[0]/tfhd[0]");
+                            TrackFragmentHeaderBox tfhd = Path.getPath(moof, "traf[0]/tfhd[0]");
                             if (tfhd.hasDefaultSampleSize()) {
                                 size = tfhd.getDefaultSampleSize();
                             } else {
-                                TrackExtendsBox trex = (TrackExtendsBox) Path.getPath(trackContainerEntry.getValue(), "/moov[0]/mvex[0]/trex[0]");
+                                TrackExtendsBox trex = Path.getPath(trackContainerEntry.getValue(), "/moov[0]/mvex[0]/trex[0]");
                                 size = trex.getDefaultSampleSize();
                             }
                         }
