@@ -103,7 +103,7 @@ public class DashFileSet implements Command {
         return 0;
     }
 
-    private void writeManifestExploded(Map<String, List<Track>> trackFamilies,
+    protected void writeManifestExploded(Map<String, List<Track>> trackFamilies,
                                        Map<Track, Long> trackBitrate,
                                        Map<Track, String> trackFilename,
                                        Map<Track, Container> dashedFiles,

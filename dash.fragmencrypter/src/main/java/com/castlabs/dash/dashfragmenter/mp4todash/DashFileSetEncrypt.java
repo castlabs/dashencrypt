@@ -184,6 +184,38 @@ public class DashFileSetEncrypt extends DashFileSet {
 
     }
 
+    protected void writeManifestExploded(Map<String, List<Track>> trackFamilies,
+                                         Map<Track, Long> trackBitrate,
+                                         Map<Track, String> trackFilename,
+                                         Map<Track, Container> dashedFiles,
+                                         Map<Track, List<File>> trackToSegments,
+                                         File outputDirectory, String initPattern, String mediaPattern) throws IOException {
+        Map<Track, UUID> trackKeyIds = new HashMap<Track, UUID>();
+        for (List<Track> tracks : trackFamilies.values()) {
+            for (Track track : tracks) {
+                trackKeyIds.put(track, this.keyid);
+            }
+        }
+        MPDDocument mpdDocument =
+                new ExplodedSegmentListManifestWriterImpl(
+                        trackFamilies, dashedFiles, trackBitrate, trackFilename,
+                        trackKeyIds, trackToSegments, initPattern, mediaPattern).getManifest();
+
+        XmlOptions xmlOptions = new XmlOptions();
+        //xmlOptions.setUseDefaultNamespace();
+        HashMap<String, String> ns = new HashMap<String, String>();
+        //ns.put("urn:mpeg:DASH:schema:MPD:2011", "");
+        ns.put("urn:mpeg:cenc:2013", "cenc");
+        xmlOptions.setSaveSuggestedPrefixes(ns);
+        xmlOptions.setSaveAggressiveNamespaces();
+        xmlOptions.setUseDefaultNamespace();
+        xmlOptions.setSavePrettyPrint();
+        File manifest1 = new File(outputDirectory, "Manifest.mpd");
+        l.info("Writing " + manifest1 + "... ");
+        mpdDocument.save(manifest1, xmlOptions);
+        l.info("Done.");
+
+    }
 
     @Override
     protected void writeManifestSingleSidx(Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate, Map<Track, String> trackFilename, Map<Track, Container> dashedFiles) throws IOException {
