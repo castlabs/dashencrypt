@@ -6,6 +6,7 @@ import com.coremedia.iso.boxes.Container;
 import com.coremedia.iso.boxes.fragment.MovieFragmentBox;
 import com.coremedia.iso.boxes.fragment.TrackRunBox;
 import com.googlecode.mp4parser.authoring.Track;
+import com.googlecode.mp4parser.boxes.threegpp26244.SegmentIndexBox;
 import com.googlecode.mp4parser.util.Path;
 import mpegDashSchemaMpd2011.*;
 import org.apache.xmlbeans.GDuration;
@@ -26,7 +27,8 @@ import static com.castlabs.dash.helpers.ManifestHelper.createRepresentation;
  */
 public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWriter {
     Map<Track, List<File>> trackToSegements;
-    Map<Track, String> trackToTemplate;
+    String initPattern;
+    String mediaPattern;
 
     public ExplodedSegmentListManifestWriterImpl(Map<String, List<Track>> trackFamilies,
                                                  Map<Track, Container> trackContainer,
@@ -34,10 +36,11 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
                                                  Map<Track, String> trackFilenames,
                                                  Map<Track, UUID> trackKeyIds,
                                                  Map<Track, List<File>> trackToSegements,
-                                                 Map<Track, String> trackToTemplate) {
+                                                 String initPattern, String mediaPattern) {
         super(trackFamilies, trackContainer, trackBitrates, trackFilenames, trackKeyIds);
         this.trackToSegements = trackToSegements;
-        this.trackToTemplate = trackToTemplate;
+        this.initPattern = initPattern;
+        this.mediaPattern = mediaPattern;
     }
 
     @Override
@@ -52,36 +55,33 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
                 maxDurationInSeconds = Math.max(maxDurationInSeconds, durationInSeconds);
             }
             AdaptationSetType adaptationSet = createAdaptationSet(periodType, tracks);
+            Track firstTrack = tracks.get(0);
+            SegmentTemplateType segmentTemplate = adaptationSet.addNewSegmentTemplate();
+            segmentTemplate.setMedia(mediaPattern);
+            segmentTemplate.setInitialization2(initPattern);
+            segmentTemplate.setTimescale(firstTrack.getTrackMetaData().getTimescale());
+            SegmentTimelineType segmentTimeline = segmentTemplate.addNewSegmentTimeline();
+            List<File> segments = trackToSegements.get(firstTrack).subList(1, trackToSegements.get(firstTrack).size());
+
+            for (File segment : segments) {
+                IsoFile segmentContainer = new IsoFile(segment.getAbsolutePath());
+                SegmentIndexBox sidx = Path.getPath(segmentContainer, "sidx");
+                SegmentTimelineType.S s = segmentTimeline.addNewS();
+                long segmentDuration = 0;
+                for (SegmentIndexBox.Entry entry : sidx.getEntries()) {
+                    segmentDuration += entry.getSubsegmentDuration();
+                }
+                s.setD((BigInteger.valueOf(segmentDuration)));
+                s.setT(BigInteger.valueOf(sidx.getEarliestPresentationTime()));
+
+            }
 
 
             for (Track track : tracks) {
                 RepresentationType representation = createRepresentation(adaptationSet, track);
 
                 representation.setBandwidth(trackBitrates.get(track));
-
-                SegmentTemplateType segmentTemplate = representation.addNewSegmentTemplate();
-                segmentTemplate.setTimescale(track.getTrackMetaData().getTimescale());
-                SegmentTimelineType segmentTimeline = segmentTemplate.addNewSegmentTimeline();
-                createInitialization(segmentTemplate.addNewInitialization(), track);
-                long time = 0;
-                List<File> segments = trackToSegements.get(track).subList(1, trackToSegements.get(track).size());
-                segmentTemplate.setMedia(trackToTemplate.get(track));
-                for (File segment : segments) {
-                    IsoFile segmentContainer = new IsoFile(segment.getAbsolutePath());
-                    MovieFragmentBox moof = Path.getPath(segmentContainer, "moof");
-                    SegmentTimelineType.S s = segmentTimeline.addNewS();
-                    assert moof.getTrackRunBoxes().size() == 1 : "Ouch - doesn't with mutiple trun";
-                    TrackRunBox trun = moof.getTrackRunBoxes().get(0);
-                    long segmentDuration = 0;
-                    for (TrackRunBox.Entry entry : trun.getEntries()) {
-                        segmentDuration += entry.getSampleDuration();
-                    }
-                    s.setD((BigInteger.valueOf(segmentDuration)));
-                    s.setT(BigInteger.valueOf(time));
-                    time += segmentDuration;
-
-
-                }
+                representation.setId(trackFilenames.get(track));
 
             }
         }

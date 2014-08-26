@@ -89,17 +89,13 @@ public class DashFileSet implements Command {
             writeFilesSingleSidx(trackFilename, dashedFiles);
             writeManifestSingleSidx(trackFamilies, trackBitrate, trackFilename, dashedFiles);
         } else {
-            Map<Track, String> trackToSegmentTemplate = new HashMap<Track, String>();
-            for (Map.Entry<String, List<Track>> stringListEntry : trackFamilies.entrySet()) {
-                for (Track track : stringListEntry.getValue()) {
-                    trackToSegmentTemplate.put(track, trackFilename.get(track) + "/media-$Time$");
-                }
-            }
+            String mediaPattern = "$RepresentationID$/media-$Time$.mp4";
+            String initPattern = "$RepresentationID$/init.mp4";
 
             Map<Track, List<File>> trackToSegments =
-                    writeFilesExploded(trackFilename, dashedFiles, trackToSegmentTemplate, trackBitrate);
+                    writeFilesExploded(trackFilename, dashedFiles, trackBitrate, outputDirectory, initPattern, mediaPattern);
 
-            writeManifestExploded(trackFamilies, trackBitrate, trackFilename, dashedFiles, trackToSegments);
+            writeManifestExploded(trackFamilies, trackBitrate, trackFilename, dashedFiles, trackToSegments, outputDirectory, initPattern, mediaPattern);
         }
 
 
@@ -112,11 +108,11 @@ public class DashFileSet implements Command {
                                        Map<Track, String> trackFilename,
                                        Map<Track, Container> dashedFiles,
                                        Map<Track, List<File>> trackToSegments,
-                                       Map<Track, String> trackToTemplate) throws IOException {
+                                       File outputDirectory, String initPattern, String mediaPattern) throws IOException {
         MPDDocument mpdDocument =
                 new ExplodedSegmentListManifestWriterImpl(
                         trackFamilies, dashedFiles, trackBitrate, trackFilename,
-                        Collections.<Track, UUID>emptyMap(), trackToSegments, trackToTemplate).getManifest();
+                        Collections.<Track, UUID>emptyMap(), trackToSegments, initPattern, mediaPattern).getManifest();
 
         XmlOptions xmlOptions = new XmlOptions();
         //xmlOptions.setUseDefaultNamespace();
@@ -137,8 +133,10 @@ public class DashFileSet implements Command {
     protected Map<Track, List<File>> writeFilesExploded(
             Map<Track, String> trackFilename,
             Map<Track, Container> dashedFiles,
-            Map<Track, String> trackToTemplates,
-            Map<Track, Long> trackBitrate) throws IOException {
+            Map<Track, Long> trackBitrate,
+            File outputDirectory,
+            String initPattern,
+            String mediaPattern) throws IOException {
         Map<Track, List<File>> trackToSegments = new HashMap<Track, List<File>>();
         for (Track t : trackFilename.keySet()) {
             String filename = trackFilename.get(t);
@@ -147,11 +145,12 @@ public class DashFileSet implements Command {
             targetDir.mkdir();
             SingleSidxExplode singleSidxExplode = new SingleSidxExplode();
             List<File> segments = new ArrayList<File>();
-            File init = new File(targetDir, "init.m4v");
-            segments.add(init);
 
+            singleSidxExplode.doIt(
+                    trackFilename.get(t),
+                    dashedFiles.get(t),
+                    trackBitrate.get(t), segments, outputDirectory, initPattern, mediaPattern);
 
-            singleSidxExplode.doIt(dashedFiles.get(t), init, segments, trackToTemplates.get(t));
             l.info("Done.");
             trackToSegments.put(t, segments);
         }
