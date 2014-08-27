@@ -4,7 +4,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package com.castlabs.dash.dashfragmenter.mp4todash;
+package com.castlabs.dash.dashfragmenter.formats.csf;
 
 import com.coremedia.iso.boxes.*;
 import com.coremedia.iso.boxes.fragment.MovieFragmentBox;

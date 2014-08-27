@@ -1,5 +1,6 @@
 package com.castlabs.dash.dashfragmenter.mp4todash;
 
+import com.castlabs.dash.dashfragmenter.formats.csf.DashBuilder;
 import com.coremedia.iso.IsoFile;
 import com.coremedia.iso.boxes.Container;
 import com.googlecode.mp4parser.DataSource;

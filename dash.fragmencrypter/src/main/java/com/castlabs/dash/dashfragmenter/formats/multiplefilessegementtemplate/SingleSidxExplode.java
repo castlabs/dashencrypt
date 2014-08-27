@@ -1,4 +1,4 @@
-package com.castlabs.dash.dashfragmenter.mp4todash;
+package com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate;
 
 import com.coremedia.iso.IsoFile;
 import com.coremedia.iso.boxes.Box;

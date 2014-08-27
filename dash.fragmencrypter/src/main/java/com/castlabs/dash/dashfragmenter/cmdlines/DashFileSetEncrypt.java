@@ -4,16 +4,14 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package com.castlabs.dash.dashfragmenter.mp4todash;
+package com.castlabs.dash.dashfragmenter.cmdlines;
 
+import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.ExplodedSegmentListManifestWriterImpl;
+import com.castlabs.dash.dashfragmenter.formats.csf.SegmentBaseSingleSidxManifestWriterImpl;
 import com.coremedia.iso.Hex;
 import com.coremedia.iso.boxes.Container;
-import com.googlecode.mp4parser.authoring.Movie;
 import com.googlecode.mp4parser.authoring.Track;
-import com.googlecode.mp4parser.authoring.builder.FragmentIntersectionFinder;
-import com.googlecode.mp4parser.authoring.builder.Mp4Builder;
 import com.googlecode.mp4parser.authoring.tracks.CencEncryptingTrackImpl;
-import com.googlecode.mp4parser.util.UUIDConverter;
 import ietfParamsXmlNsKeyprovPskc.*;
 import mpegDashSchemaMpd2011.MPDDocument;
 import org.apache.commons.io.FileUtils;

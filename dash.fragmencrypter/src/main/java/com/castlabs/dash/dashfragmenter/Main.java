@@ -6,9 +6,9 @@
 
 package com.castlabs.dash.dashfragmenter;
 
-import com.castlabs.dash.dashfragmenter.mp4todash.DashFileSet;
-import com.castlabs.dash.dashfragmenter.mp4todash.DashFileSetEncrypt;
-import com.castlabs.dash.dashfragmenter.mp4todash.MuxMp4;
+import com.castlabs.dash.dashfragmenter.cmdlines.DashFileSet;
+import com.castlabs.dash.dashfragmenter.cmdlines.DashFileSetEncrypt;
+import com.castlabs.dash.dashfragmenter.cmdlines.MuxMp4;
 import org.apache.commons.io.IOUtils;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
