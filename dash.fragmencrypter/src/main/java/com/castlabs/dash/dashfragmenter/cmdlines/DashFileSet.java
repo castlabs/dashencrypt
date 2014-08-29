@@ -54,7 +54,7 @@ public class DashFileSet implements Command {
     @Option(name = "--verbose", aliases = "-v", usage = "use switch to produce log output")
     protected boolean verbose = false;
 
-    @Option(name = "--explode", aliases = "-e", usage = "")
+    @Option(name = "--explode", aliases = "-x", usage = "If this option is set each segement will be written in a single file")
     protected boolean explode = false;
 
 
