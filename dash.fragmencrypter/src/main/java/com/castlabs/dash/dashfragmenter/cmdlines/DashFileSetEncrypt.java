@@ -6,6 +6,7 @@
 
 package com.castlabs.dash.dashfragmenter.cmdlines;
 
+import com.castlabs.dash.dashfragmenter.Main;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.ExplodedSegmentListManifestWriterImpl;
 import com.castlabs.dash.dashfragmenter.formats.csf.SegmentBaseSingleSidxManifestWriterImpl;
 import com.coremedia.iso.Hex;
@@ -69,7 +70,7 @@ public class DashFileSetEncrypt extends DashFileSet {
     protected List<File> certificates = new LinkedList<File>();
 
     @Override
-    public int run() throws IOException {
+    public int run() throws IOException, Main.ExitCodeException {
         if (((this.encKeySecretKey == null) && (this.encKeySecretKeyFile == null))) {
             byte[] k = new byte[16];
             SecureRandom random = new SecureRandom();
@@ -93,7 +94,7 @@ public class DashFileSetEncrypt extends DashFileSet {
     }
 
     @Override
-    protected Map<Track, String> createTracks() throws IOException {
+    protected Map<Track, String> createTracks() throws IOException, Main.ExitCodeException {
         Map<Track, String> tracks = super.createTracks();
         Map<Track, String> encTracks = new HashMap<Track, String>();
         for (Map.Entry<Track, String> trackStringEntry : tracks.entrySet()) {
