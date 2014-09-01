@@ -5,7 +5,7 @@
     <groupId>com.castlabs.dash</groupId>
     <artifactId>dash.encrypt</artifactId>
     <packaging>pom</packaging>
-    <version>1.0.20</version>
+    <version>1.0.21-SNAPSHOT</version>
     <modules>
         <module>dash.xsd</module>
         <module>dash.fragmencrypter</module>
@@ -17,7 +17,7 @@
 
     <scm>
         <developerConnection>scm:git:git@github.com:castlabs/dashencrypt.git</developerConnection>
-        <tag>dash.encrypt-1.0.20</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <build>
