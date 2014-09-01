@@ -7,6 +7,7 @@
 package com.castlabs.dash.dashfragmenter.cmdlines;
 
 import com.castlabs.dash.dashfragmenter.Command;
+import com.castlabs.dash.dashfragmenter.Main;
 import com.castlabs.dash.dashfragmenter.formats.csf.DashBuilder;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.ExplodedSegmentListManifestWriterImpl;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.SingleSidxExplode;
@@ -59,7 +60,7 @@ public class DashFileSet implements Command {
 
 
     @Override
-    public int run() throws IOException {
+    public int run() throws IOException, Main.ExitCodeException {
         l = setupLogger();
         if (!(outputDirectory.getAbsoluteFile().exists() ^ outputDirectory.getAbsoluteFile().mkdirs())) {
             l.severe("Output directory does not exist and cannot be created.");
@@ -377,7 +378,7 @@ public class DashFileSet implements Command {
      * @return Track too originating file map
      * @throws IOException
      */
-    protected Map<Track, String> createTracks() throws IOException {
+    protected Map<Track, String> createTracks() throws IOException, Main.ExitCodeException {
         HashMap<Track, String> track2File = new HashMap<Track, String>();
         for (File inputFile : inputFiles) {
             if (inputFile.getName().endsWith(".mp4") ||
@@ -413,7 +414,8 @@ public class DashFileSet implements Command {
                 track2File.put(track, inputFile.getName());
                 l.fine("Created DTS HD Track from " + inputFile.getName());
             } else {
-                l.warning("Cannot identify type of " + inputFile + ". Extensions mp4, aac, ac3, ec3 or dtshd are known.");
+                l.severe("Cannot identify type of " + inputFile + ". Extensions mp4, mov, m4v, aac, ac3, ec3 or dtshd are known.");
+                throw new Main.ExitCodeException("Cannot identify type of " + inputFile + ". Extensions mp4, mov, m4v, aac, ac3, ec3 or dtshd are known.", 1);
             }
         }
 

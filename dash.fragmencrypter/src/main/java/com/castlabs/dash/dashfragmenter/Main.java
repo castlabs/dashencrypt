@@ -47,6 +47,9 @@ public class Main {
         } catch (CmdLineException e) {
             System.err.println(e.getMessage());
             System.exit(1023);
+        } catch (ExitCodeException e) {
+            System.err.println(e.getMessage());
+            System.exit(e.exitCode);
         }
 
     }
@@ -60,6 +63,15 @@ public class Main {
             tool = "Could not determine version";
         }
         TOOL = tool;
+    }
+
+    public static class ExitCodeException extends Exception {
+        int exitCode;
+
+        public ExitCodeException(String message, int exitCode) {
+            super(message);
+            this.exitCode = exitCode;
+        }
     }
 
 }
