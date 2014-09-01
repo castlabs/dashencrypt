@@ -8,6 +8,7 @@ package com.castlabs.dash.dashfragmenter;
 
 import com.castlabs.dash.dashfragmenter.cmdlines.DashFileSet;
 import com.castlabs.dash.dashfragmenter.cmdlines.DashFileSetEncrypt;
+import com.castlabs.dash.dashfragmenter.cmdlines.ExitCodeException;
 import com.castlabs.dash.dashfragmenter.cmdlines.MuxMp4;
 import org.apache.commons.io.IOUtils;
 import org.kohsuke.args4j.Argument;
@@ -49,7 +50,7 @@ public class Main {
             System.exit(1023);
         } catch (ExitCodeException e) {
             System.err.println(e.getMessage());
-            System.exit(e.exitCode);
+            System.exit(e.getExitCode());
         }
 
     }
@@ -63,15 +64,6 @@ public class Main {
             tool = "Could not determine version";
         }
         TOOL = tool;
-    }
-
-    public static class ExitCodeException extends Exception {
-        int exitCode;
-
-        public ExitCodeException(String message, int exitCode) {
-            super(message);
-            this.exitCode = exitCode;
-        }
     }
 
 }

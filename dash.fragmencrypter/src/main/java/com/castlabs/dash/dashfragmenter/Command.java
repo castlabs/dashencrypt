@@ -6,9 +6,11 @@
 
 package com.castlabs.dash.dashfragmenter;
 
+import com.castlabs.dash.dashfragmenter.cmdlines.ExitCodeException;
+
 import java.io.IOException;
 
 public interface Command {
-    int run() throws IOException, Main.ExitCodeException;
+    int run() throws IOException, ExitCodeException;
 
 }
