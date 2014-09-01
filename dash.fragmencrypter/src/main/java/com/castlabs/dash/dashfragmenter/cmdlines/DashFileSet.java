@@ -109,11 +109,11 @@ public class DashFileSet implements Command {
     }
 
     protected void writeManifestExploded(Map<String, List<Track>> trackFamilies,
-                                       Map<Track, Long> trackBitrate,
-                                       Map<Track, String> trackFilename,
-                                       Map<Track, Container> dashedFiles,
-                                       Map<Track, List<File>> trackToSegments,
-                                       File outputDirectory, String initPattern, String mediaPattern) throws IOException {
+                                         Map<Track, Long> trackBitrate,
+                                         Map<Track, String> trackFilename,
+                                         Map<Track, Container> dashedFiles,
+                                         Map<Track, List<File>> trackToSegments,
+                                         File outputDirectory, String initPattern, String mediaPattern) throws IOException {
         MPDDocument mpdDocument =
                 new ExplodedSegmentListManifestWriterImpl(
                         trackFamilies, dashedFiles, trackBitrate, trackFilename,
@@ -326,6 +326,7 @@ public class DashFileSet implements Command {
         for (Track track : trackOriginalFilename.keySet()) {
             String originalFilename = trackOriginalFilename.get(track);
             originalFilename = originalFilename.replace(".mp4", "");
+            originalFilename = originalFilename.replace(".mov", "");
             originalFilename = originalFilename.replace(".aac", "");
             originalFilename = originalFilename.replace(".ec3", "");
             originalFilename = originalFilename.replace(".ac3", "");
@@ -379,7 +380,9 @@ public class DashFileSet implements Command {
     protected Map<Track, String> createTracks() throws IOException {
         HashMap<Track, String> track2File = new HashMap<Track, String>();
         for (File inputFile : inputFiles) {
-            if (inputFile.getName().endsWith("mp4")) {
+            if (inputFile.getName().endsWith(".mp4") ||
+                    inputFile.getName().endsWith(".mov") ||
+                    inputFile.getName().endsWith(".m4v")) {
                 Movie movie = MovieCreator.build(new FileDataSourceImpl(inputFile));
                 for (Track track : movie.getTracks()) {
                     String codec = track.getSampleDescriptionBox().getSampleEntry().getType();
