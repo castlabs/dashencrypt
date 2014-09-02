@@ -8,7 +8,6 @@ package com.castlabs.dash.dashfragmenter;
 
 import com.castlabs.dash.dashfragmenter.cmdlines.DashFileSet;
 import com.castlabs.dash.dashfragmenter.cmdlines.DashFileSetEncrypt;
-import com.castlabs.dash.dashfragmenter.cmdlines.ExitCodeException;
 import com.castlabs.dash.dashfragmenter.cmdlines.MuxMp4;
 import org.apache.commons.io.IOUtils;
 import org.kohsuke.args4j.Argument;

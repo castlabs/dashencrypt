@@ -1,4 +1,4 @@
-package com.castlabs.dash.dashfragmenter.cmdlines;
+package com.castlabs.dash.dashfragmenter;
 
 /**
 * Created by sannies on 01.09.2014.

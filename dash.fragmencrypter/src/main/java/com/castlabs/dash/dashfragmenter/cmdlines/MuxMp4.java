@@ -64,7 +64,7 @@ public class MuxMp4 implements Command {
         Mp4Builder mp4Builder = getFileBuilder(m);
         Container isoFile = mp4Builder.build(m);
 
-        System.out.print("Writing... ");
+        System.out.print("Writing t ");
         WritableByteChannel wbc = new FileOutputStream(outputFile).getChannel();
         try {
            isoFile.writeContainer(wbc);
