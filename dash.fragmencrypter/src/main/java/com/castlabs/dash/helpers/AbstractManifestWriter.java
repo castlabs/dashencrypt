@@ -61,10 +61,11 @@ public abstract class AbstractManifestWriter {
 
         void simPlayback(long size, long videoTime) {
             currentBufferFullness -= size;
+            currentBufferFullness += ((double) videoTime / timescale) * bandwidth / 8;
             if (currentBufferFullness<minBufferFullness) {
                 minBufferFullness = currentBufferFullness;
             }
-            currentBufferFullness += ((double) videoTime / timescale) * bandwidth / 8;
+
 
 
         }
@@ -125,7 +126,7 @@ public abstract class AbstractManifestWriter {
                     }
 
                 }
-                requiredBuffer = Math.max(requiredBuffer, -(currentBuffer.minBufferFullness + currentBuffer.currentBufferFullness));
+                requiredBuffer = Math.max(requiredBuffer, -(currentBuffer.minBufferFullness + Math.min(0, currentBuffer.currentBufferFullness)));
 
             }
             requiredTimeInS = (int) Math.max(requiredTimeInS, Math.ceil((double)requiredBuffer  / (bitrate / 8)));

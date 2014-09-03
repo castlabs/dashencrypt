@@ -20,10 +20,12 @@ import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.AudioSpecificConfig;
 import mpegDashSchemaMpd2011.MPDDocument;
 import org.apache.xmlbeans.XmlOptions;
 
+import javax.crypto.SecretKey;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
+import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -35,12 +37,29 @@ public class DashFileSetSequence {
     Logger l;
     static Set<String> supportedTypes = new HashSet<String>(Arrays.asList("ac-3", "ec-3", "dtsl", "dtsh", "dtse", "avc1", "mp4a", "h264"));
 
+    protected SecretKey key;
+
+    protected UUID keyid;
+
+    protected List<X509Certificate> certificates;
 
     protected List<File> inputFiles;
 
     protected File outputDirectory = new File("");
 
     protected boolean explode = false;
+
+    public void setKey(SecretKey key) {
+        this.key = key;
+    }
+
+    public void setKeyid(UUID keyid) {
+        this.keyid = keyid;
+    }
+
+    public void setCertificates(List<X509Certificate> certificates) {
+        this.certificates = certificates;
+    }
 
     public void setInputFiles(List<File> inputFiles) {
         this.inputFiles = inputFiles;
@@ -107,33 +126,6 @@ public class DashFileSetSequence {
         return 0;
     }
 
-    protected void writeManifestExploded(Map<String, List<Track>> trackFamilies,
-                                         Map<Track, Long> trackBitrate,
-                                         Map<Track, String> trackFilename,
-                                         Map<Track, Container> dashedFiles,
-                                         Map<Track, List<File>> trackToSegments,
-                                         File outputDirectory, String initPattern, String mediaPattern) throws IOException {
-        MPDDocument mpdDocument =
-                new ExplodedSegmentListManifestWriterImpl(
-                        trackFamilies, dashedFiles, trackBitrate, trackFilename,
-                        Collections.<Track, UUID>emptyMap(), trackToSegments, initPattern, mediaPattern).getManifest();
-
-        XmlOptions xmlOptions = new XmlOptions();
-        //xmlOptions.setUseDefaultNamespace();
-        HashMap<String, String> ns = new HashMap<String, String>();
-        //ns.put("urn:mpeg:DASH:schema:MPD:2011", "");
-        ns.put("urn:mpeg:cenc:2013", "cenc");
-        xmlOptions.setSaveSuggestedPrefixes(ns);
-        xmlOptions.setSaveAggressiveNamespaces();
-        xmlOptions.setUseDefaultNamespace();
-        xmlOptions.setSavePrettyPrint();
-        File manifest1 = new File(outputDirectory, "Manifest.mpd");
-        l.info("Writing " + manifest1 + "... ");
-        mpdDocument.save(manifest1, xmlOptions);
-        l.info("Done.");
-
-    }
-
     protected Map<Track, List<File>> writeFilesExploded(
             Map<Track, String> trackFilename,
             Map<Track, Container> dashedFiles,
@@ -182,39 +174,8 @@ public class DashFileSetSequence {
         }
     }
 
-    protected void writeManifestSingleSidx(Map<String, List<Track>> trackFamilies,
-                                           Map<Track, Long> trackBitrate,
-                                           Map<Track, String> trackFilename,
-                                           Map<Track, Container> dashedFiles) throws IOException {
-        MPDDocument mpdDocument1 =
-                new SegmentBaseSingleSidxManifestWriterImpl(trackFamilies, dashedFiles, trackBitrate,
-                        trackFilename, Collections.<Track, UUID>emptyMap()).getManifest();
 
-        MPDDocument mpdDocument2 =
-                new SegmentListManifestWriterImpl(trackFamilies, dashedFiles, trackBitrate,
-                        trackFilename, Collections.<Track, UUID>emptyMap()).getManifest();
-
-        XmlOptions xmlOptions = new XmlOptions();
-        //xmlOptions.setUseDefaultNamespace();
-        HashMap<String, String> ns = new HashMap<String, String>();
-        //ns.put("urn:mpeg:DASH:schema:MPD:2011", "");
-        ns.put("urn:mpeg:cenc:2013", "cenc");
-        xmlOptions.setSaveSuggestedPrefixes(ns);
-        xmlOptions.setSaveAggressiveNamespaces();
-        xmlOptions.setUseDefaultNamespace();
-        xmlOptions.setSavePrettyPrint();
-        File manifest1 = new File(outputDirectory, "Manifest.mpd");
-        l.info("Writing " + manifest1 + "... ");
-        mpdDocument1.save(manifest1, xmlOptions);
-        l.info("Done.");
-        File manifest2 = new File(outputDirectory, "Manifest-segment-list.mpd");
-        l.info("Writing " + manifest2 + "... ");
-        mpdDocument2.save(manifest2, xmlOptions);
-        l.info("Done.");
-
-    }
-
-    Mp4Builder getFileBuilder(FragmentIntersectionFinder fragmentIntersectionFinder, Movie m) {
+    protected Mp4Builder getFileBuilder(FragmentIntersectionFinder fragmentIntersectionFinder, Movie m) {
         DashBuilder dashBuilder = new DashBuilder();
         dashBuilder.setIntersectionFinder(fragmentIntersectionFinder);
         return dashBuilder;
@@ -360,7 +321,7 @@ public class DashFileSetSequence {
      * @throws IOException
      */
     protected Map<Track, String> createTracks() throws IOException, ExitCodeException {
-        HashMap<Track, String> track2File = new HashMap<Track, String>();
+        Map<Track, String> track2File = new HashMap<Track, String>();
         for (File inputFile : inputFiles) {
             if (inputFile.getName().endsWith(".mp4") ||
                     inputFile.getName().endsWith(".mov") ||
@@ -400,6 +361,21 @@ public class DashFileSetSequence {
             }
         }
 
+        if (this.key!= null && this.keyid != null) {
+            Map<Track, String> encTracks = new HashMap<Track, String>();
+            for (Map.Entry<Track, String> trackStringEntry : track2File.entrySet()) {
+                String hdlr = trackStringEntry.getKey().getHandler();
+                if ("vide".equals(hdlr) || "soun".equals(hdlr)) {
+                    CencEncryptingTrackImpl cencTrack = new CencEncryptingTrackImpl(trackStringEntry.getKey(), keyid, key);
+                    encTracks.put(cencTrack, trackStringEntry.getValue());
+                } else {
+                    encTracks.put(trackStringEntry.getKey(), trackStringEntry.getValue());
+                }
+            }
+            track2File = encTracks;
+        }
+
+
         return track2File;
 
     }
@@ -426,5 +402,64 @@ public class DashFileSetSequence {
         return trackFamilies;
     }
 
+    protected void writeManifestExploded(Map<String, List<Track>> trackFamilies,
+                                         Map<Track, Long> trackBitrate,
+                                         Map<Track, String> trackFilename,
+                                         Map<Track, Container> dashedFiles,
+                                         Map<Track, List<File>> trackToSegments,
+                                         File outputDirectory, String initPattern, String mediaPattern) throws IOException {
+        Map<Track, UUID> trackKeyIds = new HashMap<Track, UUID>();
+        for (List<Track> tracks : trackFamilies.values()) {
+            for (Track track : tracks) {
+                trackKeyIds.put(track, this.keyid);
+            }
+        }
+        MPDDocument mpdDocument =
+                new ExplodedSegmentListManifestWriterImpl(
+                        trackFamilies, dashedFiles, trackBitrate, trackFilename,
+                        trackKeyIds, trackToSegments, initPattern, mediaPattern).getManifest();
+
+        XmlOptions xmlOptions = new XmlOptions();
+        //xmlOptions.setUseDefaultNamespace();
+        HashMap<String, String> ns = new HashMap<String, String>();
+        //ns.put("urn:mpeg:DASH:schema:MPD:2011", "");
+        ns.put("urn:mpeg:cenc:2013", "cenc");
+        xmlOptions.setSaveSuggestedPrefixes(ns);
+        xmlOptions.setSaveAggressiveNamespaces();
+        xmlOptions.setUseDefaultNamespace();
+        xmlOptions.setSavePrettyPrint();
+        File manifest1 = new File(outputDirectory, "Manifest.mpd");
+        l.info("Writing " + manifest1 + "... ");
+        mpdDocument.save(manifest1, xmlOptions);
+        l.info("Done.");
+
+    }
+
+    protected void writeManifestSingleSidx(Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate, Map<Track, String> trackFilename, Map<Track, Container> dashedFiles) throws IOException {
+
+        Map<Track, UUID> trackKeyIds = new HashMap<Track, UUID>();
+        for (List<Track> tracks : trackFamilies.values()) {
+            for (Track track : tracks) {
+                trackKeyIds.put(track, this.keyid);
+            }
+        }
+        SegmentBaseSingleSidxManifestWriterImpl dashManifestWriter = new SegmentBaseSingleSidxManifestWriterImpl(
+                trackFamilies, dashedFiles,
+                trackBitrate, trackFilename,
+                trackKeyIds);
+        MPDDocument mpdDocument = dashManifestWriter.getManifest();
+
+        XmlOptions xmlOptions = new XmlOptions();
+        //xmlOptions.setUseDefaultNamespace();
+        HashMap<String, String> ns = new HashMap<String, String>();
+        //ns.put("urn:mpeg:DASH:schema:MPD:2011", "");
+        ns.put("urn:mpeg:cenc:2013", "cenc");
+        xmlOptions.setSaveSuggestedPrefixes(ns);
+        xmlOptions.setSaveAggressiveNamespaces();
+        xmlOptions.setUseDefaultNamespace();
+        xmlOptions.setSavePrettyPrint();
+
+        mpdDocument.save(new File(this.outputDirectory, "Manifest.mpd"), xmlOptions);
+    }
 
 }

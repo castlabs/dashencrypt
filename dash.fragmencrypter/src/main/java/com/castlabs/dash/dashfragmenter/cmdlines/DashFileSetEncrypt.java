@@ -8,7 +8,8 @@ package com.castlabs.dash.dashfragmenter.cmdlines;
 
 import com.castlabs.dash.dashfragmenter.AbstractCommand;
 import com.castlabs.dash.dashfragmenter.ExitCodeException;
-import com.castlabs.dash.dashfragmenter.sequences.DashFileSetEncryptSequence;
+import com.castlabs.dash.dashfragmenter.formats.kdf.KdfCreator;
+import com.castlabs.dash.dashfragmenter.sequences.DashFileSetSequence;
 import com.coremedia.iso.Hex;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -16,6 +17,7 @@ import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.FileOptionHandler;
 
+import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.io.FileInputStream;
@@ -24,7 +26,9 @@ import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.UUID;
 
 
 public class DashFileSetEncrypt extends AbstractCommand {
@@ -69,7 +73,7 @@ public class DashFileSetEncrypt extends AbstractCommand {
 
     @Override
     public int run() throws IOException, ExitCodeException {
-        DashFileSetEncryptSequence d = new DashFileSetEncryptSequence();
+        DashFileSetSequence d = new DashFileSetSequence();
         d.setExplode(explode);
         d.setLogger(setupLogger());
         d.setOutputDirectory(outputDirectory);
@@ -93,26 +97,41 @@ public class DashFileSetEncrypt extends AbstractCommand {
         }
         d.setCertificates(certObjects);
 
-
+        SecretKey key;
+        UUID keyId;
         if (((this.encKeySecretKey == null) && (this.encKeySecretKeyFile == null))) {
             byte[] k = new byte[16];
             SecureRandom random = new SecureRandom();
             random.nextBytes(k);
-            d.setKey(new SecretKeySpec(k, "AES"));
+            key = (new SecretKeySpec(k, "AES"));
 
             if (encKid == null) {
-                d.setKeyid(UUID.randomUUID());
+                keyId = (UUID.randomUUID());
             } else {
-                d.setKeyid(UUID.fromString(this.encKid));
+                keyId = (UUID.fromString(this.encKid));
             }
+            System.out.println(keyId.toString() + ":" + Hex.encodeHex(key.getEncoded()));
         } else {
-            d.setKeyid(UUID.fromString(this.encKid));
+            keyId = (UUID.fromString(this.encKid));
             if (this.encKeySecretKey != null) {
-                d.setKey(new SecretKeySpec(Hex.decodeHex(this.encKeySecretKey), "AES"));
+                key = (new SecretKeySpec(Hex.decodeHex(this.encKeySecretKey), "AES"));
             } else {
-                d.setKey(new SecretKeySpec(Hex.decodeHex(FileUtils.readFileToString(new File(this.encKeySecretKeyFile))), "AES"));
+                key = (new SecretKeySpec(Hex.decodeHex(FileUtils.readFileToString(new File(this.encKeySecretKeyFile))), "AES"));
             }
         }
+        d.setKeyid(keyId);
+        d.setKey(key);
+
+
+        for (X509Certificate certObject : certObjects) {
+            KdfCreator.createKdf(
+                    new File(this.outputDirectory, certObject.getSubjectDN().getName() + ".pskcxml"),
+                    certObject,
+                    key,
+                    keyId
+            );
+        }
+
 
         return d.run();
     }
