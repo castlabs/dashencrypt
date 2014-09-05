@@ -126,7 +126,7 @@ public class DashFileSetSequence {
         return 0;
     }
 
-    protected Map<Track, List<File>> writeFilesExploded(
+    public Map<Track, List<File>> writeFilesExploded(
             Map<Track, String> trackFilename,
             Map<Track, Container> dashedFiles,
             Map<Track, Long> trackBitrate,
@@ -155,7 +155,7 @@ public class DashFileSetSequence {
         return trackToSegments;
     }
 
-    protected void writeFilesSingleSidx(Map<Track, String> trackFilename, Map<Track, Container> dashedFiles) throws IOException {
+    public void writeFilesSingleSidx(Map<Track, String> trackFilename, Map<Track, Container> dashedFiles) throws IOException {
         for (Map.Entry<Track, Container> trackContainerEntry : dashedFiles.entrySet()) {
             l.info("Writing... ");
             WritableByteChannel wbc = new FileOutputStream(
@@ -175,14 +175,14 @@ public class DashFileSetSequence {
     }
 
 
-    protected Mp4Builder getFileBuilder(FragmentIntersectionFinder fragmentIntersectionFinder, Movie m) {
+    public Mp4Builder getFileBuilder(FragmentIntersectionFinder fragmentIntersectionFinder, Movie m) {
         DashBuilder dashBuilder = new DashBuilder();
         dashBuilder.setIntersectionFinder(fragmentIntersectionFinder);
         return dashBuilder;
     }
 
 
-    protected HashMap<Track, Container> createSingleTrackDashedMp4s(
+    public Map<Track, Container> createSingleTrackDashedMp4s(
             Map<Track, long[]> fragmentStartSamples,
             Map<Track, String> filenames) throws IOException {
 
@@ -203,7 +203,7 @@ public class DashFileSetSequence {
         return containers;
     }
 
-    private void sortTrackFamilies(Map<String, List<Track>> trackFamilies, final Map<Track, Long> sizes) {
+    public void sortTrackFamilies(Map<String, List<Track>> trackFamilies, final Map<Track, Long> sizes) {
         for (List<Track> tracks : trackFamilies.values()) {
             Collections.sort(tracks, new Comparator<Track>() {
                 @Override
@@ -221,7 +221,7 @@ public class DashFileSetSequence {
      * @param trackFamilies all tracks grouped by their type.
      * @return map from track to track's size
      */
-    private Map<Track, Long> calculateTrackSizes(Map<String, List<Track>> trackFamilies) {
+    public Map<Track, Long> calculateTrackSizes(Map<String, List<Track>> trackFamilies) {
         HashMap<Track, Long> sizes = new HashMap<Track, Long>();
         for (List<Track> tracks : trackFamilies.values()) {
             for (Track track : tracks) {
@@ -244,7 +244,7 @@ public class DashFileSetSequence {
      * @param trackSize     size per track
      * @return bitrate per track
      */
-    private Map<Track, Long> calculateBitrate(Map<String, List<Track>> trackFamilies, Map<Track, Long> trackSize) {
+    public Map<Track, Long> calculateBitrate(Map<String, List<Track>> trackFamilies, Map<Track, Long> trackSize) {
         HashMap<Track, Long> bitrates = new HashMap<Track, Long>();
         for (List<Track> tracks : trackFamilies.values()) {
             for (Track track : tracks) {
@@ -264,7 +264,7 @@ public class DashFileSetSequence {
      *
      * @return a descriptive filename <code>type[-lang]-bitrate.mp4</code>
      */
-    private Map<Track, String> generateFilenames(Map<Track, String> trackOriginalFilename) {
+    public Map<Track, String> generateFilenames(Map<Track, String> trackOriginalFilename) {
         HashMap<Track, String> filenames = new HashMap<Track, String>();
         for (Track track : trackOriginalFilename.keySet()) {
             String originalFilename = trackOriginalFilename.get(track);
@@ -291,7 +291,7 @@ public class DashFileSetSequence {
         return filenames;
     }
 
-    Map<Track, long[]> findFragmentStartSamples(Map<String, List<Track>> trackFamilies) {
+    public Map<Track, long[]> findFragmentStartSamples(Map<String, List<Track>> trackFamilies) {
         Map<Track, long[]> fragmentStartSamples = new HashMap<Track, long[]>();
 
         for (String key : trackFamilies.keySet()) {
@@ -320,7 +320,7 @@ public class DashFileSetSequence {
      * @return Track too originating file map
      * @throws IOException
      */
-    protected Map<Track, String> createTracks() throws IOException, ExitCodeException {
+    public Map<Track, String> createTracks() throws IOException, ExitCodeException {
         Map<Track, String> track2File = new HashMap<Track, String>();
         for (File inputFile : inputFiles) {
             if (inputFile.getName().endsWith(".mp4") ||
@@ -380,7 +380,7 @@ public class DashFileSetSequence {
 
     }
 
-    Map<String, List<Track>> findTrackFamilies(Set<Track> allTracks) throws IOException {
+    public Map<String, List<Track>> findTrackFamilies(Set<Track> allTracks) throws IOException {
         HashMap<String, List<Track>> trackFamilies = new HashMap<String, List<Track>>();
         for (Track track : allTracks) {
             String family = track.getSampleDescriptionBox().getSampleEntry().getType() + "-" + track.getTrackMetaData().getLanguage();
@@ -402,7 +402,7 @@ public class DashFileSetSequence {
         return trackFamilies;
     }
 
-    protected void writeManifestExploded(Map<String, List<Track>> trackFamilies,
+    public void writeManifestExploded(Map<String, List<Track>> trackFamilies,
                                          Map<Track, Long> trackBitrate,
                                          Map<Track, String> trackFilename,
                                          Map<Track, Container> dashedFiles,
@@ -435,7 +435,7 @@ public class DashFileSetSequence {
 
     }
 
-    protected void writeManifestSingleSidx(Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate, Map<Track, String> trackFilename, Map<Track, Container> dashedFiles) throws IOException {
+    public void writeManifestSingleSidx(Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate, Map<Track, String> trackFilename, Map<Track, Container> dashedFiles) throws IOException {
 
         Map<Track, UUID> trackKeyIds = new HashMap<Track, UUID>();
         for (List<Track> tracks : trackFamilies.values()) {
