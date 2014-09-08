@@ -393,7 +393,7 @@ public class DashFileSetSequence {
 
             List<Track> tracks = trackFamilies.get(family);
             if (tracks == null) {
-                tracks = new LinkedList<Track>();
+                tracks = new LinkedList<>();
                 trackFamilies.put(family, tracks);
             }
             tracks.add(track);
