@@ -49,10 +49,10 @@ public class DashBuilder extends FragmentedMp4Builder {
                 }
                 if (edit.getMediaTime() == -1) {
                     assert mvhd != null;
-                    editStartTime += (double)edit.getSegmentDuration() / mvhd.getTimescale() ;
+                    editStartTime -= (double)edit.getSegmentDuration() / mvhd.getTimescale() ;
                 } else /* if edit.getMediaTime() >= 0 */ {
                     assert mdhd != null;
-                    editStartTime -= (double) edit.getMediaTime() / mdhd.getTimescale();
+                    editStartTime += (double) edit.getMediaTime() / mdhd.getTimescale();
                     acceptEdit = false;
                     acceptDwell = false;
                 }

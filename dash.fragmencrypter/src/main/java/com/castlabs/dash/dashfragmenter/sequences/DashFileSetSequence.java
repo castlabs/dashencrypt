@@ -7,6 +7,7 @@ import com.castlabs.dash.dashfragmenter.formats.csf.WrappingTrack;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.ExplodedSegmentListManifestWriterImpl;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.SingleSidxExplode;
 import com.coremedia.iso.boxes.Box;
+import com.coremedia.iso.boxes.CompositionTimeToSample;
 import com.coremedia.iso.boxes.Container;
 import com.googlecode.mp4parser.FileDataSourceImpl;
 import com.googlecode.mp4parser.authoring.Edit;
@@ -361,7 +362,7 @@ public class DashFileSetSequence {
             }
         }
 
-        adoptEdits(track2File);
+        track2File = adoptEdits(track2File);
 
         if (this.key != null && this.keyid != null) {
             Map<Track, String> encTracks = new HashMap<Track, String>();
@@ -384,12 +385,15 @@ public class DashFileSetSequence {
 
     public Map<Track, String> adoptEdits(Map<Track, String> tracks) {
         Map<Track, String> result = new HashMap<Track, String>();
-        double minStartTime = 0;
+        double earliestMoviePresentationTime = 0;
+        Map<Track,Double> startTimes = new HashMap<Track, Double>();
+        Map<Track,Double> ctsOffset = new HashMap<Track, Double>();
+
         for (Track track : tracks.keySet()) {
             boolean acceptEdit = true;
             boolean acceptDwell = true;
             List<Edit> edits = track.getEdits();
-            double editStartTime = 0;
+            double earliestTrackPresentationTime = 0;
             for (Edit edit : edits) {
                 if (edit.getMediaTime() == -1 && !acceptDwell) {
                     throw new RuntimeException("Cannot accept edit list for processing (1)");
@@ -398,29 +402,43 @@ public class DashFileSetSequence {
                     throw new RuntimeException("Cannot accept edit list for processing (2)");
                 }
                 if (edit.getMediaTime() == -1) {
-                    editStartTime += edit.getSegmentDuration();
+                    earliestTrackPresentationTime += edit.getSegmentDuration();
                 } else /* if edit.getMediaTime() >= 0 */ {
-                    editStartTime -= (double) edit.getMediaTime() / edit.getTimeScale();
+                    earliestTrackPresentationTime -= (double) edit.getMediaTime() / edit.getTimeScale();
                     acceptEdit = false;
                     acceptDwell = false;
                 }
             }
-            System.err.println(track.getName() + "'s starttime after edits: " + editStartTime);
-            minStartTime = Math.min(minStartTime, editStartTime);
+
+            if (track.getCompositionTimeEntries()!=null && track.getCompositionTimeEntries().size()>0) {
+                long currentTime = 0;
+                int[] ptss = Arrays.copyOfRange(CompositionTimeToSample.blowupCompositionTimes(track.getCompositionTimeEntries()), 0, 50);
+                for (int j = 0; j < ptss.length; j++) {
+                    ptss[j] += currentTime;
+                    currentTime += track.getSampleDurations()[j];
+                }
+                Arrays.sort(ptss);
+                earliestTrackPresentationTime += (double)ptss[0]/track.getTrackMetaData().getTimescale();
+                ctsOffset.put(track, (double)ptss[0]/track.getTrackMetaData().getTimescale());
+            } else {
+                ctsOffset.put(track, 0.0);
+            }
+            startTimes.put(track, earliestTrackPresentationTime);
+            earliestMoviePresentationTime = Math.min(earliestMoviePresentationTime, earliestTrackPresentationTime);
+            System.err.println(track.getName() + "'s starttime after edits: " + earliestTrackPresentationTime);
         }
         for (Track track : tracks.keySet()) {
-            final List<Edit> edits = new ArrayList<Edit>(track.getEdits());
-            if (edits.size() == 0) {
-                edits.add(new Edit(-1, track.getTrackMetaData().getTimescale(), 1.0, minStartTime));
+            double adjustedStartTime = startTimes.get(track) - earliestMoviePresentationTime - ctsOffset.get(track);
+
+            final List<Edit> edits = new ArrayList<Edit>();
+            if (adjustedStartTime < 0) {
+                edits.add(new Edit((long)(-adjustedStartTime * track.getTrackMetaData().getTimescale()), track.getTrackMetaData().getTimescale(), 1.0, (double) track.getDuration() / track.getTrackMetaData().getTimescale()));
+            } else if (adjustedStartTime > 0) {
+                edits.add(new Edit(-1, track.getTrackMetaData().getTimescale(), 1.0, adjustedStartTime));
                 edits.add(new Edit(0, track.getTrackMetaData().getTimescale(), 1.0, (double) track.getDuration() / track.getTrackMetaData().getTimescale()));
-            } else {
-                Edit e = edits.get(0);
-                if (e.getMediaTime() == -1) {
-                    edits.set(0, new Edit(-1, e.getTimeScale(), 1.0, e.getSegmentDuration() - minStartTime));
-                } else {
-                    edits.add(0, new Edit(-1, e.getTimeScale(), 1.0, -minStartTime));
-                }
+
             }
+
             result.put(new WrappingTrack(track) {
                 @Override
                 public List<Edit> getEdits() {
