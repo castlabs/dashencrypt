@@ -10,6 +10,7 @@ import com.coremedia.iso.boxes.*;
 import com.coremedia.iso.boxes.fragment.MovieFragmentBox;
 import com.coremedia.iso.boxes.fragment.TrackRunBox;
 import com.googlecode.mp4parser.BasicContainer;
+import com.googlecode.mp4parser.authoring.Edit;
 import com.googlecode.mp4parser.authoring.Movie;
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.builder.FragmentedMp4Builder;
@@ -31,16 +32,33 @@ public class DashBuilder extends FragmentedMp4Builder {
 
     private long getTimeMappingEditTime(Container file) {
         final EditListBox editList = Path.getPath(file, "/moov[0]/trak[0]/edts[0]/elst[0]");
+        final MediaHeaderBox mdhd = Path.getPath(file, "/moov[0]/trak[0]/mdia[0]/mdhd[0]");
+        final MovieHeaderBox mvhd = Path.getPath(file, "/moov[0]/mvhd[0]");
+
         if (editList != null) {
+            double editStartTime = 0;
             final List<EditListBox.Entry> entries = editList.getEntries();
-            if (entries.size() > 1) {
-                throw new RuntimeException("CSF shouldn't have more than one entry and I don't know how to deal with it.");
-            }
-            for (EditListBox.Entry entry : entries) {
-                if (entry.getMediaTime() > 0) {
-                    return entry.getMediaTime();
+            boolean acceptDwell = true;
+            boolean acceptEdit = true;
+            for (EditListBox.Entry edit : entries) {
+                if (edit.getMediaTime() == -1 && !acceptDwell) {
+                    throw new RuntimeException("Cannot accept edit list for processing (1)");
+                }
+                if (edit.getMediaTime() >= 0 && !acceptEdit) {
+                    throw new RuntimeException("Cannot accept edit list for processing (2)");
+                }
+                if (edit.getMediaTime() == -1) {
+                    assert mvhd != null;
+                    editStartTime += (double)edit.getSegmentDuration() / mvhd.getTimescale() ;
+                } else /* if edit.getMediaTime() >= 0 */ {
+                    assert mdhd != null;
+                    editStartTime -= (double) edit.getMediaTime() / mdhd.getTimescale();
+                    acceptEdit = false;
+                    acceptDwell = false;
                 }
             }
+            assert mdhd != null;
+            return (long)(editStartTime * mdhd.getTimescale());
         }
         return 0;
     }

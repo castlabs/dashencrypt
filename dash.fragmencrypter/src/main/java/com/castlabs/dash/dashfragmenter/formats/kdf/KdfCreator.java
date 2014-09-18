@@ -15,13 +15,8 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
-import java.util.List;
 import java.util.UUID;
-import java.util.logging.Level;
 
-/**
- * Created by sannies on 02.09.2014.
- */
 public class KdfCreator {
     public static void createKdf(File outFile, X509Certificate certificate, SecretKey key, UUID keyId) throws ExitCodeException {
         // this.outputDirectory, "kdf.pskcxml"

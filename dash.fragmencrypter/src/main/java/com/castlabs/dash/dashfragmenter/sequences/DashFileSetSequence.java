@@ -3,12 +3,13 @@ package com.castlabs.dash.dashfragmenter.sequences;
 import com.castlabs.dash.dashfragmenter.ExitCodeException;
 import com.castlabs.dash.dashfragmenter.formats.csf.DashBuilder;
 import com.castlabs.dash.dashfragmenter.formats.csf.SegmentBaseSingleSidxManifestWriterImpl;
-import com.castlabs.dash.dashfragmenter.formats.csf.SegmentListManifestWriterImpl;
+import com.castlabs.dash.dashfragmenter.formats.csf.WrappingTrack;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.ExplodedSegmentListManifestWriterImpl;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.SingleSidxExplode;
 import com.coremedia.iso.boxes.Box;
 import com.coremedia.iso.boxes.Container;
 import com.googlecode.mp4parser.FileDataSourceImpl;
+import com.googlecode.mp4parser.authoring.Edit;
 import com.googlecode.mp4parser.authoring.Movie;
 import com.googlecode.mp4parser.authoring.Sample;
 import com.googlecode.mp4parser.authoring.Track;
@@ -206,7 +207,6 @@ public class DashFileSetSequence {
     public void sortTrackFamilies(Map<String, List<Track>> trackFamilies, final Map<Track, Long> sizes) {
         for (List<Track> tracks : trackFamilies.values()) {
             Collections.sort(tracks, new Comparator<Track>() {
-                @Override
                 public int compare(Track o1, Track o2) {
                     return (int) (sizes.get(o1) - sizes.get(o2));
                 }
@@ -361,7 +361,9 @@ public class DashFileSetSequence {
             }
         }
 
-        if (this.key!= null && this.keyid != null) {
+        adoptEdits(track2File);
+
+        if (this.key != null && this.keyid != null) {
             Map<Track, String> encTracks = new HashMap<Track, String>();
             for (Map.Entry<Track, String> trackStringEntry : track2File.entrySet()) {
                 String hdlr = trackStringEntry.getKey().getHandler();
@@ -378,6 +380,55 @@ public class DashFileSetSequence {
 
         return track2File;
 
+    }
+
+    public Map<Track, String> adoptEdits(Map<Track, String> tracks) {
+        Map<Track, String> result = new HashMap<Track, String>();
+        double minStartTime = 0;
+        for (Track track : tracks.keySet()) {
+            boolean acceptEdit = true;
+            boolean acceptDwell = true;
+            List<Edit> edits = track.getEdits();
+            double editStartTime = 0;
+            for (Edit edit : edits) {
+                if (edit.getMediaTime() == -1 && !acceptDwell) {
+                    throw new RuntimeException("Cannot accept edit list for processing (1)");
+                }
+                if (edit.getMediaTime() >= 0 && !acceptEdit) {
+                    throw new RuntimeException("Cannot accept edit list for processing (2)");
+                }
+                if (edit.getMediaTime() == -1) {
+                    editStartTime += edit.getSegmentDuration();
+                } else /* if edit.getMediaTime() >= 0 */ {
+                    editStartTime -= (double) edit.getMediaTime() / edit.getTimeScale();
+                    acceptEdit = false;
+                    acceptDwell = false;
+                }
+            }
+            System.err.println(track.getName() + "'s starttime after edits: " + editStartTime);
+            minStartTime = Math.min(minStartTime, editStartTime);
+        }
+        for (Track track : tracks.keySet()) {
+            final List<Edit> edits = new ArrayList<Edit>(track.getEdits());
+            if (edits.size() == 0) {
+                edits.add(new Edit(-1, track.getTrackMetaData().getTimescale(), 1.0, minStartTime));
+                edits.add(new Edit(0, track.getTrackMetaData().getTimescale(), 1.0, (double) track.getDuration() / track.getTrackMetaData().getTimescale()));
+            } else {
+                Edit e = edits.get(0);
+                if (e.getMediaTime() == -1) {
+                    edits.set(0, new Edit(-1, e.getTimeScale(), 1.0, e.getSegmentDuration() - minStartTime));
+                } else {
+                    edits.add(0, new Edit(-1, e.getTimeScale(), 1.0, -minStartTime));
+                }
+            }
+            result.put(new WrappingTrack(track) {
+                @Override
+                public List<Edit> getEdits() {
+                    return edits;
+                }
+            }, tracks.get(track));
+        }
+        return result;
     }
 
     public Map<String, List<Track>> findTrackFamilies(Set<Track> allTracks) throws IOException {
@@ -403,11 +454,11 @@ public class DashFileSetSequence {
     }
 
     public void writeManifestExploded(Map<String, List<Track>> trackFamilies,
-                                         Map<Track, Long> trackBitrate,
-                                         Map<Track, String> trackFilename,
-                                         Map<Track, Container> dashedFiles,
-                                         Map<Track, List<File>> trackToSegments,
-                                         File outputDirectory, String initPattern, String mediaPattern) throws IOException {
+                                      Map<Track, Long> trackBitrate,
+                                      Map<Track, String> trackFilename,
+                                      Map<Track, Container> dashedFiles,
+                                      Map<Track, List<File>> trackToSegments,
+                                      File outputDirectory, String initPattern, String mediaPattern) throws IOException {
         Map<Track, UUID> trackKeyIds = new HashMap<Track, UUID>();
         for (List<Track> tracks : trackFamilies.values()) {
             for (Track track : tracks) {
