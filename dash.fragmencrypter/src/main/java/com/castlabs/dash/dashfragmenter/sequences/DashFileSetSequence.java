@@ -9,16 +9,16 @@ import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.Si
 import com.coremedia.iso.boxes.Box;
 import com.coremedia.iso.boxes.CompositionTimeToSample;
 import com.coremedia.iso.boxes.Container;
+import com.coremedia.iso.boxes.SampleDescriptionBox;
+import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
 import com.googlecode.mp4parser.FileDataSourceImpl;
-import com.googlecode.mp4parser.authoring.Edit;
-import com.googlecode.mp4parser.authoring.Movie;
-import com.googlecode.mp4parser.authoring.Sample;
-import com.googlecode.mp4parser.authoring.Track;
+import com.googlecode.mp4parser.authoring.*;
 import com.googlecode.mp4parser.authoring.builder.*;
 import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import com.googlecode.mp4parser.authoring.tracks.*;
 import com.googlecode.mp4parser.boxes.mp4.ESDescriptorBox;
 import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.AudioSpecificConfig;
+import com.googlecode.mp4parser.util.Path;
 import mpegDashSchemaMpd2011.MPDDocument;
 import org.apache.xmlbeans.XmlOptions;
 
@@ -87,10 +87,15 @@ public class DashFileSetSequence {
 
         long start = System.currentTimeMillis();
 
-        Map<Track, String> trackOriginalFilename = createTracks();
+        Map<Track, String> track2File = createTracks();
+
+        track2File = alignEditsToZero(track2File);
+        track2File = fixAppleOddity(track2File);
+        track2File = encryptTracks(track2File);
+
 
         // sort by language and codec
-        Map<String, List<Track>> trackFamilies = findTrackFamilies(trackOriginalFilename.keySet());
+        Map<String, List<Track>> trackFamilies = findTrackFamilies(track2File.keySet());
 
         // Track sizes are expensive to calculate -> save them for later
         Map<Track, Long> trackSizes = calculateTrackSizes(trackFamilies);
@@ -105,7 +110,7 @@ public class DashFileSetSequence {
         Map<Track, Long> trackBitrate = calculateBitrate(trackFamilies, trackSizes);
 
         // generate filenames for later reference
-        Map<Track, String> trackFilename = generateFilenames(trackOriginalFilename);
+        Map<Track, String> trackFilename = generateFilenames(track2File);
 
         // export the dashed single track MP4s
         Map<Track, Container> dashedFiles = createSingleTrackDashedMp4s(trackStartSamples, trackFilename);
@@ -362,8 +367,13 @@ public class DashFileSetSequence {
             }
         }
 
-        track2File = adoptEdits(track2File);
 
+
+        return track2File;
+
+    }
+
+    public Map<Track, String> encryptTracks(Map<Track, String> track2File) {
         if (this.key != null && this.keyid != null) {
             Map<Track, String> encTracks = new HashMap<Track, String>();
             for (Map.Entry<Track, String> trackStringEntry : track2File.entrySet()) {
@@ -377,13 +387,37 @@ public class DashFileSetSequence {
             }
             track2File = encTracks;
         }
-
-
         return track2File;
-
     }
 
-    public Map<Track, String> adoptEdits(Map<Track, String> tracks) {
+    public Map<Track, String> fixAppleOddity(Map<Track, String> track2File) {
+        Map<Track, String> nuTracks = new HashMap<Track, String>();
+
+        for (Map.Entry<Track, String> entry  : track2File.entrySet()){
+            Track track = entry.getKey();
+            if (Path.getPath(track.getSampleDescriptionBox(), "...a/wave/esds") != null) {
+                final SampleDescriptionBox stsd = track.getSampleDescriptionBox();
+                AudioSampleEntry ase = (AudioSampleEntry)stsd.getSampleEntry();
+                List<Box> aseBoxes = new ArrayList<Box>();
+                aseBoxes.add(Path.getPath(stsd, "...a/wave/esds"));
+                for (Box box : ase.getBoxes()) {
+                    if (!box.getType().equals("wave")) {
+                        aseBoxes.add(box);
+                    }
+                }
+                ase.setBoxes(Collections.<Box>emptyList());
+                for (Box aseBox : aseBoxes) {
+                    ase.addBox(aseBox);
+                }
+                nuTracks.put(new StsdCorrectingTrack(track, stsd), entry.getValue());
+            } else {
+                nuTracks.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return nuTracks;
+    }
+
+    public Map<Track, String> alignEditsToZero(Map<Track, String> tracks) {
         Map<Track, String> result = new HashMap<Track, String>();
         double earliestMoviePresentationTime = 0;
         Map<Track,Double> startTimes = new HashMap<Track, Double>();
@@ -531,4 +565,44 @@ public class DashFileSetSequence {
         mpdDocument.save(new File(this.outputDirectory, "Manifest.mpd"), xmlOptions);
     }
 
+    private class StsdCorrectingTrack extends AbstractTrack {
+        Track track;
+        SampleDescriptionBox stsd;
+
+        public StsdCorrectingTrack(Track track, SampleDescriptionBox stsd) {
+            super(track.getName());
+            this.track = track;
+            this.stsd = stsd;
+        }
+
+
+        public void close() throws IOException {
+            track.close();
+        }
+
+
+        public SampleDescriptionBox getSampleDescriptionBox() {
+            return stsd;
+        }
+
+
+        public long[] getSampleDurations() {
+            return track.getSampleDurations();
+        }
+
+
+        public TrackMetaData getTrackMetaData() {
+            return track.getTrackMetaData();
+        }
+
+
+        public String getHandler() {
+            return track.getHandler();
+        }
+
+
+        public List<Sample> getSamples() {
+            return track.getSamples();
+        }
+    }
 }
