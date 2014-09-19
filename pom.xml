@@ -48,12 +48,6 @@
         </plugins>
     </build>
 
-    <repositories>
-        <repository>
-            <id>mp4parserstaging</id>
-            <url>https://oss.sonatype.org/content/repositories/comgooglecodemp4parser-1031</url>
-        </repository>
-    </repositories>
 
     <distributionManagement>
         <repository>
