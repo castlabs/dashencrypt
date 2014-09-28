@@ -402,10 +402,11 @@ public class DashFileSetSequence {
 
                             }
                         } else {
-                            excludes = new long[t.getSamples().size() / 3];
+                            excludes = new long[0];
+                            /*new long[t.getSamples().size() / 3];
                             for (int i = 0; i < excludes.length; i++) {
                                 excludes[i] = i * 3;
-                            }
+                            }*/
                         }
 
                         CencEncryptingTrackImpl cencTrack = new CencEncryptingTrackImpl(t, keyid,
