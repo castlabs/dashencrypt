@@ -54,6 +54,14 @@ public class DashFileSetEncrypt extends AbstractCommand {
     )
     protected String encKeySecretKeyFile = null;
 
+    @Option(name = "--sparse",
+            aliases = "-s",
+            usage = "Add to encrypt 'just enough'"
+    )
+    protected boolean sparse = false;
+
+
+
     @Option(name = "--certificate", aliases = "-c", usage = "X509 certificate for generation of KDF documents")
     protected List<File> certificates = new LinkedList<File>();
 
@@ -71,10 +79,11 @@ public class DashFileSetEncrypt extends AbstractCommand {
     protected boolean explode = false;
 
 
-    @Override
+
     public int run() throws IOException, ExitCodeException {
         DashFileSetSequence d = new DashFileSetSequence();
         d.setExplode(explode);
+        d.setSparse(sparse);
         d.setLogger(setupLogger());
         d.setOutputDirectory(outputDirectory);
         d.setInputFiles(inputFiles);

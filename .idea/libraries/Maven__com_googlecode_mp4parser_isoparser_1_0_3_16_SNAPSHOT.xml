@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="Maven: com.googlecode.mp4parser:isoparser:1.0.3.16-SNAPSHOT">
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/googlecode/mp4parser/isoparser/1.0.3.16-SNAPSHOT/isoparser-1.0.3.16-SNAPSHOT.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$MAVEN_REPOSITORY$/com/googlecode/mp4parser/isoparser/1.0.3.16-SNAPSHOT/isoparser-1.0.3.16-SNAPSHOT-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$MAVEN_REPOSITORY$/com/googlecode/mp4parser/isoparser/1.0.3.16-SNAPSHOT/isoparser-1.0.3.16-SNAPSHOT-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

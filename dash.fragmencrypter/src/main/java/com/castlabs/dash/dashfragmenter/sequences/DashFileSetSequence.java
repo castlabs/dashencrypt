@@ -3,7 +3,6 @@ package com.castlabs.dash.dashfragmenter.sequences;
 import com.castlabs.dash.dashfragmenter.ExitCodeException;
 import com.castlabs.dash.dashfragmenter.formats.csf.DashBuilder;
 import com.castlabs.dash.dashfragmenter.formats.csf.SegmentBaseSingleSidxManifestWriterImpl;
-import com.castlabs.dash.dashfragmenter.formats.csf.WrappingTrack;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.ExplodedSegmentListManifestWriterImpl;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.SingleSidxExplode;
 import com.coremedia.iso.boxes.Box;
@@ -18,6 +17,7 @@ import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import com.googlecode.mp4parser.authoring.tracks.*;
 import com.googlecode.mp4parser.boxes.mp4.ESDescriptorBox;
 import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.AudioSpecificConfig;
+import com.googlecode.mp4parser.boxes.mp4.samplegrouping.CencSampleEncryptionInformationGroupEntry;
 import com.googlecode.mp4parser.util.Path;
 import mpegDashSchemaMpd2011.MPDDocument;
 import org.apache.xmlbeans.XmlOptions;
@@ -51,6 +51,8 @@ public class DashFileSetSequence {
 
     protected boolean explode = false;
 
+    protected boolean sparse = false;
+
     public void setKey(SecretKey key) {
         this.key = key;
     }
@@ -73,6 +75,10 @@ public class DashFileSetSequence {
 
     public void setExplode(boolean explode) {
         this.explode = explode;
+    }
+
+    public void setSparse(boolean sparse) {
+        this.sparse = sparse;
     }
 
     public void setLogger(Logger l) {
@@ -368,7 +374,6 @@ public class DashFileSetSequence {
         }
 
 
-
         return track2File;
 
     }
@@ -379,8 +384,35 @@ public class DashFileSetSequence {
             for (Map.Entry<Track, String> trackStringEntry : track2File.entrySet()) {
                 String hdlr = trackStringEntry.getKey().getHandler();
                 if ("vide".equals(hdlr) || "soun".equals(hdlr)) {
-                    CencEncryptingTrackImpl cencTrack = new CencEncryptingTrackImpl(trackStringEntry.getKey(), keyid, key);
-                    encTracks.put(cencTrack, trackStringEntry.getValue());
+                    if (!sparse) {
+                        CencEncryptingTrackImpl cencTrack = new CencEncryptingTrackImpl(trackStringEntry.getKey(), keyid, key);
+                        encTracks.put(cencTrack, trackStringEntry.getValue());
+                    } else {
+                        CencSampleEncryptionInformationGroupEntry e = new CencSampleEncryptionInformationGroupEntry();
+                        e.setEncrypted(false);
+                        Track t = trackStringEntry.getKey();
+                        long[] excludes;
+                        if (t.getSyncSamples() != null && t.getSyncSamples().length > 0) {
+                            excludes = new long[t.getSamples().size() - t.getSyncSamples().length];
+                            int excludesIndex = 0;
+                            for (long i = 1; i <= t.getSamples().size(); i++) {
+                                 if (Arrays.binarySearch(t.getSyncSamples(), i) < 0) {
+                                     excludes[excludesIndex++] = i-1;
+                                 }
+
+                            }
+                        } else {
+                            excludes = new long[t.getSamples().size() / 3];
+                            for (int i = 0; i < excludes.length; i++) {
+                                excludes[i] = i * 3;
+                            }
+                        }
+
+                        CencEncryptingTrackImpl cencTrack = new CencEncryptingTrackImpl(t, keyid,
+                                Collections.singletonMap(keyid, key), Collections.singletonMap(e, excludes));
+                        encTracks.put(cencTrack, trackStringEntry.getValue());
+
+                    }
                 } else {
                     encTracks.put(trackStringEntry.getKey(), trackStringEntry.getValue());
                 }
@@ -393,11 +425,11 @@ public class DashFileSetSequence {
     public Map<Track, String> fixAppleOddity(Map<Track, String> track2File) {
         Map<Track, String> nuTracks = new HashMap<Track, String>();
 
-        for (Map.Entry<Track, String> entry  : track2File.entrySet()){
+        for (Map.Entry<Track, String> entry : track2File.entrySet()) {
             Track track = entry.getKey();
             if (Path.getPath(track.getSampleDescriptionBox(), "...a/wave/esds") != null) {
                 final SampleDescriptionBox stsd = track.getSampleDescriptionBox();
-                AudioSampleEntry ase = (AudioSampleEntry)stsd.getSampleEntry();
+                AudioSampleEntry ase = (AudioSampleEntry) stsd.getSampleEntry();
                 List<Box> aseBoxes = new ArrayList<Box>();
                 aseBoxes.add(Path.getPath(stsd, "...a/wave/esds"));
                 for (Box box : ase.getBoxes()) {
@@ -420,8 +452,8 @@ public class DashFileSetSequence {
     public Map<Track, String> alignEditsToZero(Map<Track, String> tracks) {
         Map<Track, String> result = new HashMap<Track, String>();
         double earliestMoviePresentationTime = 0;
-        Map<Track,Double> startTimes = new HashMap<Track, Double>();
-        Map<Track,Double> ctsOffset = new HashMap<Track, Double>();
+        Map<Track, Double> startTimes = new HashMap<Track, Double>();
+        Map<Track, Double> ctsOffset = new HashMap<Track, Double>();
 
         for (Track track : tracks.keySet()) {
             boolean acceptEdit = true;
@@ -444,7 +476,7 @@ public class DashFileSetSequence {
                 }
             }
 
-            if (track.getCompositionTimeEntries()!=null && track.getCompositionTimeEntries().size()>0) {
+            if (track.getCompositionTimeEntries() != null && track.getCompositionTimeEntries().size() > 0) {
                 long currentTime = 0;
                 int[] ptss = Arrays.copyOfRange(CompositionTimeToSample.blowupCompositionTimes(track.getCompositionTimeEntries()), 0, 50);
                 for (int j = 0; j < ptss.length; j++) {
@@ -452,8 +484,8 @@ public class DashFileSetSequence {
                     currentTime += track.getSampleDurations()[j];
                 }
                 Arrays.sort(ptss);
-                earliestTrackPresentationTime += (double)ptss[0]/track.getTrackMetaData().getTimescale();
-                ctsOffset.put(track, (double)ptss[0]/track.getTrackMetaData().getTimescale());
+                earliestTrackPresentationTime += (double) ptss[0] / track.getTrackMetaData().getTimescale();
+                ctsOffset.put(track, (double) ptss[0] / track.getTrackMetaData().getTimescale());
             } else {
                 ctsOffset.put(track, 0.0);
             }
@@ -466,7 +498,7 @@ public class DashFileSetSequence {
 
             final List<Edit> edits = new ArrayList<Edit>();
             if (adjustedStartTime < 0) {
-                edits.add(new Edit((long)(-adjustedStartTime * track.getTrackMetaData().getTimescale()), track.getTrackMetaData().getTimescale(), 1.0, (double) track.getDuration() / track.getTrackMetaData().getTimescale()));
+                edits.add(new Edit((long) (-adjustedStartTime * track.getTrackMetaData().getTimescale()), track.getTrackMetaData().getTimescale(), 1.0, (double) track.getDuration() / track.getTrackMetaData().getTimescale()));
             } else if (adjustedStartTime > 0) {
                 edits.add(new Edit(-1, track.getTrackMetaData().getTimescale(), 1.0, adjustedStartTime));
                 edits.add(new Edit(0, track.getTrackMetaData().getTimescale(), 1.0, (double) track.getDuration() / track.getTrackMetaData().getTimescale()));
