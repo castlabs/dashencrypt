@@ -8,17 +8,19 @@ package com.castlabs.dash.dashfragmenter.formats.csf;
 
 import com.coremedia.iso.boxes.*;
 import com.coremedia.iso.boxes.fragment.MovieFragmentBox;
+import com.coremedia.iso.boxes.fragment.TrackFragmentBox;
 import com.coremedia.iso.boxes.fragment.TrackRunBox;
 import com.googlecode.mp4parser.BasicContainer;
-import com.googlecode.mp4parser.authoring.Edit;
 import com.googlecode.mp4parser.authoring.Movie;
+import com.googlecode.mp4parser.authoring.Sample;
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.builder.FragmentedMp4Builder;
-import com.googlecode.mp4parser.authoring.builder.SyncSampleIntersectFinderImpl;
 import com.googlecode.mp4parser.boxes.threegpp26244.SegmentIndexBox;
 import com.googlecode.mp4parser.util.Path;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 
 import static com.googlecode.mp4parser.util.CastUtils.l2i;
 
@@ -74,7 +76,9 @@ public class DashBuilder extends FragmentedMp4Builder {
         MovieFragmentBox firstMoof = null;
         for (Box moofMdat : moofMdats) {
             if (moofMdat.getType().equals("moof")) {
-                firstMoof = (MovieFragmentBox) moofMdat;
+                if (firstMoof == null) {
+                    firstMoof = (MovieFragmentBox) moofMdat;
+                }
                 entries.add(new SegmentIndexBox.Entry());
             }
         }
@@ -140,6 +144,20 @@ public class DashBuilder extends FragmentedMp4Builder {
             return 0;
         } else {
             return 1;
+        }
+    }
+
+    @Override
+    protected void createTrun(long startSample, long endSample, Track track, int sequenceNumber, TrackFragmentBox parent) {
+        super.createTrun(startSample, endSample, track, sequenceNumber, parent);
+        TrackRunBox trun = Path.getPath(parent, "trun");
+        if (Path.getPath(track.getSampleDescriptionBox(), "avc.") != null) {
+            List<Sample> samples = track.getSamples();
+            for (int i = 0; i < endSample - startSample; i++) {
+                Sample s = samples.get((int) (startSample - 1 + i));
+                s.asByteBuffer();
+
+            }
         }
     }
 

@@ -53,6 +53,12 @@ public class DashFileSetSequence {
 
     protected boolean sparse = false;
 
+    protected String encryptionAlgo = "cenc";
+
+    public void setEncryptionAlgo(String encryptionAlgo) {
+        this.encryptionAlgo = encryptionAlgo;
+    }
+
     public void setKey(SecretKey key) {
         this.key = key;
     }
@@ -385,7 +391,10 @@ public class DashFileSetSequence {
                 String hdlr = trackStringEntry.getKey().getHandler();
                 if ("vide".equals(hdlr) || "soun".equals(hdlr)) {
                     if (!sparse) {
-                        CencEncryptingTrackImpl cencTrack = new CencEncryptingTrackImpl(trackStringEntry.getKey(), keyid, key);
+                        CencEncryptingTrackImpl cencTrack = new CencEncryptingTrackImpl(
+                                trackStringEntry.getKey(), keyid,
+                                Collections.singletonMap(keyid, key),
+                                null, encryptionAlgo);
                         encTracks.put(cencTrack, trackStringEntry.getValue());
                     } else {
                         CencSampleEncryptionInformationGroupEntry e = new CencSampleEncryptionInformationGroupEntry();
@@ -396,9 +405,9 @@ public class DashFileSetSequence {
                             excludes = new long[t.getSamples().size() - t.getSyncSamples().length];
                             int excludesIndex = 0;
                             for (long i = 1; i <= t.getSamples().size(); i++) {
-                                 if (Arrays.binarySearch(t.getSyncSamples(), i) < 0) {
-                                     excludes[excludesIndex++] = i-1;
-                                 }
+                                if (Arrays.binarySearch(t.getSyncSamples(), i) < 0) {
+                                    excludes[excludesIndex++] = i - 1;
+                                }
 
                             }
                         } else {
@@ -409,8 +418,11 @@ public class DashFileSetSequence {
                             }*/
                         }
 
-                        CencEncryptingTrackImpl cencTrack = new CencEncryptingTrackImpl(t, keyid,
-                                Collections.singletonMap(keyid, key), Collections.singletonMap(e, excludes));
+                        CencEncryptingTrackImpl cencTrack = new CencEncryptingTrackImpl(
+                                t, keyid,
+                                Collections.singletonMap(keyid, key),
+                                Collections.singletonMap(e, excludes),
+                                "cenc");
                         encTracks.put(cencTrack, trackStringEntry.getValue());
 
                     }
