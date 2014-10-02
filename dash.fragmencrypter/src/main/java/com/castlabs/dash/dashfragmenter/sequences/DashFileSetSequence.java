@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
+import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.logging.Logger;
@@ -51,7 +52,7 @@ public class DashFileSetSequence {
 
     protected boolean explode = false;
 
-    protected boolean sparse = false;
+    protected int sparse = 0;
 
     protected String encryptionAlgo = "cenc";
 
@@ -83,7 +84,7 @@ public class DashFileSetSequence {
         this.explode = explode;
     }
 
-    public void setSparse(boolean sparse) {
+    public void setSparse(int sparse) {
         this.sparse = sparse;
     }
 
@@ -390,13 +391,13 @@ public class DashFileSetSequence {
             for (Map.Entry<Track, String> trackStringEntry : track2File.entrySet()) {
                 String hdlr = trackStringEntry.getKey().getHandler();
                 if ("vide".equals(hdlr) || "soun".equals(hdlr)) {
-                    if (!sparse) {
+                    if (sparse == 0) {
                         CencEncryptingTrackImpl cencTrack = new CencEncryptingTrackImpl(
                                 trackStringEntry.getKey(), keyid,
                                 Collections.singletonMap(keyid, key),
                                 null, encryptionAlgo);
                         encTracks.put(cencTrack, trackStringEntry.getValue());
-                    } else {
+                    } else if (sparse == 1) {
                         CencSampleEncryptionInformationGroupEntry e = new CencSampleEncryptionInformationGroupEntry();
                         e.setEncrypted(false);
                         Track t = trackStringEntry.getKey();
@@ -411,11 +412,10 @@ public class DashFileSetSequence {
 
                             }
                         } else {
-                            excludes = new long[0];
-                            /*new long[t.getSamples().size() / 3];
+                            excludes = new long[t.getSamples().size() / 3];
                             for (int i = 0; i < excludes.length; i++) {
                                 excludes[i] = i * 3;
-                            }*/
+                            }
                         }
 
                         CencEncryptingTrackImpl cencTrack = new CencEncryptingTrackImpl(
@@ -425,6 +425,33 @@ public class DashFileSetSequence {
                                 "cenc");
                         encTracks.put(cencTrack, trackStringEntry.getValue());
 
+                    } else if (sparse == 2) {
+                        CencSampleEncryptionInformationGroupEntry e = new CencSampleEncryptionInformationGroupEntry();
+                        e.setEncrypted(true);
+                        e.setKid(keyid);
+                        e.setIvSize(8);
+                        Track t = trackStringEntry.getKey();
+
+                        long[] includes;
+                        if (t.getSyncSamples() != null && t.getSyncSamples().length > 0) {
+                            includes = Arrays.copyOf(t.getSyncSamples(), t.getSyncSamples().length);
+                            for (int i = 0; i < includes.length; i++) {
+                                includes[i] -= 1;
+                            }
+                        } else {
+                            SecureRandom r = new SecureRandom();
+                            int encSamples = t.getSamples().size() / 10;
+                            includes = new long[encSamples];
+                            while (--encSamples >= 0) {
+                                includes[encSamples] = r.nextInt(t.getSamples().size());
+                            }
+                            Arrays.sort(includes);
+                        }
+                        encTracks.put(new CencEncryptingTrackImpl(
+                                t, null,
+                                Collections.singletonMap(keyid, key),
+                                Collections.singletonMap(e, includes),
+                                "cenc"), trackStringEntry.getValue());
                     }
                 } else {
                     encTracks.put(trackStringEntry.getKey(), trackStringEntry.getValue());

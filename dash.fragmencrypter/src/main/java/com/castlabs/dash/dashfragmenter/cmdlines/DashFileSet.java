@@ -34,7 +34,6 @@ public class DashFileSet extends AbstractCommand {
     protected boolean explode = false;
 
 
-    @Override
     public int run() throws IOException, ExitCodeException {
         DashFileSetSequence dashFileSetSequence = new DashFileSetSequence();
         dashFileSetSequence.setExplode(explode);

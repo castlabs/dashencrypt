@@ -56,9 +56,9 @@ public class DashFileSetEncrypt extends AbstractCommand {
 
     @Option(name = "--sparse",
             aliases = "-s",
-            usage = "Add to encrypt 'just enough'"
+            usage = "0=encrypt everything, 1=encrypted if default, some sample clear, 2=clear is default, important samples are encrypted"
     )
-    protected boolean sparse = false;
+    protected int sparse = 0;
 
 
 
