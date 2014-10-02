@@ -8,6 +8,7 @@ package com.castlabs.dash.dashfragmenter.formats.csf;
 
 import com.coremedia.iso.boxes.*;
 import com.coremedia.iso.boxes.fragment.MovieFragmentBox;
+import com.coremedia.iso.boxes.fragment.TrackFragmentBaseMediaDecodeTimeBox;
 import com.coremedia.iso.boxes.fragment.TrackFragmentBox;
 import com.coremedia.iso.boxes.fragment.TrackRunBox;
 import com.googlecode.mp4parser.BasicContainer;
@@ -31,6 +32,8 @@ public class DashBuilder extends FragmentedMp4Builder {
 
     public DashBuilder() {
     }
+
+
 
     private long getTimeMappingEditTime(Container file) {
         final EditListBox editList = Path.getPath(file, "/moov[0]/trak[0]/edts[0]/elst[0]");
