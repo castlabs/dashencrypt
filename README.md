@@ -33,7 +33,7 @@ Usage
        ```$ ffmpeg -i sintel-1024-surround.mp4 -vn -ac 2 -acodec libfdk_aac -profile:a aac_he -ab 69k -f mp4 mp4a-sintel-69k.mp4```
   3. Execute 
   
-       ```java -jar dash.fragmencrypter-1.0.21-exe.jar dash mp4a-sintel-69k.mp4 avc1-sintel-436p-1000k.mp4 avc1-sintel-436p-500k.mp4 avc1-sintel-436p-250k.mp4```
+       ```java -jar dash.fragmencrypter-1.1.1-exe.jar dash mp4a-sintel-69k.mp4 avc1-sintel-436p-1000k.mp4 avc1-sintel-436p-500k.mp4 avc1-sintel-436p-250k.mp4```
   4. To encrypt execute: 
-       ```java -jar dash.fragmencrypter-1.0.21-exe.jar encrypt avc1-sintel-436p-250k.mp4 avc1-sintel-436p-500k.mp4 avc1-sintel-436p-1000k.mp4 mp4a-sintel-69k.mp4 --secretKey 000102030405060708090a0b0c0d0e0f --uuid 0696f5b0-b612-11e3-a5e2-0800200c9a66```
+       ```java -jar dash.fragmencrypter-1.1.1-exe.jar encrypt avc1-sintel-436p-250k.mp4 avc1-sintel-436p-500k.mp4 avc1-sintel-436p-1000k.mp4 mp4a-sintel-69k.mp4 --secretKey 000102030405060708090a0b0c0d0e0f --uuid 0696f5b0-b612-11e3-a5e2-0800200c9a66```
   
