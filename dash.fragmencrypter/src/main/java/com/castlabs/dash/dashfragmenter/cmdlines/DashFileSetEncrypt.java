@@ -61,6 +61,13 @@ public class DashFileSetEncrypt extends AbstractCommand {
     protected int sparse = 0;
 
 
+    @Option(name = "--clearlead",
+            aliases = "-C",
+            usage = "seconds of unencrypted content after start"
+    )
+    protected int clearLead = 0;
+
+
 
     @Option(name = "--certificate", aliases = "-c", usage = "X509 certificate for generation of KDF documents")
     protected List<File> certificates = new LinkedList<File>();
@@ -84,6 +91,7 @@ public class DashFileSetEncrypt extends AbstractCommand {
         DashFileSetSequence d = new DashFileSetSequence();
         d.setExplode(explode);
         d.setSparse(sparse);
+        d.setClearlead(clearLead);
         d.setLogger(setupLogger());
         d.setOutputDirectory(outputDirectory);
         d.setInputFiles(inputFiles);

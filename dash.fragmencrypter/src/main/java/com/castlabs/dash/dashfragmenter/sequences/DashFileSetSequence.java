@@ -54,6 +54,8 @@ public class DashFileSetSequence {
 
     protected int sparse = 0;
 
+    protected int clearlead = 0;
+
     protected String encryptionAlgo = "cenc";
 
     public void setEncryptionAlgo(String encryptionAlgo) {
@@ -90,6 +92,10 @@ public class DashFileSetSequence {
 
     public void setLogger(Logger l) {
         this.l = l;
+    }
+
+    public void setClearlead(int clearlead) {
+        this.clearlead = clearlead;
     }
 
     public int run() throws IOException, ExitCodeException {
@@ -385,43 +391,78 @@ public class DashFileSetSequence {
 
     }
 
+    long[] longSet2Array(Set<Long> longSet) {
+        long[] r = new long[longSet.size()];
+        List<Long> longList = new ArrayList<Long>(longSet);
+        for (int i = 0; i < r.length; i++) {
+            r[i] = longList.get(i);
+        }
+        Arrays.sort(r);
+        return r;
+    }
+
     public Map<Track, String> encryptTracks(Map<Track, String> track2File) {
         if (this.key != null && this.keyid != null) {
             Map<Track, String> encTracks = new HashMap<Track, String>();
             for (Map.Entry<Track, String> trackStringEntry : track2File.entrySet()) {
                 String hdlr = trackStringEntry.getKey().getHandler();
                 if ("vide".equals(hdlr) || "soun".equals(hdlr)) {
+                    Track t = trackStringEntry.getKey();
+
+                    int clearTillSample = 0;
+                    int numSamples = t.getSamples().size();
+                    if (clearlead > 0) {
+                        clearTillSample = (int) (clearlead * numSamples / (t.getDuration() / t.getTrackMetaData().getTimescale()));
+                    }
+
                     if (sparse == 0) {
-                        CencEncryptingTrackImpl cencTrack = new CencEncryptingTrackImpl(
-                                trackStringEntry.getKey(), keyid,
-                                Collections.singletonMap(keyid, key),
-                                null, encryptionAlgo);
+                        CencEncryptingTrackImpl cencTrack;
+                        if (clearTillSample > 0) {
+                            CencSampleEncryptionInformationGroupEntry e = new CencSampleEncryptionInformationGroupEntry();
+                            e.setEncrypted(false);
+                            long[] excludes = new long[clearTillSample];
+                            for (int i = 0; i < excludes.length; i++) {
+                                excludes[i] = i;
+                            }
+                            cencTrack = new CencEncryptingTrackImpl(
+                                    t, keyid,
+                                    Collections.singletonMap(keyid, key),
+                                    Collections.singletonMap(e, excludes),
+                                    encryptionAlgo);
+
+                        } else {
+                            cencTrack = new CencEncryptingTrackImpl(
+                                    t, keyid,
+                                    Collections.singletonMap(keyid, key),
+                                    null, encryptionAlgo);
+                        }
                         encTracks.put(cencTrack, trackStringEntry.getValue());
                     } else if (sparse == 1) {
                         CencSampleEncryptionInformationGroupEntry e = new CencSampleEncryptionInformationGroupEntry();
                         e.setEncrypted(false);
-                        Track t = trackStringEntry.getKey();
-                        long[] excludes;
-                        if (t.getSyncSamples() != null && t.getSyncSamples().length > 0) {
-                            excludes = new long[t.getSamples().size() - t.getSyncSamples().length];
-                            int excludesIndex = 0;
-                            for (long i = 1; i <= t.getSamples().size(); i++) {
-                                if (Arrays.binarySearch(t.getSyncSamples(), i) < 0) {
-                                    excludes[excludesIndex++] = i - 1;
-                                }
 
+                        Set<Long> plainSamples = new HashSet<Long>();
+                        if (t.getSyncSamples() != null && t.getSyncSamples().length > 0) {
+                            for (long i = 1; i <= t.getSamples().size(); i++) {
+                                if (Arrays.binarySearch(t.getSyncSamples(), i) < 0 || i < clearTillSample) {
+                                    plainSamples.add(i);
+                                }
                             }
                         } else {
-                            excludes = new long[t.getSamples().size() / 3];
-                            for (int i = 0; i < excludes.length; i++) {
-                                excludes[i] = i * 3;
+                            for (int i = 0; i < clearTillSample; i++) {
+                                plainSamples.add((long) i);
+                            }
+                            for (int i = clearTillSample; i < t.getSamples().size(); i++) {
+                                if (i % 3 == 0) {
+                                    plainSamples.add((long) i);
+                                }
                             }
                         }
 
                         CencEncryptingTrackImpl cencTrack = new CencEncryptingTrackImpl(
                                 t, keyid,
                                 Collections.singletonMap(keyid, key),
-                                Collections.singletonMap(e, excludes),
+                                Collections.singletonMap(e, longSet2Array(plainSamples)),
                                 "cenc");
                         encTracks.put(cencTrack, trackStringEntry.getValue());
 
@@ -430,27 +471,28 @@ public class DashFileSetSequence {
                         e.setEncrypted(true);
                         e.setKid(keyid);
                         e.setIvSize(8);
-                        Track t = trackStringEntry.getKey();
 
-                        long[] includes;
+
+                        Set<Long> encryptedSamples = new HashSet<Long>();
                         if (t.getSyncSamples() != null && t.getSyncSamples().length > 0) {
-                            includes = Arrays.copyOf(t.getSyncSamples(), t.getSyncSamples().length);
-                            for (int i = 0; i < includes.length; i++) {
-                                includes[i] -= 1;
+                            for (int i = 0; i < t.getSyncSamples().length; i++) {
+                                if (t.getSyncSamples()[i] >= clearTillSample) {
+                                    encryptedSamples.add(t.getSyncSamples()[i]);
+                                }
                             }
+
                         } else {
                             SecureRandom r = new SecureRandom();
-                            int encSamples = t.getSamples().size() / 10;
-                            includes = new long[encSamples];
+                            int encSamples = numSamples / 10;
                             while (--encSamples >= 0) {
-                                includes[encSamples] = r.nextInt(t.getSamples().size());
+                                int s = r.nextInt(numSamples - clearTillSample) + clearTillSample;
+                                encryptedSamples.add((long) s);
                             }
-                            Arrays.sort(includes);
                         }
                         encTracks.put(new CencEncryptingTrackImpl(
                                 t, null,
                                 Collections.singletonMap(keyid, key),
-                                Collections.singletonMap(e, includes),
+                                Collections.singletonMap(e, longSet2Array(encryptedSamples)),
                                 "cenc"), trackStringEntry.getValue());
                     }
                 } else {
