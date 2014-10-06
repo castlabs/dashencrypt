@@ -16,6 +16,7 @@ import com.coremedia.iso.boxes.fragment.TrackFragmentHeaderBox;
 import com.coremedia.iso.boxes.fragment.TrackRunBox;
 import com.coremedia.iso.boxes.mdat.MediaDataBox;
 import com.googlecode.mp4parser.authoring.Track;
+import com.googlecode.mp4parser.util.Iso639;
 import com.googlecode.mp4parser.util.Path;
 import mpegCenc2013.DefaultKIDAttribute;
 import mpegDashSchemaMpd2011.*;
@@ -180,7 +181,7 @@ public abstract class AbstractManifestWriter {
         AdaptationSetType adaptationSet = periodType.addNewAdaptationSet();
         adaptationSet.setSegmentAlignment(true);
         adaptationSet.setStartWithSAP(1);
-        adaptationSet.setLang(language);
+        adaptationSet.setLang(Iso639.convert3to2(language));
         adaptationSet.setBitstreamSwitching(true);
         if (tracks.get(0).getHandler().equals("soun")) {
             adaptationSet.setMimeType("audio/mp4");

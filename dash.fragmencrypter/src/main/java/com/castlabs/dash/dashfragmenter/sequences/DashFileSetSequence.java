@@ -19,7 +19,9 @@ import com.googlecode.mp4parser.boxes.mp4.ESDescriptorBox;
 import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.AudioSpecificConfig;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.CencSampleEncryptionInformationGroupEntry;
 import com.googlecode.mp4parser.util.Path;
-import mpegDashSchemaMpd2011.MPDDocument;
+import mpegDashSchemaMpd2011.*;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.xmlbeans.XmlOptions;
 
 import javax.crypto.SecretKey;
@@ -31,6 +33,8 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 /**
@@ -57,6 +61,9 @@ public class DashFileSetSequence {
     protected int clearlead = 0;
 
     protected String encryptionAlgo = "cenc";
+
+    private List<File> subtiles = new ArrayList<File>();
+    private Map<File, String> subtitleLanguages;
 
     public void setEncryptionAlgo(String encryptionAlgo) {
         this.encryptionAlgo = encryptionAlgo;
@@ -107,6 +114,10 @@ public class DashFileSetSequence {
         long start = System.currentTimeMillis();
 
         Map<Track, String> track2File = createTracks();
+        List<File> subtitles = findSubtitles();
+        Map<File, String> subtitleLanguages = getSubtitleLanguages(subtitles);
+
+        checkUnhandledFile();
 
         track2File = alignEditsToZero(track2File);
         track2File = fixAppleOddity(track2File);
@@ -134,22 +145,91 @@ public class DashFileSetSequence {
         // export the dashed single track MP4s
         Map<Track, Container> dashedFiles = createSingleTrackDashedMp4s(trackStartSamples, trackFilename);
 
+        MPDDocument mpdDocument;
         if (!explode) {
             writeFilesSingleSidx(trackFilename, dashedFiles);
-            writeManifestSingleSidx(trackFamilies, trackBitrate, trackFilename, dashedFiles);
+            mpdDocument = createManifestSingleSidx(trackFamilies, trackBitrate, trackFilename, dashedFiles);
         } else {
             String mediaPattern = "$RepresentationID$/media-$Time$.mp4";
             String initPattern = "$RepresentationID$/init.mp4";
 
             Map<Track, List<File>> trackToSegments =
                     writeFilesExploded(trackFilename, dashedFiles, trackBitrate, outputDirectory, initPattern, mediaPattern);
-
-            writeManifestExploded(trackFamilies, trackBitrate, trackFilename, dashedFiles, trackToSegments, outputDirectory, initPattern, mediaPattern);
+            mpdDocument = createManifestExploded(trackFamilies, trackBitrate, trackFilename, dashedFiles, trackToSegments, initPattern, mediaPattern);
         }
+        addSubtitles(mpdDocument, subtitles, subtitleLanguages);
 
+        writeManifest(mpdDocument);
 
         l.info("Finished write in " + (System.currentTimeMillis() - start) + "ms");
         return 0;
+    }
+
+    public void addSubtitles(MPDDocument mpdDocument, List<File> subtitles, Map<File, String> subtitleLanguages) throws IOException {
+        for (File subtitle : subtitles) {
+            PeriodType period = mpdDocument.getMPD().getPeriodArray()[0];
+            AdaptationSetType adaptationSet = period.addNewAdaptationSet();
+            if (subtitle.getName().endsWith(".xml")) {
+                adaptationSet.setMimeType("application/ttml+xml");
+            } else if (subtitle.getName().endsWith(".vtt")) {
+                adaptationSet.setMimeType("text/vtt");
+            } else {
+                throw new RuntimeException("Not sure what kind of subtitle " + subtitle.getName() + " is.");
+            }
+            adaptationSet.setLang(subtitleLanguages.get(subtitle));
+            DescriptorType descriptor = adaptationSet.addNewRole();
+            descriptor.setSchemeIdUri("urn:mpeg:dash:role");
+            descriptor.setValue("subtitle");
+            RepresentationType representation = adaptationSet.addNewRepresentation();
+            representation.setId(FilenameUtils.getBaseName(subtitle.getName()));
+            representation.setBandwidth(128); // pointless - just invent a small number
+            BaseURLType baseURL = representation.addNewBaseURL();
+            baseURL.setStringValue(subtitle.getName());
+            FileUtils.copyFileToDirectory(subtitle, outputDirectory);
+
+        }
+    }
+
+    public void writeManifest(MPDDocument mpdDocument) throws IOException {
+        XmlOptions xmlOptions = new XmlOptions();
+        //xmlOptions.setUseDefaultNamespace();
+        HashMap<String, String> ns = new HashMap<String, String>();
+        //ns.put("urn:mpeg:DASH:schema:MPD:2011", "");
+        ns.put("urn:mpeg:cenc:2013", "cenc");
+        xmlOptions.setSaveSuggestedPrefixes(ns);
+        xmlOptions.setSaveAggressiveNamespaces();
+        xmlOptions.setUseDefaultNamespace();
+        xmlOptions.setSavePrettyPrint();
+        File manifest1 = new File(outputDirectory, "Manifest.mpd");
+        l.info("Writing " + manifest1 + "... ");
+        mpdDocument.save(manifest1, xmlOptions);
+        l.info("Done.");
+
+    }
+
+    private void checkUnhandledFile() throws ExitCodeException {
+        for (File inputFile : inputFiles) {
+            l.severe("Cannot identify type of " + inputFile);
+        }
+        if (inputFiles.size() > 0) {
+            throw new ExitCodeException("Only extensions mp4, mov, m4v, aac, ac3, ec3, dtshd and xml/vtt are known.", 1);
+        }
+    }
+
+    private List<File> findSubtitles() {
+        List<File> subs = new ArrayList<File>();
+        List<File> unhandled = new ArrayList<File>();
+        for (File inputFile : inputFiles) {
+            if (inputFile.getName().endsWith(".xml")) {
+                subs.add(inputFile);
+            } else if (inputFile.getName().endsWith(".vtt")) {
+                subs.add(inputFile);
+            } else {
+                unhandled.add(inputFile);
+            }
+        }
+        inputFiles.retainAll(unhandled);
+        return subs;
     }
 
     public Map<Track, List<File>> writeFilesExploded(
@@ -346,10 +426,13 @@ public class DashFileSetSequence {
      * @throws IOException
      */
     public Map<Track, String> createTracks() throws IOException, ExitCodeException {
+        List<File> unhandled = new ArrayList<File>();
+
         Map<Track, String> track2File = new HashMap<Track, String>();
         for (File inputFile : inputFiles) {
             if (inputFile.getName().endsWith(".mp4") ||
                     inputFile.getName().endsWith(".mov") ||
+                    inputFile.getName().endsWith(".m4a") ||
                     inputFile.getName().endsWith(".m4v")) {
                 Movie movie = MovieCreator.build(new FileDataSourceImpl(inputFile));
                 for (Track track : movie.getTracks()) {
@@ -381,11 +464,10 @@ public class DashFileSetSequence {
                 track2File.put(track, inputFile.getName());
                 l.fine("Created DTS HD Track from " + inputFile.getName());
             } else {
-                l.severe("Cannot identify type of " + inputFile + ". Extensions mp4, mov, m4v, aac, ac3, ec3 or dtshd are known.");
-                throw new ExitCodeException("Cannot identify type of " + inputFile + ". Extensions mp4, mov, m4v, aac, ac3, ec3 or dtshd are known.", 1);
+                unhandled.add(inputFile);
             }
         }
-
+        inputFiles.retainAll(unhandled);
 
         return track2File;
 
@@ -619,40 +701,25 @@ public class DashFileSetSequence {
         return trackFamilies;
     }
 
-    public void writeManifestExploded(Map<String, List<Track>> trackFamilies,
-                                      Map<Track, Long> trackBitrate,
-                                      Map<Track, String> trackFilename,
-                                      Map<Track, Container> dashedFiles,
-                                      Map<Track, List<File>> trackToSegments,
-                                      File outputDirectory, String initPattern, String mediaPattern) throws IOException {
+    public MPDDocument createManifestExploded(Map<String, List<Track>> trackFamilies,
+                                              Map<Track, Long> trackBitrate,
+                                              Map<Track, String> trackFilename,
+                                              Map<Track, Container> dashedFiles,
+                                              Map<Track, List<File>> trackToSegments,
+                                              String initPattern, String mediaPattern) throws IOException {
         Map<Track, UUID> trackKeyIds = new HashMap<Track, UUID>();
         for (List<Track> tracks : trackFamilies.values()) {
             for (Track track : tracks) {
                 trackKeyIds.put(track, this.keyid);
             }
         }
-        MPDDocument mpdDocument =
-                new ExplodedSegmentListManifestWriterImpl(
-                        trackFamilies, dashedFiles, trackBitrate, trackFilename,
-                        trackKeyIds, trackToSegments, initPattern, mediaPattern).getManifest();
 
-        XmlOptions xmlOptions = new XmlOptions();
-        //xmlOptions.setUseDefaultNamespace();
-        HashMap<String, String> ns = new HashMap<String, String>();
-        //ns.put("urn:mpeg:DASH:schema:MPD:2011", "");
-        ns.put("urn:mpeg:cenc:2013", "cenc");
-        xmlOptions.setSaveSuggestedPrefixes(ns);
-        xmlOptions.setSaveAggressiveNamespaces();
-        xmlOptions.setUseDefaultNamespace();
-        xmlOptions.setSavePrettyPrint();
-        File manifest1 = new File(outputDirectory, "Manifest.mpd");
-        l.info("Writing " + manifest1 + "... ");
-        mpdDocument.save(manifest1, xmlOptions);
-        l.info("Done.");
-
+        return new ExplodedSegmentListManifestWriterImpl(
+                trackFamilies, dashedFiles, trackBitrate, trackFilename,
+                trackKeyIds, trackToSegments, initPattern, mediaPattern).getManifest();
     }
 
-    public void writeManifestSingleSidx(Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate, Map<Track, String> trackFilename, Map<Track, Container> dashedFiles) throws IOException {
+    public MPDDocument createManifestSingleSidx(Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate, Map<Track, String> trackFilename, Map<Track, Container> dashedFiles) throws IOException {
 
         Map<Track, UUID> trackKeyIds = new HashMap<Track, UUID>();
         for (List<Track> tracks : trackFamilies.values()) {
@@ -664,19 +731,41 @@ public class DashFileSetSequence {
                 trackFamilies, dashedFiles,
                 trackBitrate, trackFilename,
                 trackKeyIds);
-        MPDDocument mpdDocument = dashManifestWriter.getManifest();
 
-        XmlOptions xmlOptions = new XmlOptions();
-        //xmlOptions.setUseDefaultNamespace();
-        HashMap<String, String> ns = new HashMap<String, String>();
-        //ns.put("urn:mpeg:DASH:schema:MPD:2011", "");
-        ns.put("urn:mpeg:cenc:2013", "cenc");
-        xmlOptions.setSaveSuggestedPrefixes(ns);
-        xmlOptions.setSaveAggressiveNamespaces();
-        xmlOptions.setUseDefaultNamespace();
-        xmlOptions.setSavePrettyPrint();
+        return dashManifestWriter.getManifest();
+    }
 
-        mpdDocument.save(new File(this.outputDirectory, "Manifest.mpd"), xmlOptions);
+    public Map<File,String> getSubtitleLanguages(List<File> subtitles) throws ExitCodeException, IOException {
+        Map<File, String> languages = new HashMap<File, String>();
+
+        Pattern patternFilenameIncludesLanguage = Pattern.compile(".*-([a-z][a-z])");
+        Pattern patternXmlContainsLang = Pattern.compile(".*lang *= *\"([^\"]*)\".*", Pattern.MULTILINE);
+        for (File subtitle : subtitles) {
+            String ext = FilenameUtils.getExtension(subtitle.getName());
+            String basename = FilenameUtils.getBaseName(subtitle.getName());
+            if (ext.equals("vtt")) {
+                Matcher m = patternFilenameIncludesLanguage.matcher(basename);
+                if (m.matches()) {
+                    languages.put(subtitle, m.group(1));
+                } else {
+                    throw new ExitCodeException("Cannot determine language of " + subtitle + " please use the pattern name-[2-letter-lang].vtt", 1387);
+                }
+            } else if (ext.equals("xml")) {
+                String xml = FileUtils.readFileToString(subtitle);
+                Matcher m = patternXmlContainsLang.matcher(xml);
+                if (m.matches()) {
+                    languages.put(subtitle, m.group(1));
+                } else {
+                    Matcher m2 = patternFilenameIncludesLanguage.matcher(basename);
+                    if (m2.matches()) {
+                        languages.put(subtitle, m2.group(1));
+                    } else {
+                        throw new ExitCodeException("Cannot determine language of " + subtitle + " please use either the xml:lang attribute or a filename pattern like name-[2-letter-lang].xml", 1388);
+                    }
+                }
+            }
+        }
+        return languages    ;
     }
 
     private class StsdCorrectingTrack extends AbstractTrack {
