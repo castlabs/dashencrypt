@@ -8,13 +8,9 @@ package com.castlabs.dash.dashfragmenter.formats.csf;
 
 import com.coremedia.iso.boxes.*;
 import com.coremedia.iso.boxes.fragment.MovieFragmentBox;
-import com.coremedia.iso.boxes.fragment.TrackFragmentBaseMediaDecodeTimeBox;
-import com.coremedia.iso.boxes.fragment.TrackFragmentBox;
 import com.coremedia.iso.boxes.fragment.TrackRunBox;
 import com.googlecode.mp4parser.BasicContainer;
 import com.googlecode.mp4parser.authoring.Movie;
-import com.googlecode.mp4parser.authoring.Sample;
-import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.builder.FragmentedMp4Builder;
 import com.googlecode.mp4parser.boxes.threegpp26244.SegmentIndexBox;
 import com.googlecode.mp4parser.util.Path;
@@ -23,6 +19,8 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
+import static com.castlabs.dash.helpers.Timing.getPtss;
+import static com.castlabs.dash.helpers.Timing.getTimeMappingEditTime;
 import static com.googlecode.mp4parser.util.CastUtils.l2i;
 
 /**
@@ -33,40 +31,6 @@ public class DashBuilder extends FragmentedMp4Builder {
     public DashBuilder() {
     }
 
-
-
-    private long getTimeMappingEditTime(Container file) {
-        final EditListBox editList = Path.getPath(file, "/moov[0]/trak[0]/edts[0]/elst[0]");
-        final MediaHeaderBox mdhd = Path.getPath(file, "/moov[0]/trak[0]/mdia[0]/mdhd[0]");
-        final MovieHeaderBox mvhd = Path.getPath(file, "/moov[0]/mvhd[0]");
-
-        if (editList != null) {
-            double editStartTime = 0;
-            final List<EditListBox.Entry> entries = editList.getEntries();
-            boolean acceptDwell = true;
-            boolean acceptEdit = true;
-            for (EditListBox.Entry edit : entries) {
-                if (edit.getMediaTime() == -1 && !acceptDwell) {
-                    throw new RuntimeException("Cannot accept edit list for processing (1)");
-                }
-                if (edit.getMediaTime() >= 0 && !acceptEdit) {
-                    throw new RuntimeException("Cannot accept edit list for processing (2)");
-                }
-                if (edit.getMediaTime() == -1) {
-                    assert mvhd != null;
-                    editStartTime -= (double)edit.getSegmentDuration() / mvhd.getTimescale() ;
-                } else /* if edit.getMediaTime() >= 0 */ {
-                    assert mdhd != null;
-                    editStartTime += (double) edit.getMediaTime() / mdhd.getTimescale();
-                    acceptEdit = false;
-                    acceptDwell = false;
-                }
-            }
-            assert mdhd != null;
-            return (long)(editStartTime * mdhd.getTimescale());
-        }
-        return 0;
-    }
 
 
     private SegmentIndexBox createSidx(BasicContainer isoFile, List<Box> moofMdats, long offsetBetweenSidxAndFirstMoof) {
@@ -150,29 +114,6 @@ public class DashBuilder extends FragmentedMp4Builder {
         }
     }
 
-    @Override
-    protected void createTrun(long startSample, long endSample, Track track, int sequenceNumber, TrackFragmentBox parent) {
-        super.createTrun(startSample, endSample, track, sequenceNumber, parent);
-        TrackRunBox trun = Path.getPath(parent, "trun");
-        if (Path.getPath(track.getSampleDescriptionBox(), "avc.") != null) {
-            List<Sample> samples = track.getSamples();
-            for (int i = 0; i < endSample - startSample; i++) {
-                Sample s = samples.get((int) (startSample - 1 + i));
-                s.asByteBuffer();
-
-            }
-        }
-    }
-
-    private long[] getPtss(TrackRunBox trun) {
-        long currentTime = 0;
-        long[] ptss = new long[trun.getEntries().size()];
-        for (int j = 0; j < ptss.length; j++) {
-            ptss[j] = currentTime + trun.getEntries().get(j).getSampleCompositionTimeOffset();
-            currentTime += trun.getEntries().get(j).getSampleDuration();
-        }
-        return ptss;
-    }
 
     @Override
     public Container build(Movie movie) {

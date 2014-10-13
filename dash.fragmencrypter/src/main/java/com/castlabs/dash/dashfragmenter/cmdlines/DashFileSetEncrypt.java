@@ -95,6 +95,8 @@ public class DashFileSetEncrypt extends AbstractCommand {
         d.setLogger(setupLogger());
         d.setOutputDirectory(outputDirectory);
         d.setInputFiles(inputFiles);
+        d.setEncryptionAlgo("cenc");
+
 
         List<X509Certificate> certObjects = new LinkedList<X509Certificate>();
         CertificateFactory cf;

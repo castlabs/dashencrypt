@@ -12,7 +12,10 @@ import com.coremedia.iso.boxes.SampleDescriptionBox;
 import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
 import com.googlecode.mp4parser.FileDataSourceImpl;
 import com.googlecode.mp4parser.authoring.*;
-import com.googlecode.mp4parser.authoring.builder.*;
+import com.googlecode.mp4parser.authoring.builder.FragmentIntersectionFinder;
+import com.googlecode.mp4parser.authoring.builder.StaticFragmentIntersectionFinderImpl;
+import com.googlecode.mp4parser.authoring.builder.SyncSampleIntersectFinderImpl;
+import com.googlecode.mp4parser.authoring.builder.TwoSecondIntersectionFinder;
 import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import com.googlecode.mp4parser.authoring.tracks.*;
 import com.googlecode.mp4parser.boxes.mp4.ESDescriptorBox;
@@ -41,29 +44,17 @@ import java.util.regex.Pattern;
  *
  */
 public class DashFileSetSequence {
-    Logger l;
     static Set<String> supportedTypes = new HashSet<String>(Arrays.asList("ac-3", "ec-3", "dtsl", "dtsh", "dtse", "avc1", "mp4a", "h264"));
-
     protected SecretKey key;
-
     protected UUID keyid;
-
     protected List<X509Certificate> certificates;
-
     protected List<File> inputFiles;
-
-    protected File outputDirectory = new File("");
-
+    protected File outputDirectory = new File(System.getProperty("user.dir"));
     protected boolean explode = false;
-
     protected int sparse = 0;
-
     protected int clearlead = 0;
-
     protected String encryptionAlgo = "cenc";
-
-    private List<File> subtiles = new ArrayList<File>();
-    private Map<File, String> subtitleLanguages;
+    Logger l;
 
     public void setEncryptionAlgo(String encryptionAlgo) {
         this.encryptionAlgo = encryptionAlgo;
@@ -145,6 +136,13 @@ public class DashFileSetSequence {
         // export the dashed single track MP4s
         Map<Track, Container> dashedFiles = createSingleTrackDashedMp4s(trackStartSamples, trackFilename);
 
+        createManifest(subtitles, subtitleLanguages, trackFamilies, trackBitrate, trackFilename, dashedFiles);
+
+        l.info("Finished write in " + (System.currentTimeMillis() - start) + "ms");
+        return 0;
+    }
+
+    public void createManifest(List<File> subtitles, Map<File, String> subtitleLanguages, Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate, Map<Track, String> trackFilename, Map<Track, Container> dashedFiles) throws IOException {
         MPDDocument mpdDocument;
         if (!explode) {
             writeFilesSingleSidx(trackFilename, dashedFiles);
@@ -160,9 +158,6 @@ public class DashFileSetSequence {
         addSubtitles(mpdDocument, subtitles, subtitleLanguages);
 
         writeManifest(mpdDocument);
-
-        l.info("Finished write in " + (System.currentTimeMillis() - start) + "ms");
-        return 0;
     }
 
     public void addSubtitles(MPDDocument mpdDocument, List<File> subtitles, Map<File, String> subtitleLanguages) throws IOException {
@@ -241,9 +236,17 @@ public class DashFileSetSequence {
             String mediaPattern) throws IOException {
         Map<Track, List<File>> trackToSegments = new HashMap<Track, List<File>>();
         for (Track t : trackFilename.keySet()) {
-            String filename = trackFilename.get(t);
-            l.info("Writing... " + filename + "/...");
-            File targetDir = new File(outputDirectory, filename);
+            String filename = mediaPattern.replace("$Bandwidth$", "" + trackBitrate.get(t));
+            filename = filename.replace("$Time$", "0");
+            filename = filename.replace("$Number$", "0");
+            filename = filename.replace("$RepresentationID$", trackFilename.get(t));
+
+
+            File targetDir = new File(outputDirectory, filename).getParentFile();
+
+            l.info("Writing " + t.getName() + " to " + targetDir + "...");
+
+
             if (!(targetDir.getAbsoluteFile().exists() ^ targetDir.getAbsoluteFile().mkdirs())) {
                 l.severe("target directory " + targetDir + " does not exist and cannot be created.");
             }
@@ -281,7 +284,7 @@ public class DashFileSetSequence {
     }
 
 
-    public Mp4Builder getFileBuilder(FragmentIntersectionFinder fragmentIntersectionFinder, Movie m) {
+    public DashBuilder getFileBuilder(FragmentIntersectionFinder fragmentIntersectionFinder, Movie m) {
         DashBuilder dashBuilder = new DashBuilder();
         dashBuilder.setIntersectionFinder(fragmentIntersectionFinder);
         return dashBuilder;
@@ -299,7 +302,7 @@ public class DashFileSetSequence {
             movie.addTrack(trackEntry.getKey());
 
             l.info("Creating model for " + filename + "... ");
-            Mp4Builder mp4Builder = getFileBuilder(
+            DashBuilder mp4Builder = getFileBuilder(
                     new StaticFragmentIntersectionFinderImpl(fragmentStartSamples),
                     movie);
             Container isoFile = mp4Builder.build(movie);
@@ -357,7 +360,7 @@ public class DashFileSetSequence {
                 double duration = (double) track.getDuration() / track.getTrackMetaData().getTimescale();
                 long size = trackSize.get(track);
 
-                bitrates.put(track, (long) ((size * 8 / duration / 1000)) * 1000);
+                bitrates.put(track, (long) ((size * 8 / duration / 100)) * 100);
             }
 
         }
@@ -613,6 +616,12 @@ public class DashFileSetSequence {
         return nuTracks;
     }
 
+    /**
+     * In DASH Some tracks might have an earliest presentation timestamp < 0
+     *
+     * @param tracks
+     * @return
+     */
     public Map<Track, String> alignEditsToZero(Map<Track, String> tracks) {
         Map<Track, String> result = new HashMap<Track, String>();
         double earliestMoviePresentationTime = 0;
@@ -666,9 +675,7 @@ public class DashFileSetSequence {
             } else if (adjustedStartTime > 0) {
                 edits.add(new Edit(-1, track.getTrackMetaData().getTimescale(), 1.0, adjustedStartTime));
                 edits.add(new Edit(0, track.getTrackMetaData().getTimescale(), 1.0, (double) track.getDuration() / track.getTrackMetaData().getTimescale()));
-
             }
-
             result.put(new WrappingTrack(track) {
                 @Override
                 public List<Edit> getEdits() {

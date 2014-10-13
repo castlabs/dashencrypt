@@ -2,12 +2,9 @@ package com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate;
 
 import com.castlabs.dash.helpers.AbstractManifestWriter;
 import com.coremedia.iso.IsoFile;
-import com.coremedia.iso.boxes.Box;
 import com.coremedia.iso.boxes.Container;
-import com.coremedia.iso.boxes.fragment.MovieFragmentBox;
 import com.coremedia.iso.boxes.fragment.TrackRunBox;
 import com.googlecode.mp4parser.authoring.Track;
-import com.googlecode.mp4parser.boxes.threegpp26244.SegmentIndexBox;
 import com.googlecode.mp4parser.util.Path;
 import mpegDashSchemaMpd2011.*;
 import org.apache.xmlbeans.GDuration;
@@ -16,15 +13,16 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.Iterator;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import static com.castlabs.dash.helpers.ManifestHelper.createRepresentation;
+import static com.castlabs.dash.helpers.Timing.*;
 
 /**
- * Created by user on 26.08.2014.
+ * Creates a manifest fr
  */
 public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWriter {
     Map<Track, List<File>> trackToSegements;
@@ -63,17 +61,28 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
             segmentTemplate.setTimescale(firstTrack.getTrackMetaData().getTimescale());
             SegmentTimelineType segmentTimeline = segmentTemplate.addNewSegmentTimeline();
             List<File> segments = trackToSegements.get(firstTrack).subList(1, trackToSegements.get(firstTrack).size());
+            File init = trackToSegements.get(firstTrack).get(0);
+
+            TrackRunBox firstTrun = Path.getPath(new IsoFile(segments.get(0).getAbsolutePath()), "moof/traf/trun");
+
+            long[] ptss = getPtss(firstTrun);
+            Arrays.sort(ptss); // index 0 has now the earliest presentation time stamp!
+            long timeMappingEdit = getTimeMappingEditTime(new IsoFile(init.getAbsolutePath()));
+            long startTime = ptss[0] - timeMappingEdit;
+
 
             for (File segment : segments) {
                 IsoFile segmentContainer = new IsoFile(segment.getAbsolutePath());
-                SegmentIndexBox sidx = Path.getPath(segmentContainer, "sidx");
-                SegmentTimelineType.S s = segmentTimeline.addNewS();
-                long segmentDuration = 0;
-                for (SegmentIndexBox.Entry entry : sidx.getEntries()) {
-                    segmentDuration += entry.getSubsegmentDuration();
+                long duratoin = 0;
+                List<TrackRunBox> truns = Path.getPaths(segmentContainer, "moof/traf/trun");
+                for (TrackRunBox trun : truns) {
+                    duratoin += getDuration(trun);
                 }
-                s.setD((BigInteger.valueOf(segmentDuration)));
-                s.setT(BigInteger.valueOf(sidx.getEarliestPresentationTime()));
+
+                SegmentTimelineType.S s = segmentTimeline.addNewS();
+                s.setD((BigInteger.valueOf(duratoin)));
+                s.setT(BigInteger.valueOf(startTime));
+                startTime += duratoin;
 
             }
 
@@ -97,9 +106,12 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
 
     }
 
+
     protected void createInitialization(URLType urlType, Track track) {
         File initFile = trackToSegements.get(track).get(0);
         String dirName = trackFilenames.get(track);
         urlType.setSourceURL(dirName + "/" + initFile.getName());
     }
+
+
 }
