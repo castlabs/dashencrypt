@@ -42,6 +42,7 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
         this.mediaPattern = mediaPattern;
     }
 
+
     @Override
     protected void createPeriod(PeriodType periodType) throws IOException {
 
@@ -73,16 +74,16 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
 
             for (File segment : segments) {
                 IsoFile segmentContainer = new IsoFile(segment.getAbsolutePath());
-                long duratoin = 0;
+                long duration = 0;
                 List<TrackRunBox> truns = Path.getPaths(segmentContainer, "moof/traf/trun");
                 for (TrackRunBox trun : truns) {
-                    duratoin += getDuration(trun);
+                    duration += getDuration(trun);
                 }
 
                 SegmentTimelineType.S s = segmentTimeline.addNewS();
-                s.setD((BigInteger.valueOf(duratoin)));
+                s.setD((BigInteger.valueOf(duration)));
                 s.setT(BigInteger.valueOf(startTime));
-                startTime += duratoin;
+                startTime += duration;
 
             }
 

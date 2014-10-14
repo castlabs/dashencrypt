@@ -1,40 +1,42 @@
 package com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate;
 
-import com.coremedia.iso.IsoFile;
 import com.coremedia.iso.boxes.Box;
 import com.coremedia.iso.boxes.Container;
 import com.coremedia.iso.boxes.FileTypeBox;
-import com.coremedia.iso.boxes.fragment.MovieFragmentBox;
 import com.coremedia.iso.boxes.fragment.SegmentTypeBox;
-import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.boxes.threegpp26244.SegmentIndexBox;
 import com.googlecode.mp4parser.util.Path;
+import org.apache.commons.io.FileUtils;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Array;
-import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 /**
- * Created by user on 25.08.2014.
+ * Splits a single sidx file into one file per segment.
  */
 public class SingleSidxExplode {
+    boolean generateStypSdix = true;
+
     public SingleSidxExplode() {
     }
 
+    public void setGenerateStypSdix(boolean generateStypSdix) {
+        this.generateStypSdix = generateStypSdix;
+    }
 
-    public void doIt(String sourceFilename, Container in, Long bitrate, List<File> segments, File outputDir, String initPattern, String mediaPattern ) throws IOException {
+    public List<File> doIt(Container in, String representationId, Long bitrate, File outputDir, String initPattern, String mediaPattern) throws IOException {
+        List<File> segments = new ArrayList<File>();
         String initFilename = initPattern.replace("$Bandwidth$", "" + bitrate);
-        initFilename = initFilename.replace("$RepresentationID$", sourceFilename);
+        initFilename = initFilename.replace("$RepresentationID$", representationId);
+
         File initFile = new File(outputDir, initFilename);
+        FileUtils.forceMkdir(initFile.getParentFile());
         segments.add(initFile);
-        initFile.getParentFile().mkdirs();
+
         FileChannel initChannel = new FileOutputStream(initFile).getChannel();
         long sidxBase = 0;
         for (Box box : in.getBoxes()) {
@@ -52,32 +54,38 @@ public class SingleSidxExplode {
         long start = sidxBase + sidx.getFirstOffset();
         long earliestPresentationTime = sidx.getEarliestPresentationTime();
         for (int i = 0; i < sidx.getEntries().size(); i++) {
-            SegmentIndexBox.Entry entry = sidx.getEntries().get(i);
-            SegmentTypeBox styp = new SegmentTypeBox();
-            styp.setMajorBrand(ftyp.getMajorBrand());
-            List<String> compatibleBrands = new ArrayList<String>();
-            compatibleBrands.addAll(ftyp.getCompatibleBrands());
-            compatibleBrands.add("msdh");
-            styp.setCompatibleBrands(compatibleBrands);
-            styp.setMinorVersion(ftyp.getMinorVersion());
-            SegmentIndexBox localSidx = new SegmentIndexBox();
-            localSidx.getEntries().add(entry);
-            localSidx.setEarliestPresentationTime(earliestPresentationTime);
-
             String filename = mediaPattern.replace("$Bandwidth$", "" + bitrate);
             filename = filename.replace("$Time$", "" + earliestPresentationTime);
             filename = filename.replace("$Number$", "" + i);
-            filename = filename.replace("$RepresentationID$", sourceFilename);
+            filename = filename.replace("$RepresentationID$", representationId);
 
             File segmentFile = new File(outputDir, filename);
+            FileUtils.forceMkdir(segmentFile.getParentFile());
             segments.add(segmentFile);
-            segmentFile.getParentFile().mkdirs();
+
             FileChannel fc = new FileOutputStream(segmentFile).getChannel();
-            styp.getBox(fc);
-            localSidx.getBox(fc);
+            SegmentIndexBox.Entry entry = sidx.getEntries().get(i);
+
+            if (generateStypSdix) {
+
+                SegmentTypeBox styp = new SegmentTypeBox();
+                styp.setMajorBrand(ftyp.getMajorBrand());
+                List<String> compatibleBrands = new ArrayList<String>();
+                compatibleBrands.addAll(ftyp.getCompatibleBrands());
+                compatibleBrands.add("msdh");
+                styp.setCompatibleBrands(compatibleBrands);
+                styp.setMinorVersion(ftyp.getMinorVersion());
+                SegmentIndexBox localSidx = new SegmentIndexBox();
+                localSidx.getEntries().add(entry);
+                localSidx.setEarliestPresentationTime(earliestPresentationTime);
+
+                styp.getBox(fc);
+                localSidx.getBox(fc);
+            }
             fc.write(in.getByteBuffer(start, entry.getReferencedSize()));
             earliestPresentationTime += entry.getSubsegmentDuration();
             start += entry.getReferencedSize();
         }
+        return segments;
     }
 }

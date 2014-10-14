@@ -50,11 +50,50 @@ public class DashFileSetSequence {
     protected List<X509Certificate> certificates;
     protected List<File> inputFiles;
     protected File outputDirectory = new File(System.getProperty("user.dir"));
-    protected boolean explode = false;
     protected int sparse = 0;
     protected int clearlead = 0;
     protected String encryptionAlgo = "cenc";
-    Logger l;
+    protected boolean explode = false;
+    protected String mediaPattern = "$RepresentationID$/media-$Time$.mp4";
+    protected String initPattern = "$RepresentationID$/init.mp4";
+    protected boolean generateStypSdix = true;
+    private Logger l;
+
+    /**
+     * Sets whether styp and sidx should be generated when 'exploding' single file into one file per segement.
+     * <p>
+     * This option has no effect when <code>explode==false</code>
+     *
+     * @param generateStypSdix yes/no
+     * @see #setExplode(boolean)
+     */
+    public void setGenerateStypSdix(boolean generateStypSdix) {
+        this.generateStypSdix = generateStypSdix;
+    }
+
+    /**
+     * Sets the mediaPattern for 'exploded' mode and defines under which name to store the segments.
+     * <p>
+     * This option has no effect when <code>explode==false</code>
+     *
+     * @param mediaPattern under which name to store the segments
+     * @see #setExplode(boolean)
+     */
+    public void setMediaPattern(String mediaPattern) {
+        this.mediaPattern = mediaPattern;
+    }
+
+    /**
+     * Sets the initPattern for 'exploded' mode and defines under which name the init segment is stored.
+     * <p>
+     * This option has no effect when <code>explode==false</code>
+     *
+     * @param initPattern under which name the init segment is stored
+     * @see #setExplode(boolean)
+     */
+    public void setInitPattern(String initPattern) {
+        this.initPattern = initPattern;
+    }
 
     public void setEncryptionAlgo(String encryptionAlgo) {
         this.encryptionAlgo = encryptionAlgo;
@@ -148,9 +187,6 @@ public class DashFileSetSequence {
             writeFilesSingleSidx(trackFilename, dashedFiles);
             mpdDocument = createManifestSingleSidx(trackFamilies, trackBitrate, trackFilename, dashedFiles);
         } else {
-            String mediaPattern = "$RepresentationID$/media-$Time$.mp4";
-            String initPattern = "$RepresentationID$/init.mp4";
-
             Map<Track, List<File>> trackToSegments =
                     writeFilesExploded(trackFilename, dashedFiles, trackBitrate, outputDirectory, initPattern, mediaPattern);
             mpdDocument = createManifestExploded(trackFamilies, trackBitrate, trackFilename, dashedFiles, trackToSegments, initPattern, mediaPattern);
@@ -243,20 +279,14 @@ public class DashFileSetSequence {
 
 
             File targetDir = new File(outputDirectory, filename).getParentFile();
-
             l.info("Writing " + t.getName() + " to " + targetDir + "...");
+            FileUtils.forceMkdir(targetDir);
 
-
-            if (!(targetDir.getAbsoluteFile().exists() ^ targetDir.getAbsoluteFile().mkdirs())) {
-                l.severe("target directory " + targetDir + " does not exist and cannot be created.");
-            }
             SingleSidxExplode singleSidxExplode = new SingleSidxExplode();
-            List<File> segments = new ArrayList<File>();
-
-            singleSidxExplode.doIt(
-                    trackFilename.get(t),
-                    dashedFiles.get(t),
-                    trackBitrate.get(t), segments, outputDirectory, initPattern, mediaPattern);
+            singleSidxExplode.setGenerateStypSdix(generateStypSdix);
+            List<File> segments = singleSidxExplode.doIt(
+                    dashedFiles.get(t), trackFilename.get(t),
+                    trackBitrate.get(t), outputDirectory, initPattern, mediaPattern);
 
             l.info("Done.");
             trackToSegments.put(t, segments);
@@ -742,7 +772,7 @@ public class DashFileSetSequence {
         return dashManifestWriter.getManifest();
     }
 
-    public Map<File,String> getSubtitleLanguages(List<File> subtitles) throws ExitCodeException, IOException {
+    public Map<File, String> getSubtitleLanguages(List<File> subtitles) throws ExitCodeException, IOException {
         Map<File, String> languages = new HashMap<File, String>();
 
         Pattern patternFilenameIncludesLanguage = Pattern.compile(".*-([a-z][a-z])");
@@ -772,7 +802,7 @@ public class DashFileSetSequence {
                 }
             }
         }
-        return languages    ;
+        return languages;
     }
 
     private class StsdCorrectingTrack extends AbstractTrack {
