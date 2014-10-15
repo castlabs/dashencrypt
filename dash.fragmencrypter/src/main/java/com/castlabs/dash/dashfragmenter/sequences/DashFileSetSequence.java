@@ -5,11 +5,9 @@ import com.castlabs.dash.dashfragmenter.formats.csf.DashBuilder;
 import com.castlabs.dash.dashfragmenter.formats.csf.SegmentBaseSingleSidxManifestWriterImpl;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.ExplodedSegmentListManifestWriterImpl;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.SingleSidxExplode;
-import com.coremedia.iso.boxes.Box;
-import com.coremedia.iso.boxes.CompositionTimeToSample;
-import com.coremedia.iso.boxes.Container;
-import com.coremedia.iso.boxes.SampleDescriptionBox;
+import com.coremedia.iso.boxes.*;
 import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
+import com.coremedia.iso.boxes.sampleentry.SampleEntry;
 import com.googlecode.mp4parser.FileDataSourceImpl;
 import com.googlecode.mp4parser.authoring.*;
 import com.googlecode.mp4parser.authoring.builder.FragmentIntersectionFinder;
@@ -58,6 +56,16 @@ public class DashFileSetSequence {
     protected String initPattern = "$RepresentationID$/init.mp4";
     protected boolean generateStypSdix = true;
     private Logger l;
+
+    static String getFormat(Track track) {
+        SampleEntry se = track.getSampleDescriptionBox().getSampleEntry();
+        String type = se.getType();
+        if (type.equals("encv") || type.equals("enca") || type.equals("encv")) {
+            OriginalFormatBox frma = Path.getPath(se, "sinf/frma");
+            type = frma.getDataFormat();
+        }
+        return type;
+    }
 
     /**
      * Sets whether styp and sidx should be generated when 'exploding' single file into one file per segement.
@@ -152,7 +160,6 @@ public class DashFileSetSequence {
         track2File = alignEditsToZero(track2File);
         track2File = fixAppleOddity(track2File);
         track2File = encryptTracks(track2File);
-
 
         // sort by language and codec
         Map<String, List<Track>> trackFamilies = findTrackFamilies(track2File.keySet());
@@ -313,13 +320,11 @@ public class DashFileSetSequence {
         }
     }
 
-
     public DashBuilder getFileBuilder(FragmentIntersectionFinder fragmentIntersectionFinder, Movie m) {
         DashBuilder dashBuilder = new DashBuilder();
         dashBuilder.setIntersectionFinder(fragmentIntersectionFinder);
         return dashBuilder;
     }
-
 
     public Map<Track, Container> createSingleTrackDashedMp4s(
             Map<Track, long[]> fragmentStartSamples,
@@ -469,7 +474,7 @@ public class DashFileSetSequence {
                     inputFile.getName().endsWith(".m4v")) {
                 Movie movie = MovieCreator.build(new FileDataSourceImpl(inputFile));
                 for (Track track : movie.getTracks()) {
-                    String codec = track.getSampleDescriptionBox().getSampleEntry().getType();
+                    String codec = getFormat(track);
                     if (!supportedTypes.contains(codec)) {
                         l.warning("Excluding " + inputFile + " track " + track.getTrackMetaData().getTrackId() + " as its codec " + codec + " is not yet supported");
                         break;
@@ -624,7 +629,7 @@ public class DashFileSetSequence {
 
         for (Map.Entry<Track, String> entry : track2File.entrySet()) {
             Track track = entry.getKey();
-            if (Path.getPath(track.getSampleDescriptionBox(), "...a/wave/esds") != null) {
+            if (Path.getPath(track.getSampleDescriptionBox(), "...a/wave/esds") != null) { // mp4a or enca
                 final SampleDescriptionBox stsd = track.getSampleDescriptionBox();
                 AudioSampleEntry ase = (AudioSampleEntry) stsd.getSampleEntry();
                 List<Box> aseBoxes = new ArrayList<Box>();
@@ -719,8 +724,9 @@ public class DashFileSetSequence {
     public Map<String, List<Track>> findTrackFamilies(Set<Track> allTracks) throws IOException {
         HashMap<String, List<Track>> trackFamilies = new HashMap<String, List<Track>>();
         for (Track track : allTracks) {
-            String family = track.getSampleDescriptionBox().getSampleEntry().getType() + "-" + track.getTrackMetaData().getLanguage();
-            if ("mp4a".equals(track.getSampleDescriptionBox().getSampleEntry().getType())) {
+            String family = getFormat(track) + "-" + track.getTrackMetaData().getLanguage();
+
+            if ("mp4a".equals(getFormat(track))) {
                 // we need to look at actual channel configuration
                 ESDescriptorBox esds = track.getSampleDescriptionBox().getSampleEntry().getBoxes(ESDescriptorBox.class).get(0);
                 AudioSpecificConfig audioSpecificConfig = esds.getEsDescriptor().getDecoderConfigDescriptor().getAudioSpecificInfo();
