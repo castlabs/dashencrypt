@@ -165,7 +165,7 @@ public class DashFileSetSequence {
         track2File = fixAppleOddity(track2File);
 
         Map<Track, UUID> track2KeyId = assignKeyIds(track2File);
-        Map<UUID, SecretKey> keyId2Key = createKeyMap();
+        Map<UUID, SecretKey> keyId2Key = createKeyMap(track2File);
 
         track2File = encryptTracks(track2File, track2KeyId, keyId2Key);
 
@@ -201,14 +201,14 @@ public class DashFileSetSequence {
         return 0;
     }
 
-    private Map<UUID, SecretKey> createKeyMap() {
+    public Map<UUID, SecretKey> createKeyMap(Map<Track, String> track2File) {
         Map<UUID, SecretKey> keyIds = new HashMap<UUID, SecretKey>();
         keyIds.put(audioKeyid, audioKey);
         keyIds.put(videoKeyid, videoKey);
         return keyIds;
     }
 
-    private Map<Track, UUID> assignKeyIds(Map<Track, String> track2File) {
+    public Map<Track, UUID> assignKeyIds(Map<Track, String> track2File) {
         Map<Track, UUID> keyIds = new HashMap<Track, UUID>();
         for (Track track : track2File.keySet()) {
             if (track.getHandler().equals("soun")) {
