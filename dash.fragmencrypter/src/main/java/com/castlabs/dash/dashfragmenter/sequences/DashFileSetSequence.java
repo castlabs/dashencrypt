@@ -31,7 +31,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -43,9 +42,11 @@ import java.util.regex.Pattern;
  */
 public class DashFileSetSequence {
     static Set<String> supportedTypes = new HashSet<String>(Arrays.asList("ac-3", "ec-3", "dtsl", "dtsh", "dtse", "avc1", "mp4a", "h264"));
-    protected SecretKey key;
-    protected UUID keyid;
-    protected List<X509Certificate> certificates;
+    protected UUID audioKeyid;
+    protected SecretKey audioKey;
+    protected UUID videoKeyid;
+    protected SecretKey videoKey;
+
     protected List<File> inputFiles;
     protected File outputDirectory = new File(System.getProperty("user.dir"));
     protected int sparse = 0;
@@ -107,16 +108,20 @@ public class DashFileSetSequence {
         this.encryptionAlgo = encryptionAlgo;
     }
 
-    public void setKey(SecretKey key) {
-        this.key = key;
+    public void setAudioKey(SecretKey key) {
+        this.audioKey = key;
     }
 
-    public void setKeyid(UUID keyid) {
-        this.keyid = keyid;
+    public void setVideoKey(SecretKey key) {
+        this.videoKey = key;
     }
 
-    public void setCertificates(List<X509Certificate> certificates) {
-        this.certificates = certificates;
+    public void setAudioKeyid(UUID keyid) {
+        this.audioKeyid = keyid;
+    }
+
+    public void setVideoKeyid(UUID keyid) {
+        this.videoKeyid = keyid;
     }
 
     public void setInputFiles(List<File> inputFiles) {
@@ -154,12 +159,15 @@ public class DashFileSetSequence {
         Map<Track, String> track2File = createTracks();
         List<File> subtitles = findSubtitles();
         Map<File, String> subtitleLanguages = getSubtitleLanguages(subtitles);
-
         checkUnhandledFile();
 
         track2File = alignEditsToZero(track2File);
         track2File = fixAppleOddity(track2File);
-        track2File = encryptTracks(track2File);
+
+        Map<Track, UUID> track2KeyId = assignKeyIds(track2File);
+        Map<UUID, SecretKey> keyId2Key = createKeyMap();
+
+        track2File = encryptTracks(track2File, track2KeyId, keyId2Key);
 
         // sort by language and codec
         Map<String, List<Track>> trackFamilies = findTrackFamilies(track2File.keySet());
@@ -171,7 +179,7 @@ public class DashFileSetSequence {
         sortTrackFamilies(trackFamilies, trackSizes);
 
         // calculate the fragment start samples once & save them for later
-        Map<Track, long[]> trackStartSamples = findFragmentStartSamples(trackFamilies);
+        Map<Track, long[]> track2SegmentStartSamples = findFragmentStartSamples(trackFamilies);
 
         // calculate bitrates
         Map<Track, Long> trackBitrate = calculateBitrate(trackFamilies, trackSizes);
@@ -180,31 +188,70 @@ public class DashFileSetSequence {
         Map<Track, String> trackFilename = generateFilenames(track2File);
 
         // export the dashed single track MP4s
-        Map<Track, Container> dashedFiles = createSingleTrackDashedMp4s(trackStartSamples, trackFilename);
+        Map<Track, Container> track2CsfStructure = createSingleTrackDashedMp4s(track2SegmentStartSamples, trackFilename);
 
-        createManifest(subtitles, subtitleLanguages, trackFamilies, trackBitrate, trackFilename, dashedFiles);
+        Map<Track, List<File>> trackToFileRepresentation = writeFiles(trackFilename, track2CsfStructure, trackBitrate);
+
+        createManifest(subtitleLanguages,
+                trackFamilies, trackBitrate, trackFilename, track2CsfStructure, trackToFileRepresentation);
 
         l.info("Finished write in " + (System.currentTimeMillis() - start) + "ms");
         return 0;
     }
 
-    public void createManifest(List<File> subtitles, Map<File, String> subtitleLanguages, Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate, Map<Track, String> trackFilename, Map<Track, Container> dashedFiles) throws IOException {
+    private Map<UUID, SecretKey> createKeyMap() {
+        Map<UUID, SecretKey> keyIds = new HashMap<UUID, SecretKey>();
+        keyIds.put(audioKeyid, audioKey);
+        keyIds.put(videoKeyid, videoKey);
+        return keyIds;
+    }
+
+    private Map<Track, UUID> assignKeyIds(Map<Track, String> track2File) {
+        Map<Track, UUID> keyIds = new HashMap<Track, UUID>();
+        for (Track track : track2File.keySet()) {
+            if (track.getHandler().equals("soun")) {
+                keyIds.put(track, audioKeyid);
+            } else if (track.getHandler().equals("vide")) {
+                keyIds.put(track, videoKeyid);
+            } else {
+                // noop
+            }
+        }
+        return keyIds;
+    }
+
+    public Map<Track, List<File>> writeFiles(
+            Map<Track, String> trackFilename,
+            Map<Track, Container> dashedFiles,
+            Map<Track, Long> trackBitrate) throws IOException {
+        if (!explode) {
+            return writeFilesSingleSidx(trackFilename, dashedFiles);
+        } else {
+            return writeFilesExploded(trackFilename, dashedFiles, trackBitrate, outputDirectory, initPattern, mediaPattern);
+        }
+    }
+
+    public void createManifest(Map<File, String> subtitleLanguages,
+                               Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate,
+                               Map<Track, String> representationIds,
+                               Map<Track, Container> dashedFiles, Map<Track, List<File>> trackToFile) throws IOException {
         MPDDocument mpdDocument;
         if (!explode) {
-            writeFilesSingleSidx(trackFilename, dashedFiles);
-            mpdDocument = createManifestSingleSidx(trackFamilies, trackBitrate, trackFilename, dashedFiles);
+            mpdDocument = new SegmentBaseSingleSidxManifestWriterImpl(
+                    trackFamilies, dashedFiles,
+                    trackBitrate, representationIds).getManifest();
         } else {
-            Map<Track, List<File>> trackToSegments =
-                    writeFilesExploded(trackFilename, dashedFiles, trackBitrate, outputDirectory, initPattern, mediaPattern);
-            mpdDocument = createManifestExploded(trackFamilies, trackBitrate, trackFilename, dashedFiles, trackToSegments, initPattern, mediaPattern);
+            mpdDocument = new ExplodedSegmentListManifestWriterImpl(
+                    trackFamilies, dashedFiles, trackBitrate, representationIds,
+                    trackToFile, initPattern, mediaPattern).getManifest();
         }
-        addSubtitles(mpdDocument, subtitles, subtitleLanguages);
+        addSubtitles(mpdDocument, subtitleLanguages);
 
         writeManifest(mpdDocument);
     }
 
-    public void addSubtitles(MPDDocument mpdDocument, List<File> subtitles, Map<File, String> subtitleLanguages) throws IOException {
-        for (File subtitle : subtitles) {
+    public void addSubtitles(MPDDocument mpdDocument, Map<File, String> subtitleLanguages) throws IOException {
+        for (File subtitle : subtitleLanguages.keySet()) {
             PeriodType period = mpdDocument.getMPD().getPeriodArray()[0];
             AdaptationSetType adaptationSet = period.addNewAdaptationSet();
             if (subtitle.getName().endsWith(".xml")) {
@@ -301,11 +348,13 @@ public class DashFileSetSequence {
         return trackToSegments;
     }
 
-    public void writeFilesSingleSidx(Map<Track, String> trackFilename, Map<Track, Container> dashedFiles) throws IOException {
+    public Map<Track, List<File>> writeFilesSingleSidx(Map<Track, String> trackFilename, Map<Track, Container> dashedFiles) throws IOException {
+        Map<Track, List<File>> track2Files = new HashMap<Track, List<File>>();
         for (Map.Entry<Track, Container> trackContainerEntry : dashedFiles.entrySet()) {
             l.info("Writing... ");
-            WritableByteChannel wbc = new FileOutputStream(
-                    new File(outputDirectory, trackFilename.get(trackContainerEntry.getKey()))).getChannel();
+            Track t = trackContainerEntry.getKey();
+            File f = new File(outputDirectory, trackFilename.get(t));
+            WritableByteChannel wbc = new FileOutputStream(f).getChannel();
             try {
                 List<Box> boxes = trackContainerEntry.getValue().getBoxes();
                 for (int i = 0; i < boxes.size(); i++) {
@@ -317,7 +366,9 @@ public class DashFileSetSequence {
                 wbc.close();
             }
             l.info("Done.");
+            track2Files.put(t, Collections.singletonList(f));
         }
+        return track2Files;
     }
 
     public DashBuilder getFileBuilder(FragmentIntersectionFinder fragmentIntersectionFinder, Movie m) {
@@ -521,106 +572,106 @@ public class DashFileSetSequence {
         return r;
     }
 
-    public Map<Track, String> encryptTracks(Map<Track, String> track2File) {
-        if (this.key != null && this.keyid != null) {
-            Map<Track, String> encTracks = new HashMap<Track, String>();
-            for (Map.Entry<Track, String> trackStringEntry : track2File.entrySet()) {
-                String hdlr = trackStringEntry.getKey().getHandler();
-                if ("vide".equals(hdlr) || "soun".equals(hdlr)) {
-                    Track t = trackStringEntry.getKey();
+    public Map<Track, String> encryptTracks(Map<Track, String> track2File, Map<Track, UUID> track2KeyId, Map<UUID, SecretKey> keyId2Key) {
+        Map<Track, String> encTracks = new HashMap<Track, String>();
+        for (Map.Entry<Track, String> trackStringEntry : track2File.entrySet()) {
+            if (track2KeyId.containsKey(trackStringEntry.getKey())) {
+                Track t = trackStringEntry.getKey();
+                UUID keyid = track2KeyId.get(t);
+                SecretKey key = keyId2Key.get(keyid);
 
-                    int clearTillSample = 0;
-                    int numSamples = t.getSamples().size();
-                    if (clearlead > 0) {
-                        clearTillSample = (int) (clearlead * numSamples / (t.getDuration() / t.getTrackMetaData().getTimescale()));
-                    }
 
-                    if (sparse == 0) {
-                        CencEncryptingTrackImpl cencTrack;
-                        if (clearTillSample > 0) {
-                            CencSampleEncryptionInformationGroupEntry e = new CencSampleEncryptionInformationGroupEntry();
-                            e.setEncrypted(false);
-                            long[] excludes = new long[clearTillSample];
-                            for (int i = 0; i < excludes.length; i++) {
-                                excludes[i] = i;
-                            }
-                            cencTrack = new CencEncryptingTrackImpl(
-                                    t, keyid,
-                                    Collections.singletonMap(keyid, key),
-                                    Collections.singletonMap(e, excludes),
-                                    encryptionAlgo);
+                int clearTillSample = 0;
+                int numSamples = t.getSamples().size();
+                if (clearlead > 0) {
+                    clearTillSample = (int) (clearlead * numSamples / (t.getDuration() / t.getTrackMetaData().getTimescale()));
+                }
 
-                        } else {
-                            cencTrack = new CencEncryptingTrackImpl(
-                                    t, keyid,
-                                    Collections.singletonMap(keyid, key),
-                                    null, encryptionAlgo);
-                        }
-                        encTracks.put(cencTrack, trackStringEntry.getValue());
-                    } else if (sparse == 1) {
+                if (sparse == 0) {
+                    CencEncryptingTrackImpl cencTrack;
+                    if (clearTillSample > 0) {
                         CencSampleEncryptionInformationGroupEntry e = new CencSampleEncryptionInformationGroupEntry();
                         e.setEncrypted(false);
-
-                        Set<Long> plainSamples = new HashSet<Long>();
-                        if (t.getSyncSamples() != null && t.getSyncSamples().length > 0) {
-                            for (long i = 1; i <= t.getSamples().size(); i++) {
-                                if (Arrays.binarySearch(t.getSyncSamples(), i) < 0 || i < clearTillSample) {
-                                    plainSamples.add(i);
-                                }
-                            }
-                        } else {
-                            for (int i = 0; i < clearTillSample; i++) {
-                                plainSamples.add((long) i);
-                            }
-                            for (int i = clearTillSample; i < t.getSamples().size(); i++) {
-                                if (i % 3 == 0) {
-                                    plainSamples.add((long) i);
-                                }
-                            }
+                        long[] excludes = new long[clearTillSample];
+                        for (int i = 0; i < excludes.length; i++) {
+                            excludes[i] = i;
                         }
-
-                        CencEncryptingTrackImpl cencTrack = new CencEncryptingTrackImpl(
+                        cencTrack = new CencEncryptingTrackImpl(
                                 t, keyid,
                                 Collections.singletonMap(keyid, key),
-                                Collections.singletonMap(e, longSet2Array(plainSamples)),
-                                "cenc");
-                        encTracks.put(cencTrack, trackStringEntry.getValue());
+                                Collections.singletonMap(e, excludes),
+                                encryptionAlgo);
 
-                    } else if (sparse == 2) {
-                        CencSampleEncryptionInformationGroupEntry e = new CencSampleEncryptionInformationGroupEntry();
-                        e.setEncrypted(true);
-                        e.setKid(keyid);
-                        e.setIvSize(8);
+                    } else {
+                        cencTrack = new CencEncryptingTrackImpl(
+                                t, keyid,
+                                Collections.singletonMap(keyid, key),
+                                null, encryptionAlgo);
+                    }
+                    encTracks.put(cencTrack, trackStringEntry.getValue());
+                } else if (sparse == 1) {
+                    CencSampleEncryptionInformationGroupEntry e = new CencSampleEncryptionInformationGroupEntry();
+                    e.setEncrypted(false);
 
-
-                        Set<Long> encryptedSamples = new HashSet<Long>();
-                        if (t.getSyncSamples() != null && t.getSyncSamples().length > 0) {
-                            for (int i = 0; i < t.getSyncSamples().length; i++) {
-                                if (t.getSyncSamples()[i] >= clearTillSample) {
-                                    encryptedSamples.add(t.getSyncSamples()[i]);
-                                }
-                            }
-
-                        } else {
-                            SecureRandom r = new SecureRandom();
-                            int encSamples = numSamples / 10;
-                            while (--encSamples >= 0) {
-                                int s = r.nextInt(numSamples - clearTillSample) + clearTillSample;
-                                encryptedSamples.add((long) s);
+                    Set<Long> plainSamples = new HashSet<Long>();
+                    if (t.getSyncSamples() != null && t.getSyncSamples().length > 0) {
+                        for (long i = 1; i <= t.getSamples().size(); i++) {
+                            if (Arrays.binarySearch(t.getSyncSamples(), i) < 0 || i < clearTillSample) {
+                                plainSamples.add(i);
                             }
                         }
-                        encTracks.put(new CencEncryptingTrackImpl(
-                                t, null,
-                                Collections.singletonMap(keyid, key),
-                                Collections.singletonMap(e, longSet2Array(encryptedSamples)),
-                                "cenc"), trackStringEntry.getValue());
+                    } else {
+                        for (int i = 0; i < clearTillSample; i++) {
+                            plainSamples.add((long) i);
+                        }
+                        for (int i = clearTillSample; i < t.getSamples().size(); i++) {
+                            if (i % 3 == 0) {
+                                plainSamples.add((long) i);
+                            }
+                        }
                     }
-                } else {
-                    encTracks.put(trackStringEntry.getKey(), trackStringEntry.getValue());
+
+                    CencEncryptingTrackImpl cencTrack = new CencEncryptingTrackImpl(
+                            t, keyid,
+                            Collections.singletonMap(keyid, key),
+                            Collections.singletonMap(e, longSet2Array(plainSamples)),
+                            "cenc");
+                    encTracks.put(cencTrack, trackStringEntry.getValue());
+
+                } else if (sparse == 2) {
+                    CencSampleEncryptionInformationGroupEntry e = new CencSampleEncryptionInformationGroupEntry();
+                    e.setEncrypted(true);
+                    e.setKid(keyid);
+                    e.setIvSize(8);
+
+
+                    Set<Long> encryptedSamples = new HashSet<Long>();
+                    if (t.getSyncSamples() != null && t.getSyncSamples().length > 0) {
+                        for (int i = 0; i < t.getSyncSamples().length; i++) {
+                            if (t.getSyncSamples()[i] >= clearTillSample) {
+                                encryptedSamples.add(t.getSyncSamples()[i]);
+                            }
+                        }
+
+                    } else {
+                        SecureRandom r = new SecureRandom();
+                        int encSamples = numSamples / 10;
+                        while (--encSamples >= 0) {
+                            int s = r.nextInt(numSamples - clearTillSample) + clearTillSample;
+                            encryptedSamples.add((long) s);
+                        }
+                    }
+                    encTracks.put(new CencEncryptingTrackImpl(
+                            t, null,
+                            Collections.singletonMap(keyid, key),
+                            Collections.singletonMap(e, longSet2Array(encryptedSamples)),
+                            "cenc"), trackStringEntry.getValue());
                 }
+            } else {
+                encTracks.put(trackStringEntry.getKey(), trackStringEntry.getValue());
             }
-            track2File = encTracks;
         }
+        track2File = encTracks;
         return track2File;
     }
 
@@ -654,16 +705,16 @@ public class DashFileSetSequence {
     /**
      * In DASH Some tracks might have an earliest presentation timestamp < 0
      *
-     * @param tracks
-     * @return
+     * @param track2File map from track object to originating file
+     * @return a copy of the input map with zero-aligned tracks
      */
-    public Map<Track, String> alignEditsToZero(Map<Track, String> tracks) {
+    public Map<Track, String> alignEditsToZero(Map<Track, String> track2File) {
         Map<Track, String> result = new HashMap<Track, String>();
         double earliestMoviePresentationTime = 0;
         Map<Track, Double> startTimes = new HashMap<Track, Double>();
         Map<Track, Double> ctsOffset = new HashMap<Track, Double>();
 
-        for (Track track : tracks.keySet()) {
+        for (Track track : track2File.keySet()) {
             boolean acceptEdit = true;
             boolean acceptDwell = true;
             List<Edit> edits = track.getEdits();
@@ -701,7 +752,7 @@ public class DashFileSetSequence {
             earliestMoviePresentationTime = Math.min(earliestMoviePresentationTime, earliestTrackPresentationTime);
             System.err.println(track.getName() + "'s starttime after edits: " + earliestTrackPresentationTime);
         }
-        for (Track track : tracks.keySet()) {
+        for (Track track : track2File.keySet()) {
             double adjustedStartTime = startTimes.get(track) - earliestMoviePresentationTime - ctsOffset.get(track);
 
             final List<Edit> edits = new ArrayList<Edit>();
@@ -716,7 +767,7 @@ public class DashFileSetSequence {
                 public List<Edit> getEdits() {
                     return edits;
                 }
-            }, tracks.get(track));
+            }, track2File.get(track));
         }
         return result;
     }
@@ -744,39 +795,6 @@ public class DashFileSetSequence {
         return trackFamilies;
     }
 
-    public MPDDocument createManifestExploded(Map<String, List<Track>> trackFamilies,
-                                              Map<Track, Long> trackBitrate,
-                                              Map<Track, String> trackFilename,
-                                              Map<Track, Container> dashedFiles,
-                                              Map<Track, List<File>> trackToSegments,
-                                              String initPattern, String mediaPattern) throws IOException {
-        Map<Track, UUID> trackKeyIds = new HashMap<Track, UUID>();
-        for (List<Track> tracks : trackFamilies.values()) {
-            for (Track track : tracks) {
-                trackKeyIds.put(track, this.keyid);
-            }
-        }
-
-        return new ExplodedSegmentListManifestWriterImpl(
-                trackFamilies, dashedFiles, trackBitrate, trackFilename,
-                trackKeyIds, trackToSegments, initPattern, mediaPattern).getManifest();
-    }
-
-    public MPDDocument createManifestSingleSidx(Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate, Map<Track, String> trackFilename, Map<Track, Container> dashedFiles) throws IOException {
-
-        Map<Track, UUID> trackKeyIds = new HashMap<Track, UUID>();
-        for (List<Track> tracks : trackFamilies.values()) {
-            for (Track track : tracks) {
-                trackKeyIds.put(track, this.keyid);
-            }
-        }
-        SegmentBaseSingleSidxManifestWriterImpl dashManifestWriter = new SegmentBaseSingleSidxManifestWriterImpl(
-                trackFamilies, dashedFiles,
-                trackBitrate, trackFilename,
-                trackKeyIds);
-
-        return dashManifestWriter.getManifest();
-    }
 
     public Map<File, String> getSubtitleLanguages(List<File> subtitles) throws ExitCodeException, IOException {
         Map<File, String> languages = new HashMap<File, String>();

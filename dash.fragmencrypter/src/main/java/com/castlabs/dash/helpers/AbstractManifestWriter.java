@@ -9,13 +9,12 @@ package com.castlabs.dash.helpers;
 import com.coremedia.iso.boxes.Box;
 import com.coremedia.iso.boxes.Container;
 import com.coremedia.iso.boxes.MediaHeaderBox;
-import com.coremedia.iso.boxes.MovieHeaderBox;
 import com.coremedia.iso.boxes.fragment.MovieFragmentBox;
 import com.coremedia.iso.boxes.fragment.TrackExtendsBox;
 import com.coremedia.iso.boxes.fragment.TrackFragmentHeaderBox;
 import com.coremedia.iso.boxes.fragment.TrackRunBox;
-import com.coremedia.iso.boxes.mdat.MediaDataBox;
 import com.googlecode.mp4parser.authoring.Track;
+import com.googlecode.mp4parser.authoring.tracks.CencEncyprtedTrack;
 import com.googlecode.mp4parser.util.Iso639;
 import com.googlecode.mp4parser.util.Path;
 import mpegCenc2013.DefaultKIDAttribute;
@@ -28,58 +27,23 @@ import java.util.*;
 
 public abstract class AbstractManifestWriter {
 
-    protected final Map<String, List<Track>> trackFamilies;
-    protected final Map<Track, Container> trackContainer;
-    protected final Map<Track, Long> trackBitrates;
-    protected final Map<Track, String> trackFilenames;
-    protected final Map<Track, UUID> trackKeyIds;
+    private final Map<Track, Container> trackContainer;
+    private final Map<Track, Long> trackBitrates;
 
-    public AbstractManifestWriter(Map<String, List<Track>> trackFamilies,
-                                  Map<Track, Container> trackContainer,
-                                  Map<Track, Long> trackBitrates,
-                                  Map<Track, String> trackFilenames,
-                                  Map<Track, UUID> trackKeyIds) {
 
-        this.trackFamilies = trackFamilies;
+    public AbstractManifestWriter(Map<Track, Container> trackContainer,
+                                  Map<Track, Long> trackBitrates) {
+
         this.trackContainer = trackContainer;
         this.trackBitrates = trackBitrates;
-        this.trackFilenames = trackFilenames;
-        this.trackKeyIds = trackKeyIds;
-    }
-
-
-
-    class Buffer {
-        final long bandwidth;
-        final long timescale;
-        public Buffer(long bandwidth, long timescale) {
-            this.bandwidth = bandwidth;
-            this.timescale = timescale;
-        }
-
-        long currentBufferFullness = 0;
-        long minBufferFullness = 0;
-
-        void simPlayback(long size, long videoTime) {
-            currentBufferFullness -= size;
-            currentBufferFullness += ((double) videoTime / timescale) * bandwidth / 8;
-            if (currentBufferFullness<minBufferFullness) {
-                minBufferFullness = currentBufferFullness;
-            }
-
-
-
-        }
 
     }
-
-
 
     public GDuration getMinBufferTime() {
         int requiredTimeInS = 0;
         for (Map.Entry<Track, Container> trackContainerEntry : trackContainer.entrySet()) {
             long bitrate = trackBitrates.get(trackContainerEntry.getKey());
-            long timescale = ((MediaHeaderBox)Path.getPath(trackContainerEntry.getValue(), "/moov[0]/trak[0]/mdia[0]/mdhd[0]")).getTimescale();
+            long timescale = ((MediaHeaderBox) Path.getPath(trackContainerEntry.getValue(), "/moov[0]/trak[0]/mdia[0]/mdhd[0]")).getTimescale();
             long requiredBuffer = 0;
             Iterator<Box> iterator = trackContainerEntry.getValue().getBoxes().iterator();
             while (iterator.hasNext()) {
@@ -89,7 +53,7 @@ public abstract class AbstractManifestWriter {
                     continue;
                 }
                 MovieFragmentBox moof = (MovieFragmentBox) moofCand;
-                Box mdat = iterator.next();
+                iterator.next(); // skip mdat
 
                 Buffer currentBuffer = new Buffer(bitrate, timescale);
                 currentBuffer.simPlayback(moof.getSize(), 0);
@@ -130,11 +94,10 @@ public abstract class AbstractManifestWriter {
                 requiredBuffer = Math.max(requiredBuffer, -(currentBuffer.minBufferFullness + Math.min(0, currentBuffer.currentBufferFullness)));
 
             }
-            requiredTimeInS = (int) Math.max(requiredTimeInS, Math.ceil((double)requiredBuffer  / (bitrate / 8)));
+            requiredTimeInS = (int) Math.max(requiredTimeInS, Math.ceil((double) requiredBuffer / (bitrate / 8)));
         }
         return new GDuration(1, 0, 0, 0, 0, 0, requiredTimeInS, BigDecimal.ZERO);
     }
-
 
     public MPDDocument getManifest() throws IOException {
 
@@ -161,15 +124,24 @@ public abstract class AbstractManifestWriter {
         return mdd;
     }
 
+    UUID getKeyId(Track track) {
+        if (track instanceof CencEncyprtedTrack) {
+            return ((CencEncyprtedTrack) track).getDefaultKeyId();
+        } else {
+            return null;
+        }
+
+    }
+
     protected AdaptationSetType createAdaptationSet(PeriodType periodType, List<Track> tracks) {
         UUID keyId = null;
         String language = null;
         for (Track track : tracks) {
 
-            if (keyId != null && !keyId.equals(trackKeyIds.get(track))) {
+            if (keyId != null && !keyId.equals(getKeyId(track))) {
                 throw new RuntimeException("The ManifestWriter cannot deal with more than ONE key per adaptation set.");
             }
-            keyId = trackKeyIds.get(track);
+            keyId = getKeyId(track);
 
             if (language != null && !language.endsWith(track.getTrackMetaData().getLanguage())) {
                 throw new RuntimeException("The ManifestWriter cannot deal with more than ONE language per adaptation set.");
@@ -214,5 +186,25 @@ public abstract class AbstractManifestWriter {
     }
 
     abstract protected void createPeriod(PeriodType periodType) throws IOException;
+
+    class Buffer {
+        final long bandwidth;
+        final long timescale;
+        long currentBufferFullness = 0;
+        long minBufferFullness = 0;
+
+        public Buffer(long bandwidth, long timescale) {
+            this.bandwidth = bandwidth;
+            this.timescale = timescale;
+        }
+
+        void simPlayback(long size, long videoTime) {
+            currentBufferFullness -= size;
+            currentBufferFullness += ((double) videoTime / timescale) * bandwidth / 8;
+            if (currentBufferFullness < minBufferFullness) {
+                minBufferFullness = currentBufferFullness;
+            }
+        }
+    }
 
 }

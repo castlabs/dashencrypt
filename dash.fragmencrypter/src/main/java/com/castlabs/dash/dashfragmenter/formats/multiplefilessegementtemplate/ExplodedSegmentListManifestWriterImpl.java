@@ -16,7 +16,6 @@ import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static com.castlabs.dash.helpers.ManifestHelper.createRepresentation;
 import static com.castlabs.dash.helpers.Timing.*;
@@ -25,19 +24,24 @@ import static com.castlabs.dash.helpers.Timing.*;
  * Creates a manifest fr
  */
 public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWriter {
-    Map<Track, List<File>> trackToSegements;
-    String initPattern;
-    String mediaPattern;
+    private final Map<Track, List<File>> trackToSegements;
+    private final Map<String, List<Track>> adaptationSets;
+    private final Map<Track, Long> trackBitrates;
+    private final Map<Track, String> trackFilenames;
+    private final String initPattern;
+    private final String mediaPattern;
 
-    public ExplodedSegmentListManifestWriterImpl(Map<String, List<Track>> trackFamilies,
+    public ExplodedSegmentListManifestWriterImpl(Map<String, List<Track>> adaptationSets,
                                                  Map<Track, Container> trackContainer,
-                                                 Map<Track, Long> trackBitrates,
-                                                 Map<Track, String> trackFilenames,
-                                                 Map<Track, UUID> trackKeyIds,
+                                                 Map<Track, Long> representationBitrates,
+                                                 Map<Track, String> representationIds,
                                                  Map<Track, List<File>> trackToSegements,
                                                  String initPattern, String mediaPattern) {
-        super(trackFamilies, trackContainer, trackBitrates, trackFilenames, trackKeyIds);
+        super(trackContainer, representationBitrates);
+        this.trackBitrates = representationBitrates;
+        this.adaptationSets = adaptationSets;
         this.trackToSegements = trackToSegements;
+        this.trackFilenames = representationIds;
         this.initPattern = initPattern;
         this.mediaPattern = mediaPattern;
     }
@@ -48,8 +52,8 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
 
         double maxDurationInSeconds = -1;
 
-        for (String trackFamily : trackFamilies.keySet()) {
-            List<Track> tracks = trackFamilies.get(trackFamily);
+        for (String trackFamily : adaptationSets.keySet()) {
+            List<Track> tracks = adaptationSets.get(trackFamily);
             for (Track track : tracks) {
                 double durationInSeconds = (double) track.getDuration() / track.getTrackMetaData().getTimescale();
                 maxDurationInSeconds = Math.max(maxDurationInSeconds, durationInSeconds);
@@ -73,9 +77,8 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
 
 
             for (File segment : segments) {
-                IsoFile segmentContainer = new IsoFile(segment.getAbsolutePath());
                 long duration = 0;
-                List<TrackRunBox> truns = Path.getPaths(segmentContainer, "moof/traf/trun");
+                List<TrackRunBox> truns = Path.getPaths(new IsoFile(segment.getAbsolutePath()), "moof/traf/trun");
                 for (TrackRunBox trun : truns) {
                     duration += getDuration(trun);
                 }
@@ -84,16 +87,13 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
                 s.setD((BigInteger.valueOf(duration)));
                 s.setT(BigInteger.valueOf(startTime));
                 startTime += duration;
-
             }
 
 
             for (Track track : tracks) {
                 RepresentationType representation = createRepresentation(adaptationSet, track);
-
                 representation.setBandwidth(trackBitrates.get(track));
                 representation.setId(trackFilenames.get(track));
-
             }
         }
 
