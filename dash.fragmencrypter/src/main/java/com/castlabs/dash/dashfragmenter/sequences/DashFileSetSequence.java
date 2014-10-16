@@ -192,8 +192,10 @@ public class DashFileSetSequence {
 
         Map<Track, List<File>> trackToFileRepresentation = writeFiles(trackFilename, track2CsfStructure, trackBitrate);
 
-        createManifest(subtitleLanguages,
+        MPDDocument manifest = createManifest(subtitleLanguages,
                 trackFamilies, trackBitrate, trackFilename, track2CsfStructure, trackToFileRepresentation);
+
+        writeManifest(manifest);
 
         l.info("Finished write in " + (System.currentTimeMillis() - start) + "ms");
         return 0;
@@ -231,7 +233,7 @@ public class DashFileSetSequence {
         }
     }
 
-    public void createManifest(Map<File, String> subtitleLanguages,
+    public MPDDocument createManifest(Map<File, String> subtitleLanguages,
                                Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate,
                                Map<Track, String> representationIds,
                                Map<Track, Container> dashedFiles, Map<Track, List<File>> trackToFile) throws IOException {
@@ -247,7 +249,7 @@ public class DashFileSetSequence {
         }
         addSubtitles(mpdDocument, subtitleLanguages);
 
-        writeManifest(mpdDocument);
+        return mpdDocument;
     }
 
     public void addSubtitles(MPDDocument mpdDocument, Map<File, String> subtitleLanguages) throws IOException {
