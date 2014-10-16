@@ -9,7 +9,7 @@
     <parent>
         <groupId>com.castlabs.dash</groupId>
         <artifactId>dash.encrypt</artifactId>
-        <version>1.1.5-SNAPSHOT</version>
+        <version>1.1.5</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <packaging>jar</packaging>
@@ -110,7 +110,7 @@
         <dependency>
             <groupId>com.castlabs.dash</groupId>
             <artifactId>dash.xsd</artifactId>
-            <version>1.1.5-SNAPSHOT</version>
+            <version>1.1.5</version>
         </dependency>
 
         <dependency>
