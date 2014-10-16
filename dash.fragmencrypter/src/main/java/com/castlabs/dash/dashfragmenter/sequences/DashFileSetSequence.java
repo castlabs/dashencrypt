@@ -165,7 +165,7 @@ public class DashFileSetSequence {
         track2File = fixAppleOddity(track2File);
 
         Map<Track, UUID> track2KeyId = assignKeyIds(track2File);
-        Map<UUID, SecretKey> keyId2Key = createKeyMap(track2File);
+        Map<UUID, SecretKey> keyId2Key = createKeyMap(track2KeyId);
 
         track2File = encryptTracks(track2File, track2KeyId, keyId2Key);
 
@@ -201,7 +201,7 @@ public class DashFileSetSequence {
         return 0;
     }
 
-    public Map<UUID, SecretKey> createKeyMap(Map<Track, String> track2File) {
+    public Map<UUID, SecretKey> createKeyMap(Map<Track, UUID> track2KeyId) {
         Map<UUID, SecretKey> keyIds = new HashMap<UUID, SecretKey>();
         keyIds.put(audioKeyid, audioKey);
         keyIds.put(videoKeyid, videoKey);
@@ -277,7 +277,7 @@ public class DashFileSetSequence {
         }
     }
 
-    public void writeManifest(MPDDocument mpdDocument) throws IOException {
+    protected XmlOptions getXmlOptions() {
         XmlOptions xmlOptions = new XmlOptions();
         //xmlOptions.setUseDefaultNamespace();
         HashMap<String, String> ns = new HashMap<String, String>();
@@ -287,9 +287,13 @@ public class DashFileSetSequence {
         xmlOptions.setSaveAggressiveNamespaces();
         xmlOptions.setUseDefaultNamespace();
         xmlOptions.setSavePrettyPrint();
+        return xmlOptions;
+    }
+
+    public void writeManifest(MPDDocument mpdDocument) throws IOException {
         File manifest1 = new File(outputDirectory, "Manifest.mpd");
         l.info("Writing " + manifest1 + "... ");
-        mpdDocument.save(manifest1, xmlOptions);
+        mpdDocument.save(manifest1, getXmlOptions());
         l.info("Done.");
 
     }
