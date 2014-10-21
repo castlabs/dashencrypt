@@ -153,7 +153,9 @@ public abstract class AbstractManifestWriter {
         AdaptationSetType adaptationSet = periodType.addNewAdaptationSet();
         adaptationSet.setSegmentAlignment(true);
         adaptationSet.setStartWithSAP(1);
-        adaptationSet.setLang(Iso639.convert3to2(language));
+        if (!"und".equals(language)) {
+            adaptationSet.setLang(Iso639.convert3to2(language));
+        }
         adaptationSet.setBitstreamSwitching(true);
         if (tracks.get(0).getHandler().equals("soun")) {
             adaptationSet.setMimeType("audio/mp4");

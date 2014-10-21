@@ -806,7 +806,7 @@ public class DashFileSetSequence {
         Map<File, String> languages = new HashMap<File, String>();
 
         Pattern patternFilenameIncludesLanguage = Pattern.compile(".*-([a-z][a-z])");
-        Pattern patternXmlContainsLang = Pattern.compile(".*lang *= *\"([^\"]*)\".*", Pattern.MULTILINE);
+        Pattern patternXmlContainsLang = Pattern.compile("lang *= *\"([^\"]*)\"", Pattern.MULTILINE);
         for (File subtitle : subtitles) {
             String ext = FilenameUtils.getExtension(subtitle.getName());
             String basename = FilenameUtils.getBaseName(subtitle.getName());
@@ -820,7 +820,7 @@ public class DashFileSetSequence {
             } else if (ext.equals("xml")) {
                 String xml = FileUtils.readFileToString(subtitle);
                 Matcher m = patternXmlContainsLang.matcher(xml);
-                if (m.matches()) {
+                if (m.find()) {
                     languages.put(subtitle, m.group(1));
                 } else {
                     Matcher m2 = patternFilenameIncludesLanguage.matcher(basename);
