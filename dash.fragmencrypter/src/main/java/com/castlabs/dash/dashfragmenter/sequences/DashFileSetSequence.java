@@ -211,9 +211,9 @@ public class DashFileSetSequence {
     public Map<Track, UUID> assignKeyIds(Map<Track, String> track2File) {
         Map<Track, UUID> keyIds = new HashMap<Track, UUID>();
         for (Track track : track2File.keySet()) {
-            if (track.getHandler().equals("soun")) {
+            if (track.getHandler().equals("soun") && audioKeyid != null) {
                 keyIds.put(track, audioKeyid);
-            } else if (track.getHandler().equals("vide")) {
+            } else if (track.getHandler().equals("vide") && videoKeyid != null) {
                 keyIds.put(track, videoKeyid);
             } else {
                 // noop
