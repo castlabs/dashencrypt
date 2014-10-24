@@ -468,12 +468,12 @@ public class DashFileSetSequence {
         HashMap<Track, String> filenames = new HashMap<Track, String>();
         for (Track track : trackOriginalFilename.keySet()) {
             String originalFilename = trackOriginalFilename.get(track);
-            originalFilename = originalFilename.replace(".mp4", "");
-            originalFilename = originalFilename.replace(".mov", "");
-            originalFilename = originalFilename.replace(".aac", "");
-            originalFilename = originalFilename.replace(".ec3", "");
-            originalFilename = originalFilename.replace(".ac3", "");
-            originalFilename = originalFilename.replace(".dtshd", "");
+            originalFilename = originalFilename.replaceAll(".mov$", "");
+            originalFilename = originalFilename.replaceAll(".aac$", "");
+            originalFilename = originalFilename.replaceAll(".ec3$", "");
+            originalFilename = originalFilename.replaceAll(".ac3$", "");
+            originalFilename = originalFilename.replaceAll(".dtshd$", "");
+            originalFilename = originalFilename.replaceAll(".mp4$", "");
             for (Track track1 : filenames.keySet()) {
                 if (track1 != track &&
                         trackOriginalFilename.get(track1).equals(trackOriginalFilename.get(track))) {
