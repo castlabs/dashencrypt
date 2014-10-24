@@ -38,7 +38,6 @@ public class MuxMp4 implements Command {
     protected File outputFile = new File("output.mp4");
 
 
-    @Override
     public int run() throws IOException {
 
         long start = System.currentTimeMillis();
