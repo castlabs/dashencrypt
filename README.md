@@ -8,6 +8,7 @@ Our DASH.encrypt project provides a solution. It takes encoded video and audio f
 * [DASH Industry Forum](http://dashif.org/)
 * [ISO/IEC 23009-1:2014](http://www.iso.org/iso/home/store/catalogue_tc/catalogue_detail.htm?csnumber=65274)
 * [DASH.encrypt@castlabs.com](http://castlabs.com/products/dash-encrypt/)
+* [ISO/MP4 Parser](https://github.com/sannies/mp4parser/) 
 
 This project is released under the [Mozilla Public License 2.0](http://www.mozilla.org/MPL/2.0/).
 
