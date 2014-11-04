@@ -5,6 +5,7 @@ import com.castlabs.dash.dashfragmenter.formats.csf.DashBuilder;
 import com.castlabs.dash.dashfragmenter.formats.csf.SegmentBaseSingleSidxManifestWriterImpl;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.ExplodedSegmentListManifestWriterImpl;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.SingleSidxExplode;
+import com.castlabs.dash.dashfragmenter.tracks.NegativeCtsInsteadOfEdit;
 import com.coremedia.iso.boxes.*;
 import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
 import com.coremedia.iso.boxes.sampleentry.SampleEntry;
@@ -70,7 +71,7 @@ public class DashFileSetSequence {
 
     /**
      * Sets whether styp and sidx should be generated when 'exploding' single file into one file per segement.
-     * <p>
+     * <p/>
      * This option has no effect when <code>explode==false</code>
      *
      * @param generateStypSdix yes/no
@@ -82,7 +83,7 @@ public class DashFileSetSequence {
 
     /**
      * Sets the mediaPattern for 'exploded' mode and defines under which name to store the segments.
-     * <p>
+     * <p/>
      * This option has no effect when <code>explode==false</code>
      *
      * @param mediaPattern under which name to store the segments
@@ -94,7 +95,7 @@ public class DashFileSetSequence {
 
     /**
      * Sets the initPattern for 'exploded' mode and defines under which name the init segment is stored.
-     * <p>
+     * <p/>
      * This option has no effect when <code>explode==false</code>
      *
      * @param initPattern under which name the init segment is stored
@@ -163,6 +164,7 @@ public class DashFileSetSequence {
 
         track2File = alignEditsToZero(track2File);
         track2File = fixAppleOddity(track2File);
+        track2File = useNegativeCtsToPreventEdits(track2File);
 
         Map<Track, UUID> track2KeyId = assignKeyIds(track2File);
         Map<UUID, SecretKey> keyId2Key = createKeyMap(track2KeyId);
@@ -201,6 +203,20 @@ public class DashFileSetSequence {
         return 0;
     }
 
+    private Map<Track, String> useNegativeCtsToPreventEdits(Map<Track, String> track2File) {
+        Map<Track, String> nuTracks = new HashMap<Track, String>();
+
+        for (Map.Entry<Track, String> entry : track2File.entrySet()) {
+            Track track = entry.getKey();
+            if (NegativeCtsInsteadOfEdit.benefitsFromChange(track)) {
+                nuTracks.put(new NegativeCtsInsteadOfEdit(track), entry.getValue());
+            } else {
+                nuTracks.put(track, entry.getValue());
+            }
+        }
+        return nuTracks;
+    }
+
     public Map<UUID, SecretKey> createKeyMap(Map<Track, UUID> track2KeyId) {
         Map<UUID, SecretKey> keyIds = new HashMap<UUID, SecretKey>();
         keyIds.put(audioKeyid, audioKey);
@@ -234,9 +250,9 @@ public class DashFileSetSequence {
     }
 
     public MPDDocument createManifest(Map<File, String> subtitleLanguages,
-                               Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate,
-                               Map<Track, String> representationIds,
-                               Map<Track, Container> dashedFiles, Map<Track, List<File>> trackToFile) throws IOException {
+                                      Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate,
+                                      Map<Track, String> representationIds,
+                                      Map<Track, Container> dashedFiles, Map<Track, List<File>> trackToFile) throws IOException {
         MPDDocument mpdDocument;
         if (!explode) {
             mpdDocument = new SegmentBaseSingleSidxManifestWriterImpl(
