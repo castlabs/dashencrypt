@@ -51,9 +51,11 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
     protected void createPeriod(PeriodType periodType) throws IOException {
 
         double maxDurationInSeconds = -1;
-
-        for (String trackFamily : adaptationSets.keySet()) {
+        // %lang%
+        for (Map.Entry<String, List<Track>> e : adaptationSets.entrySet()) {
+            String trackFamily = e.getKey();
             List<Track> tracks = adaptationSets.get(trackFamily);
+
             for (Track track : tracks) {
                 double durationInSeconds = (double) track.getDuration() / track.getTrackMetaData().getTimescale();
                 maxDurationInSeconds = Math.max(maxDurationInSeconds, durationInSeconds);
@@ -61,7 +63,7 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
             AdaptationSetType adaptationSet = createAdaptationSet(periodType, tracks);
             Track firstTrack = tracks.get(0);
             SegmentTemplateType segmentTemplate = adaptationSet.addNewSegmentTemplate();
-            segmentTemplate.setMedia(mediaPattern);
+            segmentTemplate.setMedia(mediaPattern.replace("%lang%", tracks.get(0).getTrackMetaData().getLanguage()));
             segmentTemplate.setInitialization2(initPattern);
             segmentTemplate.setTimescale(firstTrack.getTrackMetaData().getTimescale());
             SegmentTimelineType segmentTimeline = segmentTemplate.addNewSegmentTimeline();

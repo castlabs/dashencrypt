@@ -348,17 +348,7 @@ public class DashFileSetSequence {
             String mediaPattern) throws IOException {
         Map<Track, List<File>> trackToSegments = new HashMap<Track, List<File>>();
         for (Track t : trackFilename.keySet()) {
-            String filename = mediaPattern.replace("$Bandwidth$", "" + trackBitrate.get(t));
-            filename = filename.replace("$Time$", "0");
-            filename = filename.replace("$Number$", "0");
-            filename = filename.replace("$RepresentationID$", trackFilename.get(t));
-
-
-            File targetDir = new File(outputDirectory, filename).getParentFile();
-            l.info("Writing " + t.getName() + " to " + targetDir + "...");
-            FileUtils.forceMkdir(targetDir);
-
-            SingleSidxExplode singleSidxExplode = new SingleSidxExplode();
+            SingleSidxExplode singleSidxExplode = new SingleSidxExplode(l);
             singleSidxExplode.setGenerateStypSdix(generateStypSdix);
             List<File> segments = singleSidxExplode.doIt(
                     dashedFiles.get(t), trackFilename.get(t),
