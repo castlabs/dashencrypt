@@ -60,7 +60,7 @@ public class DashFileSetSequence {
     private Logger l;
 
     static String getFormat(Track track) {
-        SampleEntry se = track.getSampleDescriptionBox().getSampleEntry();
+        SampleEntry se = track.getSampleDescriptionBox().getBoxes(SampleEntry.class).get(0);
         String type = se.getType();
         if (type.equals("encv") || type.equals("enca") || type.equals("encv")) {
             OriginalFormatBox frma = Path.getPath(se, "sinf/frma");
