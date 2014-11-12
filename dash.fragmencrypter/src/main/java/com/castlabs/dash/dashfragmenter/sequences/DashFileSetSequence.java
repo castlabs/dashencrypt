@@ -612,13 +612,13 @@ public class DashFileSetSequence {
                                 t, keyid,
                                 Collections.singletonMap(keyid, key),
                                 Collections.singletonMap(e, excludes),
-                                encryptionAlgo);
+                                encryptionAlgo, false);
 
                     } else {
                         cencTrack = new CencEncryptingTrackImpl(
                                 t, keyid,
                                 Collections.singletonMap(keyid, key),
-                                null, encryptionAlgo);
+                                null, encryptionAlgo, false);
                     }
                     encTracks.put(cencTrack, trackStringEntry.getValue());
                 } else if (sparse == 1) {
@@ -647,7 +647,7 @@ public class DashFileSetSequence {
                             t, keyid,
                             Collections.singletonMap(keyid, key),
                             Collections.singletonMap(e, longSet2Array(plainSamples)),
-                            "cenc");
+                            "cenc", false);
                     encTracks.put(cencTrack, trackStringEntry.getValue());
 
                 } else if (sparse == 2) {
@@ -677,7 +677,7 @@ public class DashFileSetSequence {
                             t, null,
                             Collections.singletonMap(keyid, key),
                             Collections.singletonMap(e, longSet2Array(encryptedSamples)),
-                            "cenc"), trackStringEntry.getValue());
+                            "cenc", false), trackStringEntry.getValue());
                 }
             } else {
                 encTracks.put(trackStringEntry.getKey(), trackStringEntry.getValue());

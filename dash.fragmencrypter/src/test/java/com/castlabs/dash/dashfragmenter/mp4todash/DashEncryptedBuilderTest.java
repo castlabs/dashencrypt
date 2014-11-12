@@ -25,7 +25,7 @@ import java.util.UUID;
 
 public class DashEncryptedBuilderTest {
     @Test
-    @Ignore("As long as dummyIvs is not working")
+
     public void stabilize() throws IOException {
         DashBuilder dashEncryptedBuilder = new DashBuilder();
 
@@ -36,8 +36,7 @@ public class DashEncryptedBuilderTest {
         Track t = m1.getTracks().get(0);
         UUID keyId =  UUIDConverter.convert(new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16});
         SecretKey key = new SecretKeySpec(new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}, "AES");
-        CencEncryptingTrackImpl cencEncryptingTrack = new CencEncryptingTrackImpl(t, keyId, key);
-        cencEncryptingTrack.setDummyIvs(true);
+        CencEncryptingTrackImpl cencEncryptingTrack = new CencEncryptingTrackImpl(t, keyId, key,true);
         m2.addTrack(cencEncryptingTrack);
         dashEncryptedBuilder.setIntersectionFinder(new SyncSampleIntersectFinderImpl(m2, null, -1));
 
