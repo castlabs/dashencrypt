@@ -95,7 +95,7 @@
         <dependency>
             <groupId>com.googlecode.mp4parser</groupId>
             <artifactId>isoparser</artifactId>
-            <version>1.0.5.1</version>
+            <version>1.0.5.2</version>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
@@ -125,7 +125,7 @@
     <repositories>
         <repository>
             <id>mp4parserstaging</id>
-            <url>https://oss.sonatype.org/content/repositories/comgooglecodemp4parser-1047</url>
+            <url>https://oss.sonatype.org/content/repositories/comgooglecodemp4parser-1048</url>
         </repository>
     </repositories>
 

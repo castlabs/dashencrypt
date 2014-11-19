@@ -43,6 +43,7 @@
                 <version>2.5</version>
                 <configuration>
                     <autoVersionSubmodules>true</autoVersionSubmodules>
+                    <localCheckout>true</localCheckout>
                 </configuration>
             </plugin>
         </plugins>

@@ -42,7 +42,7 @@ import java.util.regex.Pattern;
  *
  */
 public class DashFileSetSequence {
-    static Set<String> supportedTypes = new HashSet<String>(Arrays.asList("ac-3", "ec-3", "dtsl", "dtsh", "dtse", "avc1", "mp4a", "h264"));
+    static Set<String> supportedTypes = new HashSet<String>(Arrays.asList("ac-3", "ec-3", "dtsl", "dtsh", "dtse", "avc1", "mp4a", "h264", "hev1", "hvc1"));
     protected UUID audioKeyid;
     protected SecretKey audioKey;
     protected UUID videoKeyid;
