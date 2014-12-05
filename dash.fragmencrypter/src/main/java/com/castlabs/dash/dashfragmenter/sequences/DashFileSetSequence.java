@@ -370,7 +370,7 @@ public class DashFileSetSequence {
             try {
                 List<Box> boxes = trackContainerEntry.getValue().getBoxes();
                 for (int i = 0; i < boxes.size(); i++) {
-                    l.fine("Writing... " + boxes.get(i).getType() + " [" + i + " of " + boxes.size() + "]");
+                    l.finest("Writing... " + boxes.get(i).getType() + " [" + i + " of " + boxes.size() + "]");
                     boxes.get(i).getBox(wbc);
                 }
 
