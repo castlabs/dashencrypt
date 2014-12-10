@@ -99,6 +99,8 @@ public abstract class AbstractManifestWriter {
         return new GDuration(1, 0, 0, 0, 0, 0, requiredTimeInS, BigDecimal.ZERO);
     }
 
+    public abstract String getProfile();
+
     public MPDDocument getManifest() throws IOException {
 
         MPDDocument mdd = MPDDocument.Factory.newInstance();
@@ -114,7 +116,7 @@ public abstract class AbstractManifestWriter {
         createPeriod(periodType);
 
 
-        mpd.setProfiles("urn:mpeg:dash:profile:isoff-on-demand:2011");
+        mpd.setProfiles(getProfile());
         mpd.setType(PresentationType.STATIC); // no mpd update strategy implemented yet, could be dynamic
 
 

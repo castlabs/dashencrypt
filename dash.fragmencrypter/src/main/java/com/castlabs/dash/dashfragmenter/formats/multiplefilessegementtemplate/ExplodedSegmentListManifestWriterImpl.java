@@ -46,6 +46,11 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
         this.mediaPattern = mediaPattern;
     }
 
+    @Override
+    public String getProfile() {
+        return "urn:mpeg:dash:profile:isoff-live:2011";
+    }
+
 
     @Override
     protected void createPeriod(PeriodType periodType) throws IOException {

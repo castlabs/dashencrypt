@@ -46,6 +46,11 @@ public class SegmentBaseSingleSidxManifestWriterImpl extends AbstractManifestWri
         this.trackBitrates = trackBitrates;
     }
 
+    @Override
+    public String getProfile() {
+        return "urn:mpeg:dash:profile:isoff-on-demand:2011";
+    }
+
     protected void createPeriod(PeriodType periodType) throws IOException {
 
         double maxDurationInSeconds = -1;
