@@ -1,5 +1,6 @@
 package com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate;
 
+import com.castlabs.dash.dashfragmenter.sequences.DashFileSetSequence;
 import com.castlabs.dash.helpers.AbstractManifestWriter;
 import com.coremedia.iso.IsoFile;
 import com.coremedia.iso.boxes.Container;
@@ -31,13 +32,15 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
     private final String initPattern;
     private final String mediaPattern;
 
-    public ExplodedSegmentListManifestWriterImpl(Map<String, List<Track>> adaptationSets,
+    public ExplodedSegmentListManifestWriterImpl(
+            DashFileSetSequence dashFileSetSequence,
+            Map<String, List<Track>> adaptationSets,
                                                  Map<Track, Container> trackContainer,
                                                  Map<Track, Long> representationBitrates,
                                                  Map<Track, String> representationIds,
                                                  Map<Track, List<File>> trackToSegements,
                                                  String initPattern, String mediaPattern) {
-        super(trackContainer, representationBitrates);
+        super(trackContainer, representationBitrates, dashFileSetSequence);
         this.trackBitrates = representationBitrates;
         this.adaptationSets = adaptationSets;
         this.trackToSegements = trackToSegements;

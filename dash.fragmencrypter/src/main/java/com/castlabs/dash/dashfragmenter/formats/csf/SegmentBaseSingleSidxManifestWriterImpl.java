@@ -5,6 +5,7 @@
  */
 package com.castlabs.dash.dashfragmenter.formats.csf;
 
+import com.castlabs.dash.dashfragmenter.sequences.DashFileSetSequence;
 import com.castlabs.dash.helpers.AbstractManifestWriter;
 import com.coremedia.iso.boxes.Container;
 import com.googlecode.mp4parser.authoring.Track;
@@ -34,12 +35,13 @@ public class SegmentBaseSingleSidxManifestWriterImpl extends AbstractManifestWri
     private final Map<Track, Long> trackBitrates;
 
     public SegmentBaseSingleSidxManifestWriterImpl(
+            DashFileSetSequence dashFileSetSequence,
             Map<String, List<Track>> adaptationSets,
             Map<Track, Container> trackContainer,
             Map<Track, Long> trackBitrates,
             Map<Track, String> trackFilenames) {
 
-        super(trackContainer, trackBitrates);
+        super(trackContainer, trackBitrates, dashFileSetSequence);
         this.adaptationSets = adaptationSets;
         this.trackFilenames = trackFilenames;
         this.trackContainer = trackContainer;

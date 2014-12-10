@@ -6,6 +6,7 @@
 
 package com.castlabs.dash.helpers;
 
+import com.castlabs.dash.dashfragmenter.sequences.DashFileSetSequence;
 import com.coremedia.iso.boxes.Box;
 import com.coremedia.iso.boxes.Container;
 import com.coremedia.iso.boxes.MediaHeaderBox;
@@ -29,13 +30,16 @@ public abstract class AbstractManifestWriter {
 
     private final Map<Track, Container> trackContainer;
     private final Map<Track, Long> trackBitrates;
+    DashFileSetSequence dashFileSetSequence;
 
 
     public AbstractManifestWriter(Map<Track, Container> trackContainer,
-                                  Map<Track, Long> trackBitrates) {
+                                  Map<Track, Long> trackBitrates,
+                                  DashFileSetSequence dashFileSetSequence) {
 
         this.trackContainer = trackContainer;
         this.trackBitrates = trackBitrates;
+        this.dashFileSetSequence = dashFileSetSequence;
 
     }
 
@@ -168,14 +172,13 @@ public abstract class AbstractManifestWriter {
         }
 
         if (keyId != null) {
-            DescriptorType contentProtection = adaptationSet.addNewContentProtection();
-            final DefaultKIDAttribute defaultKIDAttribute = DefaultKIDAttribute.Factory.newInstance();
-            defaultKIDAttribute.setDefaultKID(Collections.singletonList(keyId.toString()));
-            contentProtection.set(defaultKIDAttribute);
-            contentProtection.setSchemeIdUri("urn:mpeg:dash:mp4protection:2011");
-            contentProtection.setValue("cenc");
+            addContentProtection(adaptationSet, keyId);
         }
         return adaptationSet;
+    }
+
+    protected void addContentProtection(AdaptationSetType adaptationSet, UUID keyId) {
+        dashFileSetSequence.addContentProtection(adaptationSet, keyId);
     }
 
     protected void createInitialization(URLType urlType, Track track) {

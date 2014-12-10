@@ -21,6 +21,7 @@ import com.googlecode.mp4parser.boxes.mp4.ESDescriptorBox;
 import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.AudioSpecificConfig;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.CencSampleEncryptionInformationGroupEntry;
 import com.googlecode.mp4parser.util.Path;
+import mpegCenc2013.DefaultKIDAttribute;
 import mpegDashSchemaMpd2011.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -255,11 +256,11 @@ public class DashFileSetSequence {
                                       Map<Track, Container> dashedFiles, Map<Track, List<File>> trackToFile) throws IOException {
         MPDDocument mpdDocument;
         if (!explode) {
-            mpdDocument = new SegmentBaseSingleSidxManifestWriterImpl(
+            mpdDocument = new SegmentBaseSingleSidxManifestWriterImpl(this,
                     trackFamilies, dashedFiles,
                     trackBitrate, representationIds).getManifest();
         } else {
-            mpdDocument = new ExplodedSegmentListManifestWriterImpl(
+            mpdDocument = new ExplodedSegmentListManifestWriterImpl(this,
                     trackFamilies, dashedFiles, trackBitrate, representationIds,
                     trackToFile, initPattern, mediaPattern).getManifest();
         }
@@ -841,44 +842,26 @@ public class DashFileSetSequence {
         return languages;
     }
 
-    private class StsdCorrectingTrack extends AbstractTrack {
-        Track track;
+    private class StsdCorrectingTrack extends WrappingTrack {
         SampleDescriptionBox stsd;
 
         public StsdCorrectingTrack(Track track, SampleDescriptionBox stsd) {
-            super(track.getName());
-            this.track = track;
+            super(track);
             this.stsd = stsd;
         }
-
-
-        public void close() throws IOException {
-            track.close();
-        }
-
 
         public SampleDescriptionBox getSampleDescriptionBox() {
             return stsd;
         }
 
+    }
 
-        public long[] getSampleDurations() {
-            return track.getSampleDurations();
-        }
-
-
-        public TrackMetaData getTrackMetaData() {
-            return track.getTrackMetaData();
-        }
-
-
-        public String getHandler() {
-            return track.getHandler();
-        }
-
-
-        public List<Sample> getSamples() {
-            return track.getSamples();
-        }
+    public void addContentProtection(AdaptationSetType adaptationSet, UUID keyId) {
+        DescriptorType contentProtection = adaptationSet.addNewContentProtection();
+        final DefaultKIDAttribute defaultKIDAttribute = DefaultKIDAttribute.Factory.newInstance();
+        defaultKIDAttribute.setDefaultKID(Collections.singletonList(keyId.toString()));
+        contentProtection.set(defaultKIDAttribute);
+        contentProtection.setSchemeIdUri("urn:mpeg:dash:mp4protection:2011");
+        contentProtection.setValue("cenc");
     }
 }
