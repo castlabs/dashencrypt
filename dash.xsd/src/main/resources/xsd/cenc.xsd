@@ -18,4 +18,6 @@
 
     <!-- attribute that can be used within the DASH ContentProtection descriptor -->
     <xs:attribute name="default_KID" type="KeyIdListType"/>
+
+    <xs:element name="pssh" type="xs:base64Binary"/>
 </xs:schema>

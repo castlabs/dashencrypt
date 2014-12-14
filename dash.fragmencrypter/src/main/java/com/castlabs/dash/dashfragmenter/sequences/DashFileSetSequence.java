@@ -58,7 +58,7 @@ public class DashFileSetSequence {
     protected String mediaPattern = "$RepresentationID$/media-$Time$.mp4";
     protected String initPattern = "$RepresentationID$/init.mp4";
     protected boolean generateStypSdix = true;
-    private Logger l;
+    protected Logger l;
 
     static String getFormat(Track track) {
         SampleEntry se = track.getSampleDescriptionBox().getBoxes(SampleEntry.class).get(0);
