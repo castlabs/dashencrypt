@@ -42,7 +42,7 @@ public class SingleSidxExplode {
 
         File initFile = new File(outputDir, initFilename);
         FileUtils.forceMkdir(initFile.getParentFile());
-        l.info("Writing " + in.toString() + " to " + initFile.getParentFile() + "...");
+        l.info("Writing " + representationId + " to " + initFile.getParentFile() + "...");
         segments.add(initFile);
 
         FileChannel initChannel = new FileOutputStream(initFile).getChannel();

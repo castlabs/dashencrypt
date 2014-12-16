@@ -102,15 +102,16 @@ public class SortTracks implements Command {
 
                     }
                 }
-                if (Path.getPath(isoFile, "/moov[0]/trak[0]/mdia[0]/minf[0]/stbl[0]/stsd[0]/mp4a[0]") != null) {
+                if (audiosDone.isEmpty() && Path.getPath(isoFile, "/moov[0]/trak[0]/mdia[0]/minf[0]/stbl[0]/stsd[0]/mp4a[0]") != null) {
                     Mp4TrackImpl mp4Track = new Mp4TrackImpl(f.getName(), (TrackBox) Path.getPath(isoFile, "/moov[0]/trak[0]"));
+
                     for (Sample sample : mp4Track.getSamples()) {
                         md.update(sample.asByteBuffer());
                     }
                     String audioFingerPrint = Hex.encodeHex(md.digest());
                     if (!audiosDone.contains(audioFingerPrint)) {
                         if (!audiosDone.isEmpty()) {
-                            throw new RuntimeException("More than 1 audio. We need to pick up the languages somehow.");
+                            throw new RuntimeException("More than 1 audio. We need to pick up the languages somehow. Colliding file: " + f.getName());
                         }
                         audiosDone.add(audioFingerPrint);
                         Movie m = new Movie();
