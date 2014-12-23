@@ -507,11 +507,11 @@ public class DashFileSetSequence {
             movie.setTracks(tracks);
             for (Track track : tracks) {
                 if (track.getHandler().startsWith("vide")) {
-                    FragmentIntersectionFinder videoIntersectionFinder = new SyncSampleIntersectFinderImpl(movie, null, 2);
+                    FragmentIntersectionFinder videoIntersectionFinder = new SyncSampleIntersectFinderImpl(movie, null, 4);
                     fragmentStartSamples.put(track, videoIntersectionFinder.sampleNumbers(track));
                     //fragmentStartSamples.put(track, checkMaxFragmentDuration(track, videoIntersectionFinder.sampleNumbers(track)));
                 } else if (track.getHandler().startsWith("soun")) {
-                    FragmentIntersectionFinder soundIntersectionFinder = new TwoSecondIntersectionFinder(movie, 5);
+                    FragmentIntersectionFinder soundIntersectionFinder = new TwoSecondIntersectionFinder(movie, 15);
                     fragmentStartSamples.put(track, soundIntersectionFinder.sampleNumbers(track));
                 } else {
                     throw new RuntimeException("An engineer needs to tell me if " + key + " is audio or video!");

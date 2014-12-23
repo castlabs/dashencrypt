@@ -22,13 +22,14 @@ import javafx.embed.swing.SwingNode;
 import javafx.scene.control.TitledPane;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.output.TeeOutputStream;
+import org.apache.xmlbeans.impl.common.IOUtil;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.FileOptionHandler;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -44,9 +45,13 @@ public class SortTracks implements Command {
     @Option(required = true, handler = FileOptionHandler.class, name = "--outputdir", aliases = "-o")
     File outputDir;
 
+
     @Argument(required = true, multiValued = true, handler = FileOptionHandler.class, usage = "Bitstream input files", metaVar = "vid1.avc1, aud1.dtshd ...")
     protected List<File> inputFiles;
 
+
+    @Option(required = false, name = "-ffprobe-executable")
+    String ffprobe;
 
     public int run() throws IOException, ExitCodeException {
         Set<String> audiosDone = new HashSet<String>();
@@ -54,8 +59,7 @@ public class SortTracks implements Command {
         MessageDigest md = null;
         try {
             md = MessageDigest.getInstance("SHA-1");
-        }
-        catch(NoSuchAlgorithmException e) {
+        } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
 
@@ -95,11 +99,12 @@ public class SortTracks implements Command {
                         Movie m = new Movie();
                         m.addTrack(new WrappingTrack(mp4Track));
                         Container correctedFile = builder.build(m);
+                        File outFile = new File(outputDir, f.getName());
                         correctedFile.writeContainer(
-                                new FileOutputStream(new File(outputDir, f.getName())).getChannel());
+                                new FileOutputStream(outFile).getChannel());
                         System.out.println("Added " + f.getName() + " with corrected sync samples.");
 
-
+                        analyze(outFile, mp4Track.getDuration() / mp4Track.getTrackMetaData().getTimescale());
                     }
                 }
                 if (audiosDone.isEmpty() && Path.getPath(isoFile, "/moov[0]/trak[0]/mdia[0]/minf[0]/stbl[0]/stsd[0]/mp4a[0]") != null) {
@@ -117,18 +122,62 @@ public class SortTracks implements Command {
                         Movie m = new Movie();
                         m.addTrack(mp4Track);
                         Container correctedFile = builder.build(m);
+                        File outFile = new File(outputDir, f.getName());
                         correctedFile.writeContainer(
-                                new FileOutputStream(new File(outputDir, f.getName())).getChannel());
+                                new FileOutputStream(outFile).getChannel());
                         System.out.println("Added " + f.getName() + " as new audio.");
+                        analyze(outFile, mp4Track.getDuration() / mp4Track.getTrackMetaData().getTimescale());
                     }
                 }
             }
             if (f.getName().endsWith(".xml")) {
-                FileUtils.copyFile(f, new File(outputDir, f.getName()));
-                System.out.println("Added " + f.getName() + " as subtitle.");
+                String xml = FileUtils.readFileToString(f);
+                xml = xml.replace("http://www.w3.org/ns/ttml#style", "http://www.w3.org/ns/ttml#styling");
+                xml = xml.replace(" id=\"", " xml:id=\"");
+                xml = xml.replace("sansSerif", "sans-serif");
+                FileUtils.write(new File(outputDir, f.getName()), xml);
+                System.out.println("Added and corrected " + f.getName() + " as subtitle.");
             }
         }
 
+
         return 0;
+    }
+
+    public void analyze(File outFile, long duration) throws IOException, ExitCodeException {
+        final Process p = Runtime.getRuntime().exec(ffprobe + " -count_frames " + outFile.getAbsolutePath());
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        final ByteArrayOutputStream err = new ByteArrayOutputStream();
+
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    IOUtils.copy(p.getErrorStream(), new TeeOutputStream(System.err, err));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }.start();
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    IOUtils.copy(p.getInputStream(), new TeeOutputStream(System.out, out));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }.start();
+        try {
+            p.waitFor();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        double errorRatio = ((double)err.toByteArray().length /duration);
+        System.err.println(String.format( "Error freeness ratio = %.5f",  errorRatio));
+        if (errorRatio > 20) {
+            throw new ExitCodeException(outFile.getName() + "'s error density is too high. Manual check required.", 12345);
+        }
     }
 }
