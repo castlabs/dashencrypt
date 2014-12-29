@@ -2,8 +2,10 @@ package com.castlabs.dash.helpers;
 
 import com.coremedia.iso.Hex;
 import com.coremedia.iso.boxes.OriginalFormatBox;
-import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;import com.coremedia.iso.boxes.sampleentry.SampleEntry;import com.coremedia.iso.boxes.sampleentry.VisualSampleEntry;
-import com.coremedia.iso.boxes.sampleentry.XMLSubtitleSampleEntry;
+import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
+import com.coremedia.iso.boxes.sampleentry.SampleEntry;
+import com.coremedia.iso.boxes.sampleentry.VisualSampleEntry;
+
 import com.googlecode.mp4parser.boxes.AC3SpecificBox;
 import com.googlecode.mp4parser.boxes.DTSSpecificBox;
 import com.googlecode.mp4parser.boxes.EC3SpecificBox;
@@ -14,8 +16,13 @@ import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.DecoderConfigDescrip
 import com.googlecode.mp4parser.util.Path;
 import com.mp4parser.iso14496.part15.AvcConfigurationBox;
 import com.mp4parser.iso14496.part15.HevcConfigurationBox;
+import com.mp4parser.iso14496.part30.XMLSubtitleSampleEntry;
 
-import java.lang.Integer;import java.lang.Long;import java.lang.RuntimeException;import java.lang.String;import java.util.List;
+import java.lang.Integer;
+import java.lang.Long;
+import java.lang.RuntimeException;
+import java.lang.String;
+import java.util.List;
 
 /**
  * Gets the precise MIME type according to RFC6381.
@@ -263,9 +270,9 @@ public final class DashHelper {
             }
             final DecoderConfigDescriptor decoderConfigDescriptor = esDescriptorBox.getEsDescriptor().getDecoderConfigDescriptor();
             final AudioSpecificConfig audioSpecificConfig = decoderConfigDescriptor.getAudioSpecificInfo();
-            if (audioSpecificConfig != null && audioSpecificConfig.getSbrPresentFlag() == 1) {
+            if (audioSpecificConfig != null && audioSpecificConfig.getSbrPresentFlag()==1) {
                 return "mp4a.40.5";
-            } else if (audioSpecificConfig != null && audioSpecificConfig.getPsPresentFlag() == 1) {
+            } else if (audioSpecificConfig != null && audioSpecificConfig.getPsPresentFlag()==1) {
                 return "mp4a.40.29";
             } else {
                 return "mp4a.40.2";
@@ -309,17 +316,17 @@ public final class DashHelper {
             } else {
                 codec += ".L";
             }
-            codec+= hvcc.getGeneral_level_idc();
+            codec += hvcc.getGeneral_level_idc();
 
 
             long _general_constraint_indicator_flags = hvcc.getGeneral_constraint_indicator_flags();
-            if ( hvcc.getHevcDecoderConfigurationRecord().isFrame_only_constraint_flag()) {
+            if (hvcc.getHevcDecoderConfigurationRecord().isFrame_only_constraint_flag()) {
                 _general_constraint_indicator_flags |= 1l << 47;
             }
             if (hvcc.getHevcDecoderConfigurationRecord().isNon_packed_constraint_flag()) {
                 _general_constraint_indicator_flags |= 1l << 46;
             }
-            if ( hvcc.getHevcDecoderConfigurationRecord().isInterlaced_source_flag()) {
+            if (hvcc.getHevcDecoderConfigurationRecord().isInterlaced_source_flag()) {
                 _general_constraint_indicator_flags |= 1l << 45;
             }
             if (hvcc.getHevcDecoderConfigurationRecord().isProgressive_source_flag()) {
@@ -329,7 +336,7 @@ public final class DashHelper {
             codec += "." + hexByte(_general_constraint_indicator_flags >> 40);
 
 
-            if ((_general_constraint_indicator_flags  & 0xFFFFFFFFFFL) > 0) {
+            if ((_general_constraint_indicator_flags & 0xFFFFFFFFFFL) > 0) {
                 codec += "." + hexByte(_general_constraint_indicator_flags >> 32);
 
                 if ((_general_constraint_indicator_flags & 0xFFFFFFFFL) > 0) {

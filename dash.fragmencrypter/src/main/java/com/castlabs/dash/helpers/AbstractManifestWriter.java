@@ -15,7 +15,7 @@ import com.coremedia.iso.boxes.fragment.TrackExtendsBox;
 import com.coremedia.iso.boxes.fragment.TrackFragmentHeaderBox;
 import com.coremedia.iso.boxes.fragment.TrackRunBox;
 import com.googlecode.mp4parser.authoring.Track;
-import com.googlecode.mp4parser.authoring.tracks.CencEncyprtedTrack;
+import com.googlecode.mp4parser.authoring.tracks.CencEncryptedTrack;
 import com.googlecode.mp4parser.util.Iso639;
 import com.googlecode.mp4parser.util.Path;
 import mpegCenc2013.DefaultKIDAttribute;
@@ -131,8 +131,8 @@ public abstract class AbstractManifestWriter {
     }
 
     UUID getKeyId(Track track) {
-        if (track instanceof CencEncyprtedTrack) {
-            return ((CencEncyprtedTrack) track).getDefaultKeyId();
+        if (track instanceof CencEncryptedTrack) {
+            return ((CencEncryptedTrack) track).getDefaultKeyId();
         } else {
             return null;
         }
