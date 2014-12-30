@@ -85,7 +85,7 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
             long timeMappingEdit = getTimeMappingEditTime(new IsoFile(init.getAbsolutePath()));
             long startTime = ptss[0] - timeMappingEdit;
 
-
+            SegmentTimelineType.S lastSegmentTimelineS = null;
             for (File segment : segments) {
                 long duration = 0;
                 List<TrackRunBox> truns = Path.getPaths(new IsoFile(segment.getAbsolutePath()), "moof/traf/trun");
@@ -93,9 +93,20 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
                     duration += getDuration(trun);
                 }
 
-                SegmentTimelineType.S s = segmentTimeline.addNewS();
-                s.setD((BigInteger.valueOf(duration)));
-                s.setT(BigInteger.valueOf(startTime));
+                if (lastSegmentTimelineS != null && lastSegmentTimelineS.getD().equals(BigInteger.valueOf(duration))) {
+                    if (lastSegmentTimelineS.isSetR()) {
+                        lastSegmentTimelineS.setR(lastSegmentTimelineS.getR().add(BigInteger.ONE));
+                    } else {
+                        lastSegmentTimelineS.setR(BigInteger.ONE);
+                    }
+
+                } else {
+                    SegmentTimelineType.S s = segmentTimeline.addNewS();
+                    s.setD((BigInteger.valueOf(duration)));
+                    s.setT(BigInteger.valueOf(startTime));
+                    lastSegmentTimelineS = s;
+                }
+
                 startTime += duration;
             }
 
