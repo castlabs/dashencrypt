@@ -92,8 +92,9 @@ public class ManifestHelper {
             adaptationSet.setMaxHeight(Math.max(adaptationSet.isSetMaxHeight() ? adaptationSet.getMaxHeight() : 0,
                     videoHeight));
 
-            adaptationSet.setPar("1:1");
-            // too hard to find it out. Ignoring even though it should be set according to DASH-AVC-264-v2.00-hd-mca.pdf
+            Fraction fraction = Fraction.getFraction((int)videoWidth, (int)videoHeight).reduce();
+            adaptationSet.setPar(""  + fraction.getNumerator() + ":" + fraction.getDenominator());
+
 
             //representation.setMimeType("video/mp4");
             representation.setCodecs(DashHelper.getRfc6381Codec(track.getSampleDescriptionBox().getSampleEntry()));
