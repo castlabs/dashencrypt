@@ -157,15 +157,20 @@ public abstract class AbstractManifestWriter {
 
 
         AdaptationSetType adaptationSet = periodType.addNewAdaptationSet();
-        adaptationSet.setSegmentAlignment(true);
-        adaptationSet.setStartWithSAP(1);
+        if (!tracks.get(0).getHandler().equals("subt")) {
+            adaptationSet.setSegmentAlignment(true);
+            adaptationSet.setStartWithSAP(1);
+            adaptationSet.setBitstreamSwitching(true);
+        }
         if (!"und".equals(language)) {
             adaptationSet.setLang(Iso639.convert3to2(language));
         }
-        adaptationSet.setBitstreamSwitching(true);
+
         if (tracks.get(0).getHandler().equals("soun")) {
             adaptationSet.setMimeType("audio/mp4");
         } else if (tracks.get(0).getHandler().equals("vide")) {
+            adaptationSet.setMimeType("video/mp4");
+        } else if (tracks.get(0).getHandler().equals("subt")) {
             adaptationSet.setMimeType("video/mp4");
         } else {
             throw new RuntimeException("Don't know what to do with handler type = " + tracks.get(0).getHandler());

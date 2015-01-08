@@ -43,7 +43,7 @@ import java.util.regex.Pattern;
  *
  */
 public class DashFileSetSequence {
-    static Set<String> supportedTypes = new HashSet<String>(Arrays.asList("ac-3", "ec-3", "dtsl", "dtsh", "dtse", "avc1", "avc3", "mp4a", "h264", "hev1", "hvc1"));
+    static Set<String> supportedTypes = new HashSet<String>(Arrays.asList("ac-3", "ec-3", "dtsl", "dtsh", "dtse", "avc1", "avc3", "mp4a", "h264", "hev1", "hvc1", "stpp"));
     protected UUID audioKeyid;
     protected SecretKey audioKey;
     protected UUID videoKeyid;
@@ -510,7 +510,7 @@ public class DashFileSetSequence {
                     FragmentIntersectionFinder videoIntersectionFinder = new SyncSampleIntersectFinderImpl(movie, null, 4);
                     fragmentStartSamples.put(track, videoIntersectionFinder.sampleNumbers(track));
                     //fragmentStartSamples.put(track, checkMaxFragmentDuration(track, videoIntersectionFinder.sampleNumbers(track)));
-                } else if (track.getHandler().startsWith("soun")) {
+                } else if (track.getHandler().startsWith("soun") || track.getHandler().startsWith("subt")) {
                     FragmentIntersectionFinder soundIntersectionFinder = new TwoSecondIntersectionFinder(movie, 15);
                     fragmentStartSamples.put(track, soundIntersectionFinder.sampleNumbers(track));
                 } else {
