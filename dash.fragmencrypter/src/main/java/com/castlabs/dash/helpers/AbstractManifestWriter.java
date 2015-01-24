@@ -159,6 +159,8 @@ public abstract class AbstractManifestWriter {
         AdaptationSetType adaptationSet = periodType.addNewAdaptationSet();
         if (!tracks.get(0).getHandler().equals("subt")) {
             adaptationSet.setSegmentAlignment(true);
+            adaptationSet.setSubsegmentAlignment(true);
+            adaptationSet.setSubsegmentStartsWithSAP(1);
             adaptationSet.setStartWithSAP(1);
             adaptationSet.setBitstreamSwitching(true);
         }
