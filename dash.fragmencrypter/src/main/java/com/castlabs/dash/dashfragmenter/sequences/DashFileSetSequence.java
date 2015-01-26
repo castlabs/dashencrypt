@@ -250,23 +250,33 @@ public class DashFileSetSequence {
         }
     }
 
+
+
     public MPDDocument createManifest(Map<File, String> subtitleLanguages,
                                       Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate,
                                       Map<Track, String> representationIds,
                                       Map<Track, Container> dashedFiles, Map<Track, List<File>> trackToFile) throws IOException {
         MPDDocument mpdDocument;
         if (!explode) {
-            mpdDocument = new SegmentBaseSingleSidxManifestWriterImpl(this,
-                    trackFamilies, dashedFiles,
-                    trackBitrate, representationIds).getManifest();
+            mpdDocument = getManifestSingleSidx(trackFamilies, trackBitrate, representationIds, dashedFiles);
         } else {
-            mpdDocument = new ExplodedSegmentListManifestWriterImpl(this,
-                    trackFamilies, dashedFiles, trackBitrate, representationIds,
-                    trackToFile, initPattern, mediaPattern).getManifest();
+            mpdDocument = getManifestSegmentList(trackFamilies, trackBitrate, representationIds, dashedFiles, trackToFile);
         }
         addSubtitles(mpdDocument, subtitleLanguages);
 
         return mpdDocument;
+    }
+
+    protected MPDDocument getManifestSegmentList(Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate, Map<Track, String> representationIds, Map<Track, Container> dashedFiles, Map<Track, List<File>> trackToFile) throws IOException {
+        return new ExplodedSegmentListManifestWriterImpl(this,
+                trackFamilies, dashedFiles, trackBitrate, representationIds,
+                trackToFile, initPattern, mediaPattern, false).getManifest();
+    }
+
+    protected MPDDocument getManifestSingleSidx(Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate, Map<Track, String> representationIds, Map<Track, Container> dashedFiles) throws IOException {
+        return new SegmentBaseSingleSidxManifestWriterImpl(this,
+                trackFamilies, dashedFiles,
+                trackBitrate, representationIds, true).getManifest();
     }
 
     public void addSubtitles(MPDDocument mpdDocument, Map<File, String> subtitleLanguages) throws IOException {

@@ -33,19 +33,22 @@ public class SegmentBaseSingleSidxManifestWriterImpl extends AbstractManifestWri
     private final Map<String, List<Track>> adaptationSets;
     private final Map<Track, String> trackFilenames;
     private final Map<Track, Long> trackBitrates;
+    private final boolean writeSegmentBase;
 
     public SegmentBaseSingleSidxManifestWriterImpl(
             DashFileSetSequence dashFileSetSequence,
             Map<String, List<Track>> adaptationSets,
             Map<Track, Container> trackContainer,
             Map<Track, Long> trackBitrates,
-            Map<Track, String> trackFilenames) {
+            Map<Track, String> trackFilenames,
+            boolean writeSegmentBase) {
 
         super(trackContainer, trackBitrates, dashFileSetSequence);
         this.adaptationSets = adaptationSets;
         this.trackFilenames = trackFilenames;
         this.trackContainer = trackContainer;
         this.trackBitrates = trackBitrates;
+        this.writeSegmentBase = writeSegmentBase;
     }
 
     @Override
@@ -65,12 +68,14 @@ public class SegmentBaseSingleSidxManifestWriterImpl extends AbstractManifestWri
 
             for (Track track : tracks) {
                 RepresentationType representation = createRepresentation(adaptationSet, track);
-                SegmentBaseType segBaseType = representation.addNewSegmentBase();
-                createInitialization(segBaseType.addNewInitialization(), track);
 
-                segBaseType.setTimescale(track.getTrackMetaData().getTimescale());
-                segBaseType.setIndexRangeExact(true);
-                segBaseType.setIndexRange(calculateIndexRange(trackContainer.get(track)));
+                if (writeSegmentBase) {
+                    SegmentBaseType segBaseType = representation.addNewSegmentBase();
+                    createInitialization(segBaseType.addNewInitialization(), track);
+                    segBaseType.setTimescale(track.getTrackMetaData().getTimescale());
+                    segBaseType.setIndexRangeExact(true);
+                    segBaseType.setIndexRange(calculateIndexRange(trackContainer.get(track)));
+                }
 
                 representation.setId(trackFilenames.get(track));
                 representation.setBandwidth(trackBitrates.get(track));

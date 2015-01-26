@@ -32,14 +32,17 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
     private final String initPattern;
     private final String mediaPattern;
 
+    private final boolean compressTimeline;
+
     public ExplodedSegmentListManifestWriterImpl(
             DashFileSetSequence dashFileSetSequence,
             Map<String, List<Track>> adaptationSets,
-                                                 Map<Track, Container> trackContainer,
-                                                 Map<Track, Long> representationBitrates,
-                                                 Map<Track, String> representationIds,
-                                                 Map<Track, List<File>> trackToSegements,
-                                                 String initPattern, String mediaPattern) {
+            Map<Track, Container> trackContainer,
+            Map<Track, Long> representationBitrates,
+            Map<Track, String> representationIds,
+            Map<Track, List<File>> trackToSegements,
+            String initPattern, String mediaPattern,
+            boolean compressTimeline) {
         super(trackContainer, representationBitrates, dashFileSetSequence);
         this.trackBitrates = representationBitrates;
         this.adaptationSets = adaptationSets;
@@ -47,6 +50,7 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
         this.trackFilenames = representationIds;
         this.initPattern = initPattern;
         this.mediaPattern = mediaPattern;
+        this.compressTimeline = compressTimeline;
     }
 
     @Override
@@ -93,7 +97,7 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
                     duration += getDuration(trun);
                 }
 
-                if (lastSegmentTimelineS != null && lastSegmentTimelineS.getD().equals(BigInteger.valueOf(duration))) {
+                if (compressTimeline && lastSegmentTimelineS != null && lastSegmentTimelineS.getD().equals(BigInteger.valueOf(duration))) {
                     if (lastSegmentTimelineS.isSetR()) {
                         lastSegmentTimelineS.setR(lastSegmentTimelineS.getR().add(BigInteger.ONE));
                     } else {
