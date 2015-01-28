@@ -6,9 +6,9 @@ import com.castlabs.dash.dashfragmenter.formats.csf.SegmentBaseSingleSidxManifes
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.ExplodedSegmentListManifestWriterImpl;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.SingleSidxExplode;
 import com.castlabs.dash.dashfragmenter.tracks.NegativeCtsInsteadOfEdit;
+import com.castlabs.dash.helpers.DashHelper;
 import com.coremedia.iso.boxes.*;
 import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
-import com.coremedia.iso.boxes.sampleentry.SampleEntry;
 import com.googlecode.mp4parser.FileDataSourceImpl;
 import com.googlecode.mp4parser.authoring.*;
 import com.googlecode.mp4parser.authoring.builder.FragmentIntersectionFinder;
@@ -58,17 +58,9 @@ public class DashFileSetSequence {
     protected String mediaPattern = "$RepresentationID$/media-$Time$.mp4";
     protected String initPattern = "$RepresentationID$/init.mp4";
     protected boolean generateStypSdix = true;
-    protected Logger l;
 
-    static String getFormat(Track track) {
-        SampleEntry se = track.getSampleDescriptionBox().getBoxes(SampleEntry.class).get(0);
-        String type = se.getType();
-        if (type.equals("encv") || type.equals("enca") || type.equals("encv")) {
-            OriginalFormatBox frma = Path.getPath(se, "sinf/frma");
-            type = frma.getDataFormat();
-        }
-        return type;
-    }
+    protected boolean avc1ToAvc3 = false;
+    protected Logger l;
 
     /**
      * Sets whether styp and sidx should be generated when 'exploding' single file into one file per segement.
@@ -104,6 +96,14 @@ public class DashFileSetSequence {
      */
     public void setInitPattern(String initPattern) {
         this.initPattern = initPattern;
+    }
+
+    /**
+     * The dash.encrypter will convert AVC1 tracks to AVC3 tracks when flag is set.
+     * @param avc1ToAvc3 triggers avc1 to avc3 conversion
+     */
+    public void setAvc1ToAvc3(boolean avc1ToAvc3) {
+        this.avc1ToAvc3 = avc1ToAvc3;
     }
 
     public void setEncryptionAlgo(String encryptionAlgo) {
@@ -249,7 +249,6 @@ public class DashFileSetSequence {
             return writeFilesExploded(trackFilename, dashedFiles, trackBitrate, outputDirectory, initPattern, mediaPattern);
         }
     }
-
 
 
     public MPDDocument createManifest(Map<File, String> subtitleLanguages,
@@ -542,13 +541,14 @@ public class DashFileSetSequence {
 
         Map<Track, String> track2File = new HashMap<Track, String>();
         for (File inputFile : inputFiles) {
+
             if (inputFile.getName().endsWith(".mp4") ||
                     inputFile.getName().endsWith(".mov") ||
                     inputFile.getName().endsWith(".m4a") ||
                     inputFile.getName().endsWith(".m4v")) {
                 Movie movie = MovieCreator.build(new FileDataSourceImpl(inputFile));
                 for (Track track : movie.getTracks()) {
-                    String codec = getFormat(track);
+                    String codec = DashHelper.getFormat(track);
                     if (!supportedTypes.contains(codec)) {
                         l.warning("Excluding " + inputFile + " track " + track.getTrackMetaData().getTrackId() + " as its codec " + codec + " is not yet supported");
                         break;
@@ -580,8 +580,19 @@ public class DashFileSetSequence {
             }
         }
         inputFiles.retainAll(unhandled);
-
-        return track2File;
+        if (avc1ToAvc3) {
+            Map<Track, String> avc3ed = new HashMap<Track, String>();
+            for (Map.Entry<Track, String> trackStringEntry : track2File.entrySet()) {
+                if ("avc1".equals(trackStringEntry.getKey().getSampleDescriptionBox().getSampleEntry().getType())) {
+                    avc3ed.put(new Avc1ToAvc3TrackImpl(trackStringEntry.getKey()), trackStringEntry.getValue());
+                } else {
+                    avc3ed.put(trackStringEntry.getKey(), trackStringEntry.getValue());
+                }
+            }
+            return avc3ed;
+        } else {
+            return track2File;
+        }
 
     }
 
@@ -798,9 +809,9 @@ public class DashFileSetSequence {
     public Map<String, List<Track>> findTrackFamilies(Set<Track> allTracks) throws IOException {
         HashMap<String, List<Track>> trackFamilies = new HashMap<String, List<Track>>();
         for (Track track : allTracks) {
-            String family = getFormat(track) + "-" + track.getTrackMetaData().getLanguage();
+            String family = DashHelper.getFormat(track) + "-" + track.getTrackMetaData().getLanguage();
 
-            if ("mp4a".equals(getFormat(track))) {
+            if ("mp4a".equals(DashHelper.getFormat(track))) {
                 // we need to look at actual channel configuration
                 ESDescriptorBox esds = track.getSampleDescriptionBox().getSampleEntry().getBoxes(ESDescriptorBox.class).get(0);
                 AudioSpecificConfig audioSpecificConfig = esds.getEsDescriptor().getDecoderConfigDescriptor().getAudioSpecificInfo();

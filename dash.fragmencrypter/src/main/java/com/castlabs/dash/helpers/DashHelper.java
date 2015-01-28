@@ -6,6 +6,7 @@ import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
 import com.coremedia.iso.boxes.sampleentry.SampleEntry;
 import com.coremedia.iso.boxes.sampleentry.VisualSampleEntry;
 
+import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.boxes.AC3SpecificBox;
 import com.googlecode.mp4parser.boxes.DTSSpecificBox;
 import com.googlecode.mp4parser.boxes.EC3SpecificBox;
@@ -372,6 +373,16 @@ public final class DashHelper {
 
     static String hexByte(long l) {
         return Hex.encodeHex(new byte[]{(byte) (l & 0xFF)});
+    }
+
+    public static String getFormat(Track track) {
+        SampleEntry se = track.getSampleDescriptionBox().getBoxes(SampleEntry.class).get(0);
+        String type = se.getType();
+        if (type.equals("encv") || type.equals("enca") || type.equals("encv")) {
+            OriginalFormatBox frma = Path.getPath(se, "sinf/frma");
+            type = frma.getDataFormat();
+        }
+        return type;
     }
 
     public static class ChannelConfiguration {
