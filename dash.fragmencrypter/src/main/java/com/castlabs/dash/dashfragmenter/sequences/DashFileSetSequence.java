@@ -812,13 +812,15 @@ public class DashFileSetSequence {
     public Map<String, List<Track>> findTrackFamilies(Set<Track> allTracks) throws IOException {
         HashMap<String, List<Track>> trackFamilies = new HashMap<String, List<Track>>();
         for (Track track : allTracks) {
-            String family = DashHelper.getFormat(track) + "-" + track.getTrackMetaData().getLanguage();
+            String family;
 
             if ("mp4a".equals(DashHelper.getFormat(track))) {
                 // we need to look at actual channel configuration
                 ESDescriptorBox esds = track.getSampleDescriptionBox().getSampleEntry().getBoxes(ESDescriptorBox.class).get(0);
                 AudioSpecificConfig audioSpecificConfig = esds.getEsDescriptor().getDecoderConfigDescriptor().getAudioSpecificInfo();
-                family += "-" + audioSpecificConfig.getChannelConfiguration();
+                family = DashHelper.getRfc6381Codec(track.getSampleDescriptionBox().getSampleEntry()) + "-" + track.getTrackMetaData().getLanguage() + "-" + audioSpecificConfig.getChannelConfiguration();
+            } else {
+                family =DashHelper.getFormat(track) + "-" + track.getTrackMetaData().getLanguage();
             }
 
             List<Track> tracks = trackFamilies.get(family);
