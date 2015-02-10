@@ -3,10 +3,11 @@ package com.castlabs.dash.dashfragmenter.sequences;
 import com.castlabs.dash.dashfragmenter.ExitCodeException;
 import com.castlabs.dash.dashfragmenter.formats.csf.DashBuilder;
 import com.castlabs.dash.dashfragmenter.formats.csf.SegmentBaseSingleSidxManifestWriterImpl;
-import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.ExplodedSegmentListManifestWriterImpl;
-import com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate.SingleSidxExplode;
+import com.castlabs.dash.dashfragmenter.formats.multiplefilessegmenttemplate.ExplodedSegmentListManifestWriterImpl;
+import com.castlabs.dash.dashfragmenter.formats.multiplefilessegmenttemplate.SingleSidxExplode;
 import com.castlabs.dash.dashfragmenter.tracks.NegativeCtsInsteadOfEdit;
 import com.castlabs.dash.helpers.DashHelper;
+import com.castlabs.dash.helpers.SoundIntersectionFinderImpl;
 import com.coremedia.iso.boxes.*;
 import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
 import com.googlecode.mp4parser.FileDataSourceImpl;
@@ -149,6 +150,8 @@ public class DashFileSetSequence {
     public void setClearlead(int clearlead) {
         this.clearlead = clearlead;
     }
+
+
 
     public int run() throws IOException, ExitCodeException {
 
@@ -520,7 +523,7 @@ public class DashFileSetSequence {
                     fragmentStartSamples.put(track, videoIntersectionFinder.sampleNumbers(track));
                     //fragmentStartSamples.put(track, checkMaxFragmentDuration(track, videoIntersectionFinder.sampleNumbers(track)));
                 } else if (track.getHandler().startsWith("soun") || track.getHandler().startsWith("subt")) {
-                    FragmentIntersectionFinder soundIntersectionFinder = new TwoSecondIntersectionFinder(movie, 15);
+                    FragmentIntersectionFinder soundIntersectionFinder = new SoundIntersectionFinderImpl(tracks, 15);
                     fragmentStartSamples.put(track, soundIntersectionFinder.sampleNumbers(track));
                 } else {
                     throw new RuntimeException("An engineer needs to tell me if " + key + " is audio or video!");

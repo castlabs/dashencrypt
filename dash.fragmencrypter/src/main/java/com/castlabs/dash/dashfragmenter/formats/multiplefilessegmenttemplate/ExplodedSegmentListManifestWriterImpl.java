@@ -1,4 +1,4 @@
-package com.castlabs.dash.dashfragmenter.formats.multiplefilessegementtemplate;
+package com.castlabs.dash.dashfragmenter.formats.multiplefilessegmenttemplate;
 
 import com.castlabs.dash.dashfragmenter.sequences.DashFileSetSequence;
 import com.castlabs.dash.helpers.AbstractManifestWriter;
