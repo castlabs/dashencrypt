@@ -3,7 +3,7 @@
     <parent>
         <groupId>com.castlabs.dash</groupId>
         <artifactId>dash.encrypt</artifactId>
-        <version>1.2.15-SNAPSHOT</version>
+        <version>1.2.14</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
