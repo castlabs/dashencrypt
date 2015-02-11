@@ -787,7 +787,6 @@ public class DashFileSetSequence {
             }
             startTimes.put(track, earliestTrackPresentationTime);
             earliestMoviePresentationTime = Math.min(earliestMoviePresentationTime, earliestTrackPresentationTime);
-            System.err.println(track.getName() + "'s starttime after edits: " + earliestTrackPresentationTime);
         }
         for (Track track : track2File.keySet()) {
             double adjustedStartTime = startTimes.get(track) - earliestMoviePresentationTime - ctsOffset.get(track);
@@ -809,7 +808,7 @@ public class DashFileSetSequence {
         return result;
     }
 
-    public Map<String, List<Track>> findTrackFamilies(Set<Track> allTracks) throws IOException {
+    public Map<String, List<Track>> findTrackFamilies(Set<Track> allTracks) throws IOException, ExitCodeException {
         HashMap<String, List<Track>> trackFamilies = new HashMap<String, List<Track>>();
         for (Track track : allTracks) {
             String family;
@@ -830,6 +829,21 @@ public class DashFileSetSequence {
             }
             tracks.add(track);
         }
+
+        for (String fam : trackFamilies.keySet()) {
+            List<Track> tracks = trackFamilies.get(fam);
+            long timeScale = -1;
+            for (Track track : tracks) {
+                if (timeScale > 0) {
+                    if (timeScale != track.getTrackMetaData().getTimescale()) {
+                        throw new ExitCodeException("The tracks " + tracks.get(0) + " and " + track + " have been assigned the same adaptation set but their timescale differs: " + timeScale + " vs. " + track.getTrackMetaData().getTimescale(), 38743);
+                    }
+                } else {
+                    timeScale = track.getTrackMetaData().getTimescale();
+                }
+            }
+        }
+
 
         return trackFamilies;
     }
