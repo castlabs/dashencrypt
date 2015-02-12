@@ -161,42 +161,42 @@ public class DashFileSetSequence {
 
         long start = System.currentTimeMillis();
 
-        Map<Track, String> track2File = createTracks();
+        Map<TrackProxy, String> track2File = createTracks();
         List<File> subtitles = findSubtitles();
         Map<File, String> subtitleLanguages = getSubtitleLanguages(subtitles);
         checkUnhandledFile();
 
-        track2File = alignEditsToZero(track2File);
-        track2File = fixAppleOddity(track2File);
-        track2File = useNegativeCtsToPreventEdits(track2File);
+        alignEditsToZero(track2File);
+        fixAppleOddity(track2File);
+        useNegativeCtsToPreventEdits(track2File);
 
-        Map<Track, UUID> track2KeyId = assignKeyIds(track2File);
+        Map<TrackProxy, UUID> track2KeyId = assignKeyIds(track2File);
         Map<UUID, SecretKey> keyId2Key = createKeyMap(track2KeyId);
 
-        track2File = encryptTracks(track2File, track2KeyId, keyId2Key);
+        encryptTracks(track2File, track2KeyId, keyId2Key);
 
         // sort by language and codec
-        Map<String, List<Track>> trackFamilies = findTrackFamilies(track2File.keySet());
+        Map<String, List<TrackProxy>> trackFamilies = findTrackFamilies(track2File.keySet());
 
         // Track sizes are expensive to calculate -> save them for later
-        Map<Track, Long> trackSizes = calculateTrackSizes(trackFamilies);
+        Map<TrackProxy, Long> trackSizes = calculateTrackSizes(trackFamilies);
 
         // sort within the track families by size to get stable output
         sortTrackFamilies(trackFamilies, trackSizes);
 
         // calculate the fragment start samples once & save them for later
-        Map<Track, long[]> track2SegmentStartSamples = findFragmentStartSamples(trackFamilies);
+        Map<TrackProxy, long[]> track2SegmentStartSamples = findFragmentStartSamples(trackFamilies);
 
         // calculate bitrates
-        Map<Track, Long> trackBitrate = calculateBitrate(trackFamilies, trackSizes);
+        Map<TrackProxy, Long> trackBitrate = calculateBitrate(trackFamilies, trackSizes);
 
         // generate filenames for later reference
-        Map<Track, String> trackFilename = generateFilenames(track2File);
+        Map<TrackProxy, String> trackFilename = generateFilenames(track2File);
 
         // export the dashed single track MP4s
-        Map<Track, Container> track2CsfStructure = createSingleTrackDashedMp4s(track2SegmentStartSamples, trackFilename);
+        Map<TrackProxy, Container> track2CsfStructure = createSingleTrackDashedMp4s(track2SegmentStartSamples, trackFilename);
 
-        Map<Track, List<File>> trackToFileRepresentation = writeFiles(trackFilename, track2CsfStructure, trackBitrate);
+        Map<TrackProxy, List<File>> trackToFileRepresentation = writeFiles(trackFilename, track2CsfStructure, trackBitrate);
 
         MPDDocument manifest = createManifest(subtitleLanguages,
                 trackFamilies, trackBitrate, trackFilename, track2CsfStructure, trackToFileRepresentation);
@@ -207,45 +207,38 @@ public class DashFileSetSequence {
         return 0;
     }
 
-    private Map<Track, String> useNegativeCtsToPreventEdits(Map<Track, String> track2File) {
-        Map<Track, String> nuTracks = new HashMap<Track, String>();
-
-        for (Map.Entry<Track, String> entry : track2File.entrySet()) {
-            Track track = entry.getKey();
-            if (NegativeCtsInsteadOfEdit.benefitsFromChange(track)) {
-                nuTracks.put(new NegativeCtsInsteadOfEdit(track), entry.getValue());
-            } else {
-                nuTracks.put(track, entry.getValue());
+    private void useNegativeCtsToPreventEdits(Map<TrackProxy, String> track2File) {
+        for (Map.Entry<TrackProxy, String> entry : track2File.entrySet()) {
+            TrackProxy track = entry.getKey();
+            if (NegativeCtsInsteadOfEdit.benefitsFromChange(track.getTarget())) {
+                track.setTarget(new NegativeCtsInsteadOfEdit(track.getTarget()));
             }
         }
-        return nuTracks;
     }
 
-    public Map<UUID, SecretKey> createKeyMap(Map<Track, UUID> track2KeyId) {
+    public Map<UUID, SecretKey> createKeyMap(Map<TrackProxy, UUID> track2KeyId) {
         Map<UUID, SecretKey> keyIds = new HashMap<UUID, SecretKey>();
         keyIds.put(audioKeyid, audioKey);
         keyIds.put(videoKeyid, videoKey);
         return keyIds;
     }
 
-    public Map<Track, UUID> assignKeyIds(Map<Track, String> track2File) {
-        Map<Track, UUID> keyIds = new HashMap<Track, UUID>();
-        for (Track track : track2File.keySet()) {
+    public Map<TrackProxy, UUID> assignKeyIds(Map<TrackProxy, String> track2File) {
+        Map<TrackProxy, UUID> keyIds = new HashMap<TrackProxy, UUID>();
+        for (TrackProxy track : track2File.keySet()) {
             if (track.getHandler().equals("soun") && audioKeyid != null) {
                 keyIds.put(track, audioKeyid);
             } else if (track.getHandler().equals("vide") && videoKeyid != null) {
                 keyIds.put(track, videoKeyid);
-            } else {
-                // noop
             }
         }
         return keyIds;
     }
 
-    public Map<Track, List<File>> writeFiles(
-            Map<Track, String> trackFilename,
-            Map<Track, Container> dashedFiles,
-            Map<Track, Long> trackBitrate) throws IOException {
+    public Map<TrackProxy, List<File>> writeFiles(
+            Map<TrackProxy, String> trackFilename,
+            Map<TrackProxy, Container> dashedFiles,
+            Map<TrackProxy, Long> trackBitrate) throws IOException {
         if (!explode) {
             return writeFilesSingleSidx(trackFilename, dashedFiles);
         } else {
@@ -255,9 +248,9 @@ public class DashFileSetSequence {
 
 
     public MPDDocument createManifest(Map<File, String> subtitleLanguages,
-                                      Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate,
-                                      Map<Track, String> representationIds,
-                                      Map<Track, Container> dashedFiles, Map<Track, List<File>> trackToFile) throws IOException {
+                                      Map<String, List<TrackProxy>> trackFamilies, Map<TrackProxy, Long> trackBitrate,
+                                      Map<TrackProxy, String> representationIds,
+                                      Map<TrackProxy, Container> dashedFiles, Map<TrackProxy, List<File>> trackToFile) throws IOException {
         MPDDocument mpdDocument;
         if (!explode) {
             mpdDocument = getManifestSingleSidx(trackFamilies, trackBitrate, representationIds, dashedFiles);
@@ -269,16 +262,47 @@ public class DashFileSetSequence {
         return mpdDocument;
     }
 
-    protected MPDDocument getManifestSegmentList(Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate, Map<Track, String> representationIds, Map<Track, Container> dashedFiles, Map<Track, List<File>> trackToFile) throws IOException {
-        return new ExplodedSegmentListManifestWriterImpl(this,
-                trackFamilies, dashedFiles, trackBitrate, representationIds,
-                trackToFile, initPattern, mediaPattern, false).getManifest();
+    public <T> Map<Track, T> t(Map<TrackProxy, T> mapIn) {
+        Map<Track, T> mapOut = new HashMap<Track, T>();
+        for (Map.Entry<TrackProxy, T> trackProxyTEntry : mapIn.entrySet()) {
+            mapOut.put(trackProxyTEntry.getKey().getTarget(), trackProxyTEntry.getValue());
+        }
+        return mapOut;
     }
 
-    protected MPDDocument getManifestSingleSidx(Map<String, List<Track>> trackFamilies, Map<Track, Long> trackBitrate, Map<Track, String> representationIds, Map<Track, Container> dashedFiles) throws IOException {
+    public List<Track> t(List<TrackProxy> listIn) {
+        List<Track> listOut = new ArrayList<Track>();
+        for (TrackProxy trackProxy : listIn) {
+            listOut.add(trackProxy.getTarget());
+        }
+        return listOut;
+    }
+
+    public <T> Map<T, List<Track>> tt(Map<T, List<TrackProxy>> mapIn) {
+        Map<T, List<Track>> mapOut = new HashMap<T, List<Track>>();
+
+        for (Map.Entry<T, List<TrackProxy>> tListEntry : mapIn.entrySet()) {
+            mapOut.put(tListEntry.getKey(), t(tListEntry.getValue()));
+        }
+        return mapOut;
+    }
+
+    protected MPDDocument getManifestSegmentList(Map<String, List<TrackProxy>> trackFamilies, Map<TrackProxy, Long> trackBitrate, Map<TrackProxy, String> representationIds, Map<TrackProxy, Container> dashedFiles, Map<TrackProxy, List<File>> trackToFile) throws IOException {
+        Map<String, List<Track>> _trackFamilies = new HashMap<String, List<Track>>();
+        Map<Track, Long> _trackBitrate = new HashMap<Track, Long>();
+        Map<Track, String> _representationIds = new HashMap<Track, String>();
+        Map<Track, Container> _dashedFiles = new HashMap<Track, Container>();
+        Map<Track, List<File>> _trackToFile = new HashMap<Track, List<File>>();
+
+        return new ExplodedSegmentListManifestWriterImpl(this,
+                tt(trackFamilies), t(dashedFiles), t(trackBitrate), t(representationIds),
+                t(trackToFile), initPattern, mediaPattern, false).getManifest();
+    }
+
+    protected MPDDocument getManifestSingleSidx(Map<String, List<TrackProxy>> trackFamilies, Map<TrackProxy, Long> trackBitrate, Map<TrackProxy, String> representationIds, Map<TrackProxy, Container> dashedFiles) throws IOException {
         return new SegmentBaseSingleSidxManifestWriterImpl(this,
-                trackFamilies, dashedFiles,
-                trackBitrate, representationIds, true).getManifest();
+                tt(trackFamilies), t(dashedFiles),
+                t(trackBitrate), t(representationIds), true).getManifest();
     }
 
     public void addSubtitles(MPDDocument mpdDocument, Map<File, String> subtitleLanguages) throws IOException {
@@ -352,15 +376,15 @@ public class DashFileSetSequence {
         return subs;
     }
 
-    public Map<Track, List<File>> writeFilesExploded(
-            Map<Track, String> trackFilename,
-            Map<Track, Container> dashedFiles,
-            Map<Track, Long> trackBitrate,
+    public Map<TrackProxy, List<File>> writeFilesExploded(
+            Map<TrackProxy, String> trackFilename,
+            Map<TrackProxy, Container> dashedFiles,
+            Map<TrackProxy, Long> trackBitrate,
             File outputDirectory,
             String initPattern,
             String mediaPattern) throws IOException {
-        Map<Track, List<File>> trackToSegments = new HashMap<Track, List<File>>();
-        for (Track t : trackFilename.keySet()) {
+        Map<TrackProxy, List<File>> trackToSegments = new HashMap<TrackProxy, List<File>>();
+        for (TrackProxy t : trackFilename.keySet()) {
             SingleSidxExplode singleSidxExplode = new SingleSidxExplode(l);
             singleSidxExplode.setGenerateStypSdix(generateStypSdix);
             List<File> segments = singleSidxExplode.doIt(
@@ -373,11 +397,11 @@ public class DashFileSetSequence {
         return trackToSegments;
     }
 
-    public Map<Track, List<File>> writeFilesSingleSidx(Map<Track, String> trackFilename, Map<Track, Container> dashedFiles) throws IOException {
-        Map<Track, List<File>> track2Files = new HashMap<Track, List<File>>();
-        for (Map.Entry<Track, Container> trackContainerEntry : dashedFiles.entrySet()) {
+    public Map<TrackProxy, List<File>> writeFilesSingleSidx(Map<TrackProxy, String> trackFilename, Map<TrackProxy, Container> dashedFiles) throws IOException {
+        Map<TrackProxy, List<File>> track2Files = new HashMap<TrackProxy, List<File>>();
+        for (Map.Entry<TrackProxy, Container> trackContainerEntry : dashedFiles.entrySet()) {
             l.info("Writing... ");
-            Track t = trackContainerEntry.getKey();
+            TrackProxy t = trackContainerEntry.getKey();
             File f = new File(outputDirectory, trackFilename.get(t));
             WritableByteChannel wbc = new FileOutputStream(f).getChannel();
             try {
@@ -402,19 +426,25 @@ public class DashFileSetSequence {
         return dashBuilder;
     }
 
-    public Map<Track, Container> createSingleTrackDashedMp4s(
-            Map<Track, long[]> fragmentStartSamples,
-            Map<Track, String> filenames) throws IOException {
+    public Map<TrackProxy, Container> createSingleTrackDashedMp4s(
+            Map<TrackProxy, long[]> fragmentStartSamples,
+            Map<TrackProxy, String> filenames) throws IOException {
 
-        HashMap<Track, Container> containers = new HashMap<Track, Container>();
-        for (final Map.Entry<Track, long[]> trackEntry : fragmentStartSamples.entrySet()) {
+        HashMap<TrackProxy, Container> containers = new HashMap<TrackProxy, Container>();
+        Map<Track, long[]> sampleNumbers = new HashMap<Track, long[]>();
+        for (Map.Entry<TrackProxy, long[]> entry : fragmentStartSamples.entrySet()) {
+            sampleNumbers.put(entry.getKey().getTarget(), entry.getValue());
+        }
+        for (final Map.Entry<TrackProxy, long[]> trackEntry : fragmentStartSamples.entrySet()) {
             String filename = filenames.get(trackEntry.getKey());
             Movie movie = new Movie();
-            movie.addTrack(trackEntry.getKey());
+            movie.addTrack(trackEntry.getKey().getTarget());
 
             l.info("Creating model for " + filename + "... ");
+
+
             DashBuilder mp4Builder = getFileBuilder(
-                    new StaticFragmentIntersectionFinderImpl(fragmentStartSamples),
+                    new StaticFragmentIntersectionFinderImpl(sampleNumbers),
                     movie);
             Container isoFile = mp4Builder.build(movie);
             containers.put(trackEntry.getKey(), isoFile);
@@ -423,10 +453,10 @@ public class DashFileSetSequence {
         return containers;
     }
 
-    public void sortTrackFamilies(Map<String, List<Track>> trackFamilies, final Map<Track, Long> sizes) {
-        for (List<Track> tracks : trackFamilies.values()) {
-            Collections.sort(tracks, new Comparator<Track>() {
-                public int compare(Track o1, Track o2) {
+    public void sortTrackFamilies(Map<String, List<TrackProxy>> trackFamilies, final Map<TrackProxy, Long> sizes) {
+        for (List<TrackProxy> tracks : trackFamilies.values()) {
+            Collections.sort(tracks, new Comparator<TrackProxy>() {
+                public int compare(TrackProxy o1, TrackProxy o2) {
                     return (int) (sizes.get(o1) - sizes.get(o2));
                 }
             });
@@ -440,10 +470,10 @@ public class DashFileSetSequence {
      * @param trackFamilies all tracks grouped by their type.
      * @return map from track to track's size
      */
-    public Map<Track, Long> calculateTrackSizes(Map<String, List<Track>> trackFamilies) {
-        HashMap<Track, Long> sizes = new HashMap<Track, Long>();
-        for (List<Track> tracks : trackFamilies.values()) {
-            for (Track track : tracks) {
+    public Map<TrackProxy, Long> calculateTrackSizes(Map<String, List<TrackProxy>> trackFamilies) {
+        HashMap<TrackProxy, Long> sizes = new HashMap<TrackProxy, Long>();
+        for (List<TrackProxy> tracks : trackFamilies.values()) {
+            for (TrackProxy track : tracks) {
                 long size = 0;
                 List<Sample> samples = track.getSamples();
                 for (int i = 0; i < Math.min(samples.size(), 10000); i++) {
@@ -463,10 +493,10 @@ public class DashFileSetSequence {
      * @param trackSize     size per track
      * @return bitrate per track
      */
-    public Map<Track, Long> calculateBitrate(Map<String, List<Track>> trackFamilies, Map<Track, Long> trackSize) {
-        HashMap<Track, Long> bitrates = new HashMap<Track, Long>();
-        for (List<Track> tracks : trackFamilies.values()) {
-            for (Track track : tracks) {
+    public Map<TrackProxy, Long> calculateBitrate(Map<String, List<TrackProxy>> trackFamilies, Map<TrackProxy, Long> trackSize) {
+        HashMap<TrackProxy, Long> bitrates = new HashMap<TrackProxy, Long>();
+        for (List<TrackProxy> tracks : trackFamilies.values()) {
+            for (TrackProxy track : tracks) {
 
                 double duration = (double) track.getDuration() / track.getTrackMetaData().getTimescale();
                 long size = trackSize.get(track);
@@ -483,9 +513,9 @@ public class DashFileSetSequence {
      *
      * @return a descriptive filename <code>type[-lang]-bitrate.mp4</code>
      */
-    public Map<Track, String> generateFilenames(Map<Track, String> trackOriginalFilename) {
-        HashMap<Track, String> filenames = new HashMap<Track, String>();
-        for (Track track : trackOriginalFilename.keySet()) {
+    public Map<TrackProxy, String> generateFilenames(Map<TrackProxy, String> trackOriginalFilename) {
+        HashMap<TrackProxy, String> filenames = new HashMap<TrackProxy, String>();
+        for (TrackProxy track : trackOriginalFilename.keySet()) {
             String originalFilename = trackOriginalFilename.get(track);
             originalFilename = originalFilename.replaceAll(".mov$", "");
             originalFilename = originalFilename.replaceAll(".aac$", "");
@@ -493,7 +523,7 @@ public class DashFileSetSequence {
             originalFilename = originalFilename.replaceAll(".ac3$", "");
             originalFilename = originalFilename.replaceAll(".dtshd$", "");
             originalFilename = originalFilename.replaceAll(".mp4$", "");
-            for (Track track1 : filenames.keySet()) {
+            for (TrackProxy track1 : filenames.keySet()) {
                 if (track1 != track &&
                         trackOriginalFilename.get(track1).equals(trackOriginalFilename.get(track))) {
                     // ouch multiple tracks point to same file
@@ -510,21 +540,26 @@ public class DashFileSetSequence {
         return filenames;
     }
 
-    public Map<Track, long[]> findFragmentStartSamples(Map<String, List<Track>> trackFamilies) {
-        Map<Track, long[]> fragmentStartSamples = new HashMap<Track, long[]>();
+    public Map<TrackProxy, long[]> findFragmentStartSamples(Map<String, List<TrackProxy>> trackFamilies) {
+        Map<TrackProxy, long[]> fragmentStartSamples = new HashMap<TrackProxy, long[]>();
 
         for (String key : trackFamilies.keySet()) {
-            List<Track> tracks = trackFamilies.get(key);
+            List<TrackProxy> trackProxies = trackFamilies.get(key);
+            List<Track> tracks = new ArrayList<Track>();
+            for (TrackProxy proxy : trackProxies) {
+                tracks.add(proxy.getTarget());
+            }
+
             Movie movie = new Movie();
             movie.setTracks(tracks);
-            for (Track track : tracks) {
+            for (TrackProxy track : trackProxies) {
                 if (track.getHandler().startsWith("vide")) {
                     FragmentIntersectionFinder videoIntersectionFinder = new SyncSampleIntersectFinderImpl(movie, null, 4);
-                    fragmentStartSamples.put(track, videoIntersectionFinder.sampleNumbers(track));
+                    fragmentStartSamples.put(track, videoIntersectionFinder.sampleNumbers(track.getTarget()));
                     //fragmentStartSamples.put(track, checkMaxFragmentDuration(track, videoIntersectionFinder.sampleNumbers(track)));
                 } else if (track.getHandler().startsWith("soun") || track.getHandler().startsWith("subt")) {
                     FragmentIntersectionFinder soundIntersectionFinder = new SoundIntersectionFinderImpl(tracks, 15);
-                    fragmentStartSamples.put(track, soundIntersectionFinder.sampleNumbers(track));
+                    fragmentStartSamples.put(track, soundIntersectionFinder.sampleNumbers(track.getTarget()));
                 } else {
                     throw new RuntimeException("An engineer needs to tell me if " + key + " is audio or video!");
                 }
@@ -539,10 +574,10 @@ public class DashFileSetSequence {
      * @return Track too originating file map
      * @throws IOException
      */
-    public Map<Track, String> createTracks() throws IOException, ExitCodeException {
+    public Map<TrackProxy, String> createTracks() throws IOException, ExitCodeException {
         List<File> unhandled = new ArrayList<File>();
 
-        Map<Track, String> track2File = new HashMap<Track, String>();
+        Map<TrackProxy, String> track2File = new HashMap<TrackProxy, String>();
         for (File inputFile : inputFiles) {
 
             if (inputFile.getName().endsWith(".mp4") ||
@@ -556,27 +591,27 @@ public class DashFileSetSequence {
                         l.warning("Excluding " + inputFile + " track " + track.getTrackMetaData().getTrackId() + " as its codec " + codec + " is not yet supported");
                         break;
                     }
-                    track2File.put(track, inputFile.getName());
+                    track2File.put(new TrackProxy(track), inputFile.getName());
                 }
             } else if (inputFile.getName().endsWith(".aac")) {
                 Track track = new AACTrackImpl(new FileDataSourceImpl(inputFile));
-                track2File.put(track, inputFile.getName());
+                track2File.put(new TrackProxy(track), inputFile.getName());
                 l.fine("Created AAC Track from " + inputFile.getName());
             } else if (inputFile.getName().endsWith(".h264")) {
                 Track track = new H264TrackImpl(new FileDataSourceImpl(inputFile));
-                track2File.put(track, inputFile.getName());
+                track2File.put(new TrackProxy(track), inputFile.getName());
                 l.fine("Created H264 Track from " + inputFile.getName());
             } else if (inputFile.getName().endsWith(".ac3")) {
                 Track track = new AC3TrackImpl(new FileDataSourceImpl(inputFile));
-                track2File.put(track, inputFile.getName());
+                track2File.put(new TrackProxy(track), inputFile.getName());
                 l.fine("Created AC3 Track from " + inputFile.getName());
             } else if (inputFile.getName().endsWith(".ec3")) {
                 Track track = new EC3TrackImpl(new FileDataSourceImpl(inputFile));
-                track2File.put(track, inputFile.getName());
+                track2File.put(new TrackProxy(track), inputFile.getName());
                 l.fine("Created EC3 Track from " + inputFile.getName());
             } else if (inputFile.getName().endsWith(".dtshd")) {
                 Track track = new DTSTrackImpl(new FileDataSourceImpl(inputFile));
-                track2File.put(track, inputFile.getName());
+                track2File.put(new TrackProxy(track), inputFile.getName());
                 l.fine("Created DTS HD Track from " + inputFile.getName());
             } else {
                 unhandled.add(inputFile);
@@ -584,19 +619,13 @@ public class DashFileSetSequence {
         }
         inputFiles.retainAll(unhandled);
         if (avc1ToAvc3) {
-            Map<Track, String> avc3ed = new HashMap<Track, String>();
-            for (Map.Entry<Track, String> trackStringEntry : track2File.entrySet()) {
+            for (Map.Entry<TrackProxy, String> trackStringEntry : track2File.entrySet()) {
                 if ("avc1".equals(trackStringEntry.getKey().getSampleDescriptionBox().getSampleEntry().getType())) {
-                    avc3ed.put(new Avc1ToAvc3TrackImpl(trackStringEntry.getKey()), trackStringEntry.getValue());
-                } else {
-                    avc3ed.put(trackStringEntry.getKey(), trackStringEntry.getValue());
+                    trackStringEntry.getKey().setTarget(new Avc1ToAvc3TrackImpl(trackStringEntry.getKey().getTarget()));
                 }
             }
-            return avc3ed;
-        } else {
-            return track2File;
         }
-
+        return track2File;
     }
 
     long[] longSet2Array(Set<Long> longSet) {
@@ -609,11 +638,11 @@ public class DashFileSetSequence {
         return r;
     }
 
-    public Map<Track, String> encryptTracks(Map<Track, String> track2File, Map<Track, UUID> track2KeyId, Map<UUID, SecretKey> keyId2Key) {
-        Map<Track, String> encTracks = new HashMap<Track, String>();
-        for (Map.Entry<Track, String> trackStringEntry : track2File.entrySet()) {
+    public void encryptTracks(Map<TrackProxy, String> track2File, Map<TrackProxy, UUID> track2KeyId, Map<UUID, SecretKey> keyId2Key) {
+
+        for (Map.Entry<TrackProxy, String> trackStringEntry : track2File.entrySet()) {
             if (track2KeyId.containsKey(trackStringEntry.getKey())) {
-                Track t = trackStringEntry.getKey();
+                TrackProxy t = trackStringEntry.getKey();
                 UUID keyid = track2KeyId.get(t);
                 SecretKey key = keyId2Key.get(keyid);
 
@@ -634,18 +663,18 @@ public class DashFileSetSequence {
                             excludes[i] = i;
                         }
                         cencTrack = new CencEncryptingTrackImpl(
-                                t, keyid,
+                                t.getTarget(), keyid,
                                 Collections.singletonMap(keyid, key),
                                 Collections.singletonMap(e, excludes),
                                 encryptionAlgo, false);
 
                     } else {
                         cencTrack = new CencEncryptingTrackImpl(
-                                t, keyid,
+                                t.getTarget(), keyid,
                                 Collections.singletonMap(keyid, key),
                                 null, encryptionAlgo, false);
                     }
-                    encTracks.put(cencTrack, trackStringEntry.getValue());
+                    t.setTarget(cencTrack);
                 } else if (sparse == 1) {
                     CencSampleEncryptionInformationGroupEntry e = new CencSampleEncryptionInformationGroupEntry();
                     e.setEncrypted(false);
@@ -669,11 +698,11 @@ public class DashFileSetSequence {
                     }
 
                     CencEncryptingTrackImpl cencTrack = new CencEncryptingTrackImpl(
-                            t, keyid,
+                            t.getTarget(), keyid,
                             Collections.singletonMap(keyid, key),
                             Collections.singletonMap(e, longSet2Array(plainSamples)),
                             "cenc", false);
-                    encTracks.put(cencTrack, trackStringEntry.getValue());
+                    t.setTarget(cencTrack);
 
                 } else if (sparse == 2) {
                     CencSampleEncryptionInformationGroupEntry e = new CencSampleEncryptionInformationGroupEntry();
@@ -698,25 +727,22 @@ public class DashFileSetSequence {
                             encryptedSamples.add((long) s);
                         }
                     }
-                    encTracks.put(new CencEncryptingTrackImpl(
-                            t, null,
+                    t.setTarget(new CencEncryptingTrackImpl(
+                            t.getTarget(), null,
                             Collections.singletonMap(keyid, key),
                             Collections.singletonMap(e, longSet2Array(encryptedSamples)),
-                            "cenc", false), trackStringEntry.getValue());
+                            "cenc", false));
                 }
-            } else {
-                encTracks.put(trackStringEntry.getKey(), trackStringEntry.getValue());
             }
         }
-        track2File = encTracks;
-        return track2File;
+
     }
 
-    public Map<Track, String> fixAppleOddity(Map<Track, String> track2File) {
-        Map<Track, String> nuTracks = new HashMap<Track, String>();
+    public void fixAppleOddity(Map<TrackProxy, String> track2File) {
 
-        for (Map.Entry<Track, String> entry : track2File.entrySet()) {
-            Track track = entry.getKey();
+
+        for (Map.Entry<TrackProxy, String> entry : track2File.entrySet()) {
+            TrackProxy track = entry.getKey();
             if (Path.getPath(track.getSampleDescriptionBox(), "...a/wave/esds") != null) { // mp4a or enca
                 final SampleDescriptionBox stsd = track.getSampleDescriptionBox();
                 AudioSampleEntry ase = (AudioSampleEntry) stsd.getSampleEntry();
@@ -731,12 +757,9 @@ public class DashFileSetSequence {
                 for (Box aseBox : aseBoxes) {
                     ase.addBox(aseBox);
                 }
-                nuTracks.put(new StsdCorrectingTrack(track, stsd), entry.getValue());
-            } else {
-                nuTracks.put(entry.getKey(), entry.getValue());
+                track.setTarget(new StsdCorrectingTrack(track.getTarget(), stsd));
             }
         }
-        return nuTracks;
     }
 
     /**
@@ -745,13 +768,13 @@ public class DashFileSetSequence {
      * @param track2File map from track object to originating file
      * @return a copy of the input map with zero-aligned tracks
      */
-    public Map<Track, String> alignEditsToZero(Map<Track, String> track2File) {
-        Map<Track, String> result = new HashMap<Track, String>();
-        double earliestMoviePresentationTime = 0;
-        Map<Track, Double> startTimes = new HashMap<Track, Double>();
-        Map<Track, Double> ctsOffset = new HashMap<Track, Double>();
+    public void alignEditsToZero(Map<TrackProxy, String> track2File) {
 
-        for (Track track : track2File.keySet()) {
+        double earliestMoviePresentationTime = 0;
+        Map<TrackProxy, Double> startTimes = new HashMap<TrackProxy, Double>();
+        Map<TrackProxy, Double> ctsOffset = new HashMap<TrackProxy, Double>();
+
+        for (TrackProxy track : track2File.keySet()) {
             boolean acceptEdit = true;
             boolean acceptDwell = true;
             List<Edit> edits = track.getEdits();
@@ -788,7 +811,7 @@ public class DashFileSetSequence {
             startTimes.put(track, earliestTrackPresentationTime);
             earliestMoviePresentationTime = Math.min(earliestMoviePresentationTime, earliestTrackPresentationTime);
         }
-        for (Track track : track2File.keySet()) {
+        for (TrackProxy track : track2File.keySet()) {
             double adjustedStartTime = startTimes.get(track) - earliestMoviePresentationTime - ctsOffset.get(track);
 
             final List<Edit> edits = new ArrayList<Edit>();
@@ -798,42 +821,41 @@ public class DashFileSetSequence {
                 edits.add(new Edit(-1, track.getTrackMetaData().getTimescale(), 1.0, adjustedStartTime));
                 edits.add(new Edit(0, track.getTrackMetaData().getTimescale(), 1.0, (double) track.getDuration() / track.getTrackMetaData().getTimescale()));
             }
-            result.put(new WrappingTrack(track) {
+            track.setTarget(new WrappingTrack(track.getTarget()) {
                 @Override
                 public List<Edit> getEdits() {
                     return edits;
                 }
-            }, track2File.get(track));
+            });
         }
-        return result;
     }
 
-    public Map<String, List<Track>> findTrackFamilies(Set<Track> allTracks) throws IOException, ExitCodeException {
-        HashMap<String, List<Track>> trackFamilies = new HashMap<String, List<Track>>();
-        for (Track track : allTracks) {
+    public Map<String, List<TrackProxy>> findTrackFamilies(Set<TrackProxy> allTracks) throws IOException, ExitCodeException {
+        HashMap<String, List<TrackProxy>> trackFamilies = new HashMap<String, List<TrackProxy>>();
+        for (TrackProxy track : allTracks) {
             String family;
 
-            if ("mp4a".equals(DashHelper.getFormat(track))) {
+            if ("mp4a".equals(DashHelper.getFormat(track.getTarget()))) {
                 // we need to look at actual channel configuration
                 ESDescriptorBox esds = track.getSampleDescriptionBox().getSampleEntry().getBoxes(ESDescriptorBox.class).get(0);
                 AudioSpecificConfig audioSpecificConfig = esds.getEsDescriptor().getDecoderConfigDescriptor().getAudioSpecificInfo();
                 family = DashHelper.getRfc6381Codec(track.getSampleDescriptionBox().getSampleEntry()) + "-" + track.getTrackMetaData().getLanguage() + "-" + audioSpecificConfig.getChannelConfiguration();
             } else {
-                family =DashHelper.getFormat(track) + "-" + track.getTrackMetaData().getLanguage();
+                family =DashHelper.getFormat(track.getTarget()) + "-" + track.getTrackMetaData().getLanguage();
             }
 
-            List<Track> tracks = trackFamilies.get(family);
+            List<TrackProxy> tracks = trackFamilies.get(family);
             if (tracks == null) {
-                tracks = new LinkedList<Track>();
+                tracks = new ArrayList<TrackProxy>();
                 trackFamilies.put(family, tracks);
             }
             tracks.add(track);
         }
 
         for (String fam : trackFamilies.keySet()) {
-            List<Track> tracks = trackFamilies.get(fam);
+            List<TrackProxy> tracks = trackFamilies.get(fam);
             long timeScale = -1;
-            for (Track track : tracks) {
+            for (TrackProxy track : tracks) {
                 if (timeScale > 0) {
                     if (timeScale != track.getTrackMetaData().getTimescale()) {
                         throw new ExitCodeException("The tracks " + tracks.get(0) + " and " + track + " have been assigned the same adaptation set but their timescale differs: " + timeScale + " vs. " + track.getTrackMetaData().getTimescale(), 38743);
