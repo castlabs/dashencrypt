@@ -101,6 +101,7 @@ public class DashFileSetSequence {
 
     /**
      * The dash.encrypter will convert AVC1 tracks to AVC3 tracks when flag is set.
+     *
      * @param avc1ToAvc3 triggers avc1 to avc3 conversion
      */
     public void setAvc1ToAvc3(boolean avc1ToAvc3) {
@@ -150,7 +151,6 @@ public class DashFileSetSequence {
     public void setClearlead(int clearlead) {
         this.clearlead = clearlead;
     }
-
 
 
     public int run() throws IOException, ExitCodeException {
@@ -206,6 +206,7 @@ public class DashFileSetSequence {
         l.info("Finished write in " + (System.currentTimeMillis() - start) + "ms");
         return 0;
     }
+
 
     private void useNegativeCtsToPreventEdits(Map<TrackProxy, String> track2File) {
         for (Map.Entry<TrackProxy, String> entry : track2File.entrySet()) {
@@ -287,13 +288,12 @@ public class DashFileSetSequence {
         return mapOut;
     }
 
-    protected MPDDocument getManifestSegmentList(Map<String, List<TrackProxy>> trackFamilies, Map<TrackProxy, Long> trackBitrate, Map<TrackProxy, String> representationIds, Map<TrackProxy, Container> dashedFiles, Map<TrackProxy, List<File>> trackToFile) throws IOException {
-        Map<String, List<Track>> _trackFamilies = new HashMap<String, List<Track>>();
-        Map<Track, Long> _trackBitrate = new HashMap<Track, Long>();
-        Map<Track, String> _representationIds = new HashMap<Track, String>();
-        Map<Track, Container> _dashedFiles = new HashMap<Track, Container>();
-        Map<Track, List<File>> _trackToFile = new HashMap<Track, List<File>>();
-
+    protected MPDDocument getManifestSegmentList(
+            Map<String, List<TrackProxy>> trackFamilies,
+            Map<TrackProxy, Long> trackBitrate,
+            Map<TrackProxy, String> representationIds,
+            Map<TrackProxy, Container> dashedFiles,
+            Map<TrackProxy, List<File>> trackToFile) throws IOException {
         return new ExplodedSegmentListManifestWriterImpl(this,
                 tt(trackFamilies), t(dashedFiles), t(trackBitrate), t(representationIds),
                 t(trackToFile), initPattern, mediaPattern, false).getManifest();
@@ -841,7 +841,7 @@ public class DashFileSetSequence {
                 AudioSpecificConfig audioSpecificConfig = esds.getEsDescriptor().getDecoderConfigDescriptor().getAudioSpecificInfo();
                 family = DashHelper.getRfc6381Codec(track.getSampleDescriptionBox().getSampleEntry()) + "-" + track.getTrackMetaData().getLanguage() + "-" + audioSpecificConfig.getChannelConfiguration();
             } else {
-                family =DashHelper.getFormat(track.getTarget()) + "-" + track.getTrackMetaData().getLanguage();
+                family = DashHelper.getFormat(track.getTarget()) + "-" + track.getTrackMetaData().getLanguage();
             }
 
             List<TrackProxy> tracks = trackFamilies.get(family);
