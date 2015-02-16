@@ -31,7 +31,7 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
     private final Map<Track, String> trackFilenames;
     private final String initPattern;
     private final String mediaPattern;
-
+    private Map<String, String> adaptationSet2Role;
     private final boolean compressTimeline;
 
     public ExplodedSegmentListManifestWriterImpl(
@@ -42,7 +42,8 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
             Map<Track, String> representationIds,
             Map<Track, List<File>> trackToSegements,
             String initPattern, String mediaPattern,
-            boolean compressTimeline) {
+            boolean compressTimeline,
+            Map<String, String> adaptationSet2Role) {
         super(trackContainer, representationBitrates, dashFileSetSequence);
         this.trackBitrates = representationBitrates;
         this.adaptationSets = adaptationSets;
@@ -51,6 +52,7 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
         this.initPattern = initPattern;
         this.mediaPattern = mediaPattern;
         this.compressTimeline = compressTimeline;
+        this.adaptationSet2Role = adaptationSet2Role;
     }
 
     @Override
@@ -65,14 +67,14 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
         double maxDurationInSeconds = -1;
         // %lang%
         for (Map.Entry<String, List<Track>> e : adaptationSets.entrySet()) {
-            String trackFamily = e.getKey();
-            List<Track> tracks = adaptationSets.get(trackFamily);
+            String adaptationSetId = e.getKey();
+            List<Track> tracks = adaptationSets.get(adaptationSetId);
 
             for (Track track : tracks) {
                 double durationInSeconds = (double) track.getDuration() / track.getTrackMetaData().getTimescale();
                 maxDurationInSeconds = Math.max(maxDurationInSeconds, durationInSeconds);
             }
-            AdaptationSetType adaptationSet = createAdaptationSet(periodType, tracks);
+            AdaptationSetType adaptationSet = createAdaptationSet(periodType, tracks, adaptationSet2Role.get(adaptationSetId));
             Track firstTrack = tracks.get(0);
             SegmentTemplateType segmentTemplate = adaptationSet.addNewSegmentTemplate();
             segmentTemplate.setMedia(mediaPattern.replace("%lang%", tracks.get(0).getTrackMetaData().getLanguage()));

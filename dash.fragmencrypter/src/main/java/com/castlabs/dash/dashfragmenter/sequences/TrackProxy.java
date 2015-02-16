@@ -88,4 +88,9 @@ public class TrackProxy  {
     public Map<GroupEntry, long[]> getSampleGroups() {
         return target.getSampleGroups();
     }
+
+    @Override
+    public String toString() {
+        return "->" + target.toString();
+    }
 }

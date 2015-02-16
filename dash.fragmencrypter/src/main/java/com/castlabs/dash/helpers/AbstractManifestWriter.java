@@ -139,7 +139,7 @@ public abstract class AbstractManifestWriter {
 
     }
 
-    protected AdaptationSetType createAdaptationSet(PeriodType periodType, List<? extends  Track> tracks) {
+    protected AdaptationSetType createAdaptationSet(PeriodType periodType, List<Track> tracks, String role) {
         UUID keyId = null;
         String language = null;
         for (Track track : tracks) {
@@ -157,6 +157,15 @@ public abstract class AbstractManifestWriter {
 
 
         AdaptationSetType adaptationSet = periodType.addNewAdaptationSet();
+
+        if (role != null) {
+            DescriptorType roleDescriptorType = adaptationSet.addNewRole();
+            String scheme = role.split("\\|")[0];
+            String id = role.split("\\|")[1];
+            roleDescriptorType.setSchemeIdUri(scheme);
+            roleDescriptorType.setId(id);
+        }
+
         if (!tracks.get(0).getHandler().equals("subt")) {
             adaptationSet.setSegmentAlignment(true);
             adaptationSet.setSubsegmentAlignment(true);

@@ -25,37 +25,21 @@ import java.io.IOException;
 public class ManifestHelper {
 
     public static String convertFramerate(double vrate) {
-        vrate = (double) Math.round(vrate * 1000) / 1000;
-        String frameRate = null;
-        if ((vrate > 14) && (vrate < 15)) {
-            frameRate = "15000/1001";
-        } else if ((vrate == 15)) {
-            frameRate = "15000/1000";
-        } else if ((vrate > 23) && (vrate < 24)) {
-            frameRate = "24000/1001";
-        } else if (vrate == 24) {
-            frameRate = "24000/1000";
-        } else if ((vrate > 24) && ((vrate < 25) || (vrate == 25))) {
-            frameRate = "25000/1000";
-        } else if ((vrate > 29) && (vrate < 30)) {
-            frameRate = "30000/1001";
-        } else if (vrate == 30) {
-            frameRate = "30000/1000";
-        } else if (vrate == 50) {
-            frameRate = "50000/1000";
-        } else if ((vrate > 59) && (vrate < 60)) {
-            frameRate = "60000/1001";
-        } else if (vrate == 60) {
-            frameRate = "60000/1000";
+        Fraction f1 = Fraction.getFraction((int) (vrate * 1001), 1001);
+        Fraction f2 = Fraction.getFraction((int) (vrate * 1000), 1000);
+        double d1 = Math.abs(f1.doubleValue() - vrate);
+        double d2 = Math.abs(f2.doubleValue() - vrate);
+        if (d1 < d2) {
+            return f1.getNumerator() + "/" + f1.getDenominator();
         } else {
-            System.out.println("Framerate " + vrate + " is not supported");
-            System.exit(1);
+            return f2.getNumerator() + "/" + f2.getDenominator();
         }
-        return frameRate;
+
+
     }
 
     public static String calculateIndexRange(Container isoFile) throws IOException {
-        SegmentIndexBox sidx = (SegmentIndexBox) Path.getPath(isoFile, "/sidx");
+        SegmentIndexBox sidx = Path.getPath(isoFile, "/sidx");
         long start = 0;
         for (Box box : isoFile.getBoxes()) {
             if (box == sidx) {
@@ -92,8 +76,8 @@ public class ManifestHelper {
             adaptationSet.setMaxHeight(Math.max(adaptationSet.isSetMaxHeight() ? adaptationSet.getMaxHeight() : 0,
                     videoHeight));
 
-            Fraction fraction = Fraction.getFraction((int)videoWidth, (int)videoHeight).reduce();
-            adaptationSet.setPar(""  + fraction.getNumerator() + ":" + fraction.getDenominator());
+            Fraction fraction = Fraction.getFraction((int) videoWidth, (int) videoHeight).reduce();
+            adaptationSet.setPar("" + fraction.getNumerator() + ":" + fraction.getDenominator());
 
 
             //representation.setMimeType("video/mp4");
@@ -122,8 +106,6 @@ public class ManifestHelper {
         }
         return representation;
     }
-
-
 
 
 }

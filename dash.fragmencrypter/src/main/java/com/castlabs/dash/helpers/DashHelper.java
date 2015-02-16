@@ -278,6 +278,19 @@ public final class DashHelper {
             } else {
                 return "mp4a.40.2";
             }
+        } else if (type.equals("mp4v")) {
+            ESDescriptorBox esDescriptorBox = Path.getPath(se, "esds");
+            if (esDescriptorBox == null) {
+                esDescriptorBox = Path.getPath(se, "..../esds"); // Apple does weird things
+            }
+            if (esDescriptorBox.getEsDescriptor().getDecoderConfigDescriptor().getObjectTypeIndication() == 0x6C) {
+                return "mp4v." +
+                        Integer.toHexString(esDescriptorBox.getEsDescriptor().getDecoderConfigDescriptor().getObjectTypeIndication());
+            } else {
+                throw new RuntimeException("I don't know how to construct codec for mp4v with OTI " +
+                        esDescriptorBox.getEsDescriptor().getDecoderConfigDescriptor().getObjectTypeIndication()
+                );
+            }
         } else if (type.equals("dtsl") || type.equals("dtsl") || type.equals("dtse")) {
             return type;
         } else if (type.equals("ec-3") || type.equals("ac-3") || type.equals("mlpa")) {

@@ -34,6 +34,7 @@ public class SegmentBaseSingleSidxManifestWriterImpl extends AbstractManifestWri
     private final Map<Track, String> trackFilenames;
     private final Map<Track, Long> trackBitrates;
     private final boolean writeSegmentBase;
+    private Map<String, String> adaptationSet2Role;
 
     public SegmentBaseSingleSidxManifestWriterImpl(
             DashFileSetSequence dashFileSetSequence,
@@ -41,7 +42,8 @@ public class SegmentBaseSingleSidxManifestWriterImpl extends AbstractManifestWri
             Map<Track, Container> trackContainer,
             Map<Track, Long> trackBitrates,
             Map<Track, String> trackFilenames,
-            boolean writeSegmentBase) {
+            boolean writeSegmentBase,
+            Map<String, String> adaptationSet2Role) {
 
         super(trackContainer, trackBitrates, dashFileSetSequence);
         this.adaptationSets = adaptationSets;
@@ -49,6 +51,7 @@ public class SegmentBaseSingleSidxManifestWriterImpl extends AbstractManifestWri
         this.trackContainer = trackContainer;
         this.trackBitrates = trackBitrates;
         this.writeSegmentBase = writeSegmentBase;
+        this.adaptationSet2Role = adaptationSet2Role;
     }
 
     @Override
@@ -60,10 +63,10 @@ public class SegmentBaseSingleSidxManifestWriterImpl extends AbstractManifestWri
 
         double maxDurationInSeconds = -1;
 
-        for (String trackFamily : adaptationSets.keySet()) {
-            List<Track> tracks = adaptationSets.get(trackFamily);
+        for (String adaptationSetId : adaptationSets.keySet()) {
+            List<Track> tracks = adaptationSets.get(adaptationSetId);
 
-            AdaptationSetType adaptationSet = createAdaptationSet(periodType, tracks);
+            AdaptationSetType adaptationSet = createAdaptationSet(periodType, tracks, adaptationSet2Role.get(adaptationSetId));
 
 
             for (Track track : tracks) {

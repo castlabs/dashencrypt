@@ -15,7 +15,6 @@ import com.googlecode.mp4parser.authoring.*;
 import com.googlecode.mp4parser.authoring.builder.FragmentIntersectionFinder;
 import com.googlecode.mp4parser.authoring.builder.StaticFragmentIntersectionFinderImpl;
 import com.googlecode.mp4parser.authoring.builder.SyncSampleIntersectFinderImpl;
-import com.googlecode.mp4parser.authoring.builder.TwoSecondIntersectionFinder;
 import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import com.googlecode.mp4parser.authoring.tracks.*;
 import com.googlecode.mp4parser.boxes.mp4.ESDescriptorBox;
@@ -60,7 +59,9 @@ public class DashFileSetSequence {
     protected String initPattern = "$RepresentationID$/init.mp4";
     protected boolean generateStypSdix = true;
 
+    protected String mainLang = "eng";
     protected boolean avc1ToAvc3 = false;
+
     protected Logger l;
 
     /**
@@ -176,19 +177,21 @@ public class DashFileSetSequence {
         encryptTracks(track2File, track2KeyId, keyId2Key);
 
         // sort by language and codec
-        Map<String, List<TrackProxy>> trackFamilies = findTrackFamilies(track2File.keySet());
+        Map<String, List<TrackProxy>> adaptationSets = findAdaptationSets(track2File.keySet());
+
+        Map<String, String> adaptationSet2Role = setAdaptionSetRoles(adaptationSets);
 
         // Track sizes are expensive to calculate -> save them for later
-        Map<TrackProxy, Long> trackSizes = calculateTrackSizes(trackFamilies);
+        Map<TrackProxy, Long> trackSizes = calculateTrackSizes(adaptationSets);
 
         // sort within the track families by size to get stable output
-        sortTrackFamilies(trackFamilies, trackSizes);
+        sortTrackFamilies(adaptationSets, trackSizes);
 
         // calculate the fragment start samples once & save them for later
-        Map<TrackProxy, long[]> track2SegmentStartSamples = findFragmentStartSamples(trackFamilies);
+        Map<TrackProxy, long[]> track2SegmentStartSamples = findFragmentStartSamples(adaptationSets);
 
         // calculate bitrates
-        Map<TrackProxy, Long> trackBitrate = calculateBitrate(trackFamilies, trackSizes);
+        Map<TrackProxy, Long> trackBitrate = calculateBitrate(adaptationSets, trackSizes);
 
         // generate filenames for later reference
         Map<TrackProxy, String> trackFilename = generateFilenames(track2File);
@@ -199,12 +202,29 @@ public class DashFileSetSequence {
         Map<TrackProxy, List<File>> trackToFileRepresentation = writeFiles(trackFilename, track2CsfStructure, trackBitrate);
 
         MPDDocument manifest = createManifest(subtitleLanguages,
-                trackFamilies, trackBitrate, trackFilename, track2CsfStructure, trackToFileRepresentation);
+                adaptationSets, trackBitrate, trackFilename, track2CsfStructure, trackToFileRepresentation, adaptationSet2Role);
 
         writeManifest(manifest);
 
         l.info("Finished write in " + (System.currentTimeMillis() - start) + "ms");
         return 0;
+    }
+
+    protected Map<String, String> setAdaptionSetRoles(Map<String, List<TrackProxy>> adaptationSets) {
+        Map<String, String> roles = new HashMap<String, String>();
+        for (Map.Entry<String, List<TrackProxy>> stringListEntry : adaptationSets.entrySet()) {
+            if (stringListEntry.getValue().get(0).getHandler().contains("vide")) {
+                roles.put(stringListEntry.getKey(), "urn:mpeg:dash:role:2011|main");
+            } else if (stringListEntry.getValue().get(0).getHandler().contains("soun")) {
+                String lang = stringListEntry.getValue().get(0).getTrackMetaData().getLanguage();
+                if (lang.equals(mainLang) || lang.equals("und")) {
+                    roles.put(stringListEntry.getKey(), "urn:mpeg:dash:role:2011|main");
+                } else {
+                    roles.put(stringListEntry.getKey(), "urn:mpeg:dash:role:2011|dub");
+                }
+            }
+        }
+        return roles;
     }
 
 
@@ -251,12 +271,12 @@ public class DashFileSetSequence {
     public MPDDocument createManifest(Map<File, String> subtitleLanguages,
                                       Map<String, List<TrackProxy>> trackFamilies, Map<TrackProxy, Long> trackBitrate,
                                       Map<TrackProxy, String> representationIds,
-                                      Map<TrackProxy, Container> dashedFiles, Map<TrackProxy, List<File>> trackToFile) throws IOException {
+                                      Map<TrackProxy, Container> dashedFiles, Map<TrackProxy, List<File>> trackToFile, Map<String, String> adaptationSet2Role) throws IOException {
         MPDDocument mpdDocument;
         if (!explode) {
-            mpdDocument = getManifestSingleSidx(trackFamilies, trackBitrate, representationIds, dashedFiles);
+            mpdDocument = getManifestSingleSidx(trackFamilies, trackBitrate, representationIds, dashedFiles, adaptationSet2Role);
         } else {
-            mpdDocument = getManifestSegmentList(trackFamilies, trackBitrate, representationIds, dashedFiles, trackToFile);
+            mpdDocument = getManifestSegmentList(trackFamilies, trackBitrate, representationIds, dashedFiles, trackToFile, adaptationSet2Role);
         }
         addSubtitles(mpdDocument, subtitleLanguages);
 
@@ -293,16 +313,22 @@ public class DashFileSetSequence {
             Map<TrackProxy, Long> trackBitrate,
             Map<TrackProxy, String> representationIds,
             Map<TrackProxy, Container> dashedFiles,
-            Map<TrackProxy, List<File>> trackToFile) throws IOException {
+            Map<TrackProxy, List<File>> trackToFile,
+            Map<String, String> adaptationSet2Role) throws IOException {
         return new ExplodedSegmentListManifestWriterImpl(this,
                 tt(trackFamilies), t(dashedFiles), t(trackBitrate), t(representationIds),
-                t(trackToFile), initPattern, mediaPattern, false).getManifest();
+                t(trackToFile), initPattern, mediaPattern, false, adaptationSet2Role).getManifest();
     }
 
-    protected MPDDocument getManifestSingleSidx(Map<String, List<TrackProxy>> trackFamilies, Map<TrackProxy, Long> trackBitrate, Map<TrackProxy, String> representationIds, Map<TrackProxy, Container> dashedFiles) throws IOException {
+    protected MPDDocument getManifestSingleSidx(
+            Map<String, List<TrackProxy>> trackFamilies,
+            Map<TrackProxy, Long> trackBitrate,
+            Map<TrackProxy, String> representationIds,
+            Map<TrackProxy, Container> dashedFiles,
+            Map<String, String> adaptationSet2Role) throws IOException {
         return new SegmentBaseSingleSidxManifestWriterImpl(this,
                 tt(trackFamilies), t(dashedFiles),
-                t(trackBitrate), t(representationIds), true).getManifest();
+                t(trackBitrate), t(representationIds), true, adaptationSet2Role).getManifest();
     }
 
     public void addSubtitles(MPDDocument mpdDocument, Map<File, String> subtitleLanguages) throws IOException {
@@ -577,7 +603,7 @@ public class DashFileSetSequence {
     public Map<TrackProxy, String> createTracks() throws IOException, ExitCodeException {
         List<File> unhandled = new ArrayList<File>();
 
-        Map<TrackProxy, String> track2File = new HashMap<TrackProxy, String>();
+        Map<TrackProxy, String> track2File = new LinkedHashMap<TrackProxy, String>();
         for (File inputFile : inputFiles) {
 
             if (inputFile.getName().endsWith(".mp4") ||
@@ -814,6 +840,8 @@ public class DashFileSetSequence {
         for (TrackProxy track : track2File.keySet()) {
             double adjustedStartTime = startTimes.get(track) - earliestMoviePresentationTime - ctsOffset.get(track);
 
+            l.info("Adjusted earliest presentation of " + track.getName() + " from " + startTimes.get(track) + " to " + (startTimes.get(track) - earliestMoviePresentationTime));
+
             final List<Edit> edits = new ArrayList<Edit>();
             if (adjustedStartTime < 0) {
                 edits.add(new Edit((long) (-adjustedStartTime * track.getTrackMetaData().getTimescale()), track.getTrackMetaData().getTimescale(), 1.0, (double) track.getDuration() / track.getTrackMetaData().getTimescale()));
@@ -830,7 +858,7 @@ public class DashFileSetSequence {
         }
     }
 
-    public Map<String, List<TrackProxy>> findTrackFamilies(Set<TrackProxy> allTracks) throws IOException, ExitCodeException {
+    public Map<String, List<TrackProxy>> findAdaptationSets(Set<TrackProxy> allTracks) throws IOException, ExitCodeException {
         HashMap<String, List<TrackProxy>> trackFamilies = new HashMap<String, List<TrackProxy>>();
         for (TrackProxy track : allTracks) {
             String family;
