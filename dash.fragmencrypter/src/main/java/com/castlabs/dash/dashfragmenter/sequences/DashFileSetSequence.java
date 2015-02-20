@@ -868,6 +868,10 @@ public class DashFileSetSequence {
                 ESDescriptorBox esds = track.getSampleDescriptionBox().getSampleEntry().getBoxes(ESDescriptorBox.class).get(0);
                 AudioSpecificConfig audioSpecificConfig = esds.getEsDescriptor().getDecoderConfigDescriptor().getAudioSpecificInfo();
                 family = DashHelper.getRfc6381Codec(track.getSampleDescriptionBox().getSampleEntry()) + "-" + track.getTrackMetaData().getLanguage() + "-" + audioSpecificConfig.getChannelConfiguration();
+            } else if (track.getTarget().getHandler().equals("soun")) {
+                int channels = ((AudioSampleEntry)track.getSampleDescriptionBox().getSampleEntry()).getChannelCount();
+                family = DashHelper.getRfc6381Codec(track.getSampleDescriptionBox().getSampleEntry()) +
+                        "-" + track.getTrackMetaData().getLanguage() + "-" + channels + "ch";
             } else {
                 family = DashHelper.getFormat(track.getTarget()) + "-" + track.getTrackMetaData().getLanguage();
             }
