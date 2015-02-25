@@ -569,8 +569,20 @@ public class DashFileSetSequence {
     public Map<TrackProxy, long[]> findFragmentStartSamples(Map<String, List<TrackProxy>> trackFamilies) {
         Map<TrackProxy, long[]> fragmentStartSamples = new HashMap<TrackProxy, long[]>();
 
-        for (String key : trackFamilies.keySet()) {
-            List<TrackProxy> trackProxies = trackFamilies.get(key);
+        Map<String, List<TrackProxy>> trackFamiliesForSegements = new HashMap<String, List<TrackProxy>>();
+
+        for (Map.Entry<String, List<TrackProxy>> stringListEntry : trackFamilies.entrySet()) {
+            String shortFamily = stringListEntry.getKey().substring(0,4);
+            List<TrackProxy> tps = trackFamiliesForSegements.get(shortFamily);
+            if (tps == null) {
+                tps = new ArrayList<TrackProxy>();
+                trackFamiliesForSegements.put(shortFamily, tps );
+            }
+            tps.addAll(stringListEntry.getValue());
+        }
+
+        for (String key : trackFamiliesForSegements.keySet()) {
+            List<TrackProxy> trackProxies = trackFamiliesForSegements.get(key);
             List<Track> tracks = new ArrayList<Track>();
             for (TrackProxy proxy : trackProxies) {
                 tracks.add(proxy.getTarget());
