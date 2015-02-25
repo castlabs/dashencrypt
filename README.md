@@ -13,3 +13,5 @@ Our DASH.encrypt project provides a solution. It takes encoded video and audio f
 This project is released under the [Mozilla Public License 2.0](http://www.mozilla.org/MPL/2.0/).
 
 Have a look at the wiki for help.
+
+![MWC](https://raw.githubusercontent.com/castlabs/dashencrypt/master/mwc.png)
