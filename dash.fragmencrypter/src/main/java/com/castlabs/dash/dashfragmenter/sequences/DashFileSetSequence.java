@@ -8,7 +8,10 @@ import com.castlabs.dash.dashfragmenter.formats.multiplefilessegmenttemplate.Sin
 import com.castlabs.dash.dashfragmenter.tracks.NegativeCtsInsteadOfEdit;
 import com.castlabs.dash.helpers.DashHelper;
 import com.castlabs.dash.helpers.SoundIntersectionFinderImpl;
-import com.coremedia.iso.boxes.*;
+import com.coremedia.iso.boxes.Box;
+import com.coremedia.iso.boxes.CompositionTimeToSample;
+import com.coremedia.iso.boxes.Container;
+import com.coremedia.iso.boxes.SampleDescriptionBox;
 import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
 import com.googlecode.mp4parser.FileDataSourceImpl;
 import com.googlecode.mp4parser.authoring.*;
@@ -26,8 +29,20 @@ import mpegDashSchemaMpd2011.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.xmlbeans.XmlOptions;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 import javax.crypto.SecretKey;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -572,11 +587,11 @@ public class DashFileSetSequence {
         Map<String, List<TrackProxy>> trackFamiliesForSegements = new HashMap<String, List<TrackProxy>>();
 
         for (Map.Entry<String, List<TrackProxy>> stringListEntry : trackFamilies.entrySet()) {
-            String shortFamily = stringListEntry.getKey().substring(0,4);
+            String shortFamily = stringListEntry.getKey().substring(0, 4);
             List<TrackProxy> tps = trackFamiliesForSegements.get(shortFamily);
             if (tps == null) {
                 tps = new ArrayList<TrackProxy>();
-                trackFamiliesForSegements.put(shortFamily, tps );
+                trackFamiliesForSegements.put(shortFamily, tps);
             }
             tps.addAll(stringListEntry.getValue());
         }
@@ -881,7 +896,7 @@ public class DashFileSetSequence {
                 AudioSpecificConfig audioSpecificConfig = esds.getEsDescriptor().getDecoderConfigDescriptor().getAudioSpecificInfo();
                 family = DashHelper.getRfc6381Codec(track.getSampleDescriptionBox().getSampleEntry()) + "-" + track.getTrackMetaData().getLanguage() + "-" + audioSpecificConfig.getChannelConfiguration();
             } else if (track.getTarget().getHandler().equals("soun")) {
-                int channels = ((AudioSampleEntry)track.getSampleDescriptionBox().getSampleEntry()).getChannelCount();
+                int channels = ((AudioSampleEntry) track.getSampleDescriptionBox().getSampleEntry()).getChannelCount();
                 family = DashHelper.getRfc6381Codec(track.getSampleDescriptionBox().getSampleEntry()) +
                         "-" + track.getTrackMetaData().getLanguage() + "-" + channels + "ch";
             } else {
@@ -919,7 +934,6 @@ public class DashFileSetSequence {
         Map<File, String> languages = new HashMap<File, String>();
 
         Pattern patternFilenameIncludesLanguage = Pattern.compile(".*-([a-z][a-z])");
-        Pattern patternXmlContainsLang = Pattern.compile("lang *= *\"([^\"]*)\"", Pattern.MULTILINE);
         for (File subtitle : subtitles) {
             String ext = FilenameUtils.getExtension(subtitle.getName());
             String basename = FilenameUtils.getBaseName(subtitle.getName());
@@ -931,18 +945,36 @@ public class DashFileSetSequence {
                     throw new ExitCodeException("Cannot determine language of " + subtitle + " please use the pattern name-[2-letter-lang].vtt", 1387);
                 }
             } else if (ext.equals("xml")) {
-                String xml = FileUtils.readFileToString(subtitle);
-                Matcher m = patternXmlContainsLang.matcher(xml);
-                if (m.find()) {
-                    languages.put(subtitle, m.group(1));
-                } else {
-                    Matcher m2 = patternFilenameIncludesLanguage.matcher(basename);
-                    if (m2.matches()) {
-                        languages.put(subtitle, m2.group(1));
+                DocumentBuilderFactory builderFactory =
+                        DocumentBuilderFactory.newInstance();
+                try {
+                    DocumentBuilder builder = builderFactory.newDocumentBuilder();
+
+                    String xml = FileUtils.readFileToString(subtitle);
+                    Document xmlDocument = builder.parse(new ByteArrayInputStream(xml.getBytes()));
+                    String lang  = xmlDocument.getDocumentElement().getAttribute("xml:lang");
+                    if (lang != null) {
+                        languages.put(subtitle, lang);
                     } else {
-                        throw new ExitCodeException("Cannot determine language of " + subtitle + " please use either the xml:lang attribute or a filename pattern like name-[2-letter-lang].xml", 1388);
+                        Matcher m2 = patternFilenameIncludesLanguage.matcher(basename);
+                        if (m2.matches()) {
+                            languages.put(subtitle, m2.group(1));
+                        } else {
+                            throw new ExitCodeException("Cannot determine language of " + subtitle + " please use either the xml:lang attribute or a filename pattern like name-[2-letter-lang].xml", 1388);
+                        }
                     }
+                } catch (ParserConfigurationException e) {
+                    e.printStackTrace();
+                    throw new ExitCodeException("Cannot instantiate XML parser to determine subtitle language", 3242);
+                } catch (SAXException e) {
+                    e.printStackTrace();
+                    throw new ExitCodeException("Cannot parse XML to extract subtitle language", 87433);
                 }
+
+
+
+
+
             }
         }
         return languages;

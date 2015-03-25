@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tt xmlns:ttm="http://www.w3.org/ns/ttml#metadata" xmlns:tts="http://www.w3.org/ns/ttml#styling"
+    xmlns:ttp="http://www.w3.org/ns/ttml#parameter" xmlns:cff="http://www.decellc.org/schema/2012/01/cff-tt-meta"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.w3.org/ns/ttml cff-tt-text-ttaf1-dfxp-1.0.7.xsd http://www.decellc.org/schema/2012/01/cff-tt-meta cff-tt-meta-1.0.7.xsd"
+    xml:lang="en" ttp:timeBase="media" xmlns="http://www.w3.org/ns/ttml" cff:progressivelyDecodable="true">
+    <head>
+        <ttm:title>Life of a Programmer</ttm:title>
+        <ttm:desc>English SDH</ttm:desc>
+        <ttm:copyright>©afdsfafdaox</ttm:copyright>
+        <ttp:profile use="http://www.decellc.org/profile/cff-tt-text-1.0.7"/>
+        <styling>
+            <style xml:id="normal" tts:color="#CDCDCDFF" tts:backgroundColor="transparent"
+                   tts:fontFamily="proportionalSansSerif" tts:fontSize="92%" tts:lineHeight="112%"
+                   tts:textOutline="black 4%" tts:textAlign="left" tts:wrapOption="noWrap"/>
+        </styling>
+        <layout>
+            <region xml:id="bottom50-2" tts:showBackground="whenActive" tts:origin="7.81% 50.10%"
+                    tts:extent="87.19% 44.90%" tts:displayAlign="after"/>
+        </layout>
+    </head>
+</tt>
