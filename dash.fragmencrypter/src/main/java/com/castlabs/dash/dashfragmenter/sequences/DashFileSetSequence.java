@@ -79,6 +79,10 @@ public class DashFileSetSequence {
 
     protected Logger l;
 
+    // This is purely for debugging purposes and WILL weaken security weh set to true
+    protected boolean dummyIvs = false;
+    protected boolean encryptButClear = false;
+
     /**
      * Sets whether styp and sidx should be generated when 'exploding' single file into one file per segement.
      * <p/>
@@ -397,7 +401,7 @@ public class DashFileSetSequence {
             l.severe("Cannot identify type of " + inputFile);
         }
         if (inputFiles.size() > 0) {
-            throw new ExitCodeException("Only extensions mp4, mov, m4v, aac, ac3, ec3, dtshd and xml/vtt are known.", 1);
+            throw new ExitCodeException("Only extensions mp4, ismv, mov, m4v, aac, ac3, ec3, dtshd and xml/vtt are known.", 1);
         }
     }
 
@@ -635,6 +639,7 @@ public class DashFileSetSequence {
 
             if (inputFile.getName().endsWith(".mp4") ||
                     inputFile.getName().endsWith(".mov") ||
+                    inputFile.getName().endsWith(".ismv") ||
                     inputFile.getName().endsWith(".m4a") ||
                     inputFile.getName().endsWith(".m4v")) {
                 Movie movie = MovieCreator.build(new FileDataSourceImpl(inputFile));
@@ -642,6 +647,10 @@ public class DashFileSetSequence {
                     String codec = DashHelper.getFormat(track);
                     if (!supportedTypes.contains(codec)) {
                         l.warning("Excluding " + inputFile + " track " + track.getTrackMetaData().getTrackId() + " as its codec " + codec + " is not yet supported");
+                        break;
+                    }
+                    if (track instanceof CencEncryptedTrack) {
+                        l.warning("Excluding " + inputFile + " track " + track.getTrackMetaData().getTrackId() + " as it is encrypted. Encrypted source tracks are not yet supported");
                         break;
                     }
                     track2File.put(new TrackProxy(track), inputFile.getName());
@@ -719,13 +728,13 @@ public class DashFileSetSequence {
                                 t.getTarget(), keyid,
                                 Collections.singletonMap(keyid, key),
                                 Collections.singletonMap(e, excludes),
-                                encryptionAlgo, false);
+                                encryptionAlgo, dummyIvs, encryptButClear);
 
                     } else {
                         cencTrack = new CencEncryptingTrackImpl(
                                 t.getTarget(), keyid,
                                 Collections.singletonMap(keyid, key),
-                                null, encryptionAlgo, false);
+                                null, encryptionAlgo, dummyIvs, encryptButClear);
                     }
                     t.setTarget(cencTrack);
                 } else if (sparse == 1) {
@@ -754,7 +763,7 @@ public class DashFileSetSequence {
                             t.getTarget(), keyid,
                             Collections.singletonMap(keyid, key),
                             Collections.singletonMap(e, longSet2Array(plainSamples)),
-                            "cenc", false);
+                            "cenc", dummyIvs, encryptButClear);
                     t.setTarget(cencTrack);
 
                 } else if (sparse == 2) {
@@ -784,7 +793,7 @@ public class DashFileSetSequence {
                             t.getTarget(), null,
                             Collections.singletonMap(keyid, key),
                             Collections.singletonMap(e, longSet2Array(encryptedSamples)),
-                            "cenc", false));
+                            "cenc", dummyIvs, encryptButClear));
                 }
             }
         }
