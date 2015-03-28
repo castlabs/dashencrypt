@@ -14,4 +14,3 @@ This project is released under the [Mozilla Public License 2.0](http://www.mozil
 
 Have a look at the wiki for help.
 
-![MWC](https://raw.githubusercontent.com/castlabs/dashencrypt/master/mwc.png)
