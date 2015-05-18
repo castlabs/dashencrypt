@@ -5,7 +5,6 @@ import com.coremedia.iso.boxes.OriginalFormatBox;
 import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
 import com.coremedia.iso.boxes.sampleentry.SampleEntry;
 import com.coremedia.iso.boxes.sampleentry.VisualSampleEntry;
-
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.boxes.AC3SpecificBox;
 import com.googlecode.mp4parser.boxes.DTSSpecificBox;
@@ -19,10 +18,6 @@ import com.mp4parser.iso14496.part15.AvcConfigurationBox;
 import com.mp4parser.iso14496.part15.HevcConfigurationBox;
 import com.mp4parser.iso14496.part30.XMLSubtitleSampleEntry;
 
-import java.lang.Integer;
-import java.lang.Long;
-import java.lang.RuntimeException;
-import java.lang.String;
 import java.util.List;
 
 /**
@@ -30,6 +25,21 @@ import java.util.List;
  * http://tools.ietf.org/html/rfc6381
  */
 public final class DashHelper {
+
+    public static long getAudioSamplingRate(AudioSampleEntry e) {
+        ESDescriptorBox esds = Path.getPath(e, "esds");
+        if (esds != null) {
+            final DecoderConfigDescriptor decoderConfigDescriptor = esds.getEsDescriptor().getDecoderConfigDescriptor();
+            final AudioSpecificConfig audioSpecificConfig = decoderConfigDescriptor.getAudioSpecificInfo();
+            if (audioSpecificConfig.getExtensionAudioObjectType() > 0) {
+                return audioSpecificConfig.getExtensionSamplingFrequency();
+            } else {
+                return audioSpecificConfig.getSamplingFrequency();
+            }
+        } else {
+            return e.getSampleRate();
+        }
+    }
 
     public static ChannelConfiguration getChannelConfiguration(AudioSampleEntry e) {
         DTSSpecificBox ddts = Path.getPath(e, "ddts");

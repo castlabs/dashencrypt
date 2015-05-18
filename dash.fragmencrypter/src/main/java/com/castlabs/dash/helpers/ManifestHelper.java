@@ -96,7 +96,7 @@ public class ManifestHelper {
 
             //representation.setMimeType("audio/mp4");
             representation.setCodecs(DashHelper.getRfc6381Codec(ase));
-            representation.setAudioSamplingRate("" + ase.getSampleRate());
+            representation.setAudioSamplingRate("" + DashHelper.getAudioSamplingRate(ase));
 
             DescriptorType audio_channel_conf = representation.addNewAudioChannelConfiguration();
             DashHelper.ChannelConfiguration cc = DashHelper.getChannelConfiguration(ase);

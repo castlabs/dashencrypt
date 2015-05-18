@@ -14,6 +14,7 @@ import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.builder.DefaultMp4Builder;
 import com.googlecode.mp4parser.authoring.builder.Mp4Builder;
 import com.googlecode.mp4parser.authoring.tracks.*;
+import com.googlecode.mp4parser.authoring.tracks.h264.H264TrackImpl;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.FileOptionHandler;

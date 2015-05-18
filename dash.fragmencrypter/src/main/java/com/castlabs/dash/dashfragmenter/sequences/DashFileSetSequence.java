@@ -20,6 +20,7 @@ import com.googlecode.mp4parser.authoring.builder.StaticFragmentIntersectionFind
 import com.googlecode.mp4parser.authoring.builder.SyncSampleIntersectFinderImpl;
 import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import com.googlecode.mp4parser.authoring.tracks.*;
+import com.googlecode.mp4parser.authoring.tracks.h264.H264TrackImpl;
 import com.googlecode.mp4parser.boxes.mp4.ESDescriptorBox;
 import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.AudioSpecificConfig;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.CencSampleEncryptionInformationGroupEntry;
@@ -30,18 +31,12 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.xmlbeans.XmlOptions;
 import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import javax.crypto.SecretKey;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -636,47 +631,48 @@ public class DashFileSetSequence {
 
         Map<TrackProxy, String> track2File = new LinkedHashMap<TrackProxy, String>();
         for (File inputFile : inputFiles) {
-
-            if (inputFile.getName().endsWith(".mp4") ||
-                    inputFile.getName().endsWith(".mov") ||
-                    inputFile.getName().endsWith(".ismv") ||
-                    inputFile.getName().endsWith(".m4a") ||
-                    inputFile.getName().endsWith(".m4v")) {
-                Movie movie = MovieCreator.build(new FileDataSourceImpl(inputFile));
-                for (Track track : movie.getTracks()) {
-                    String codec = DashHelper.getFormat(track);
-                    if (!supportedTypes.contains(codec)) {
-                        l.warning("Excluding " + inputFile + " track " + track.getTrackMetaData().getTrackId() + " as its codec " + codec + " is not yet supported");
-                        break;
+            if (inputFile.isFile()) {
+                if (inputFile.getName().endsWith(".mp4") ||
+                        inputFile.getName().endsWith(".mov") ||
+                        inputFile.getName().endsWith(".ismv") ||
+                        inputFile.getName().endsWith(".m4a") ||
+                        inputFile.getName().endsWith(".m4v")) {
+                    Movie movie = MovieCreator.build(new FileDataSourceImpl(inputFile));
+                    for (Track track : movie.getTracks()) {
+                        String codec = DashHelper.getFormat(track);
+                        if (!supportedTypes.contains(codec)) {
+                            l.warning("Excluding " + inputFile + " track " + track.getTrackMetaData().getTrackId() + " as its codec " + codec + " is not yet supported");
+                            break;
+                        }
+                        if (track instanceof CencEncryptedTrack) {
+                            l.warning("Excluding " + inputFile + " track " + track.getTrackMetaData().getTrackId() + " as it is encrypted. Encrypted source tracks are not yet supported");
+                            break;
+                        }
+                        track2File.put(new TrackProxy(track), inputFile.getName());
                     }
-                    if (track instanceof CencEncryptedTrack) {
-                        l.warning("Excluding " + inputFile + " track " + track.getTrackMetaData().getTrackId() + " as it is encrypted. Encrypted source tracks are not yet supported");
-                        break;
-                    }
+                } else if (inputFile.getName().endsWith(".aac")) {
+                    Track track = new AACTrackImpl(new FileDataSourceImpl(inputFile));
                     track2File.put(new TrackProxy(track), inputFile.getName());
+                    l.fine("Created AAC Track from " + inputFile.getName());
+                } else if (inputFile.getName().endsWith(".h264")) {
+                    Track track = new H264TrackImpl(new FileDataSourceImpl(inputFile));
+                    track2File.put(new TrackProxy(track), inputFile.getName());
+                    l.fine("Created H264 Track from " + inputFile.getName());
+                } else if (inputFile.getName().endsWith(".ac3")) {
+                    Track track = new AC3TrackImpl(new FileDataSourceImpl(inputFile));
+                    track2File.put(new TrackProxy(track), inputFile.getName());
+                    l.fine("Created AC3 Track from " + inputFile.getName());
+                } else if (inputFile.getName().endsWith(".ec3")) {
+                    Track track = new EC3TrackImpl(new FileDataSourceImpl(inputFile));
+                    track2File.put(new TrackProxy(track), inputFile.getName());
+                    l.fine("Created EC3 Track from " + inputFile.getName());
+                } else if (inputFile.getName().endsWith(".dtshd")) {
+                    Track track = new DTSTrackImpl(new FileDataSourceImpl(inputFile));
+                    track2File.put(new TrackProxy(track), inputFile.getName());
+                    l.fine("Created DTS HD Track from " + inputFile.getName());
+                } else {
+                    unhandled.add(inputFile);
                 }
-            } else if (inputFile.getName().endsWith(".aac")) {
-                Track track = new AACTrackImpl(new FileDataSourceImpl(inputFile));
-                track2File.put(new TrackProxy(track), inputFile.getName());
-                l.fine("Created AAC Track from " + inputFile.getName());
-            } else if (inputFile.getName().endsWith(".h264")) {
-                Track track = new H264TrackImpl(new FileDataSourceImpl(inputFile));
-                track2File.put(new TrackProxy(track), inputFile.getName());
-                l.fine("Created H264 Track from " + inputFile.getName());
-            } else if (inputFile.getName().endsWith(".ac3")) {
-                Track track = new AC3TrackImpl(new FileDataSourceImpl(inputFile));
-                track2File.put(new TrackProxy(track), inputFile.getName());
-                l.fine("Created AC3 Track from " + inputFile.getName());
-            } else if (inputFile.getName().endsWith(".ec3")) {
-                Track track = new EC3TrackImpl(new FileDataSourceImpl(inputFile));
-                track2File.put(new TrackProxy(track), inputFile.getName());
-                l.fine("Created EC3 Track from " + inputFile.getName());
-            } else if (inputFile.getName().endsWith(".dtshd")) {
-                Track track = new DTSTrackImpl(new FileDataSourceImpl(inputFile));
-                track2File.put(new TrackProxy(track), inputFile.getName());
-                l.fine("Created DTS HD Track from " + inputFile.getName());
-            } else {
-                unhandled.add(inputFile);
             }
         }
         inputFiles.retainAll(unhandled);
