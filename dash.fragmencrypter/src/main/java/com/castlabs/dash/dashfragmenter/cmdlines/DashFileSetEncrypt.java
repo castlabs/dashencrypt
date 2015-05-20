@@ -10,7 +10,6 @@ import com.castlabs.dash.dashfragmenter.AbstractCommand;
 import com.castlabs.dash.dashfragmenter.ExitCodeException;
 import com.castlabs.dash.dashfragmenter.sequences.DashFileSetSequence;
 import com.coremedia.iso.Hex;
-import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.FileOptionHandler;
