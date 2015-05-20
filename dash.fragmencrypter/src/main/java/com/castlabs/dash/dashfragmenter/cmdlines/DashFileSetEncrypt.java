@@ -10,6 +10,7 @@ import com.castlabs.dash.dashfragmenter.AbstractCommand;
 import com.castlabs.dash.dashfragmenter.ExitCodeException;
 import com.castlabs.dash.dashfragmenter.sequences.DashFileSetSequence;
 import com.coremedia.iso.Hex;
+import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.FileOptionHandler;
@@ -86,6 +87,9 @@ public class DashFileSetEncrypt extends AbstractCommand {
     @Option(name = "--explode", aliases = "-x", usage = "If this option is set each segement will be written in a single file")
     protected boolean explode = false;
 
+    @Option(name = "--dummyIvs", hidden = true)
+    protected boolean dummyIvs = false;
+
 
     public int run() throws IOException, ExitCodeException {
         DashFileSetSequence d = new DashFileSetSequence();
@@ -96,6 +100,7 @@ public class DashFileSetEncrypt extends AbstractCommand {
         d.setOutputDirectory(outputDirectory);
         d.setInputFiles(inputFiles);
         d.setEncryptionAlgo("cenc");
+        d.setDummyIvs(dummyIvs);
 
         SecretKey audioKey;
         SecretKey videoKey;
@@ -117,7 +122,11 @@ public class DashFileSetEncrypt extends AbstractCommand {
             System.out.println(audioKeyId.toString() + ":" + Hex.encodeHex(audioKey.getEncoded()));
             System.out.println(videoKeyId.toString() + ":" + Hex.encodeHex(videoKey.getEncoded()));
         } else {
-            videoKeyId = UUID.fromString(this.encKid);
+            try {
+                videoKeyId = UUID.fromString(this.encKid);
+            } catch (IllegalArgumentException e) {
+                throw new ExitCodeException(e.getMessage(), 7983489);
+            }
             if (encKidAudio != null) {
                 audioKeyId = UUID.fromString(this.encKidAudio);
             } else {

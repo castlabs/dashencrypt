@@ -79,6 +79,14 @@ public class DashFileSetSequence {
     protected boolean encryptButClear = false;
 
     /**
+     * Turns off the random number generator for IVs and therefore they start at 0x0000000000000000.
+     * @param dummyIvs <code>true</code> turns off the RNG
+     */
+    public void setDummyIvs(boolean dummyIvs) {
+        this.dummyIvs = dummyIvs;
+    }
+
+    /**
      * Sets whether styp and sidx should be generated when 'exploding' single file into one file per segement.
      * <p/>
      * This option has no effect when <code>explode==false</code>
