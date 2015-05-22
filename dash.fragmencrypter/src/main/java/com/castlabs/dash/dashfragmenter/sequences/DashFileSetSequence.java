@@ -59,6 +59,7 @@ public class DashFileSetSequence {
     protected UUID videoKeyid;
     protected SecretKey videoKey;
 
+    protected List<File> inputFilesOrig;
     protected List<File> inputFiles;
     protected File outputDirectory = new File(System.getProperty("user.dir"));
     protected int sparse = 0;
@@ -448,6 +449,16 @@ public class DashFileSetSequence {
     public Map<TrackProxy, List<File>> writeFilesSingleSidx(Map<TrackProxy, String> trackFilename, Map<TrackProxy, Container> dashedFiles) throws IOException {
         Map<TrackProxy, List<File>> track2Files = new HashMap<TrackProxy, List<File>>();
         for (Map.Entry<TrackProxy, Container> trackContainerEntry : dashedFiles.entrySet()) {
+            File f = new File(outputDirectory, trackFilename.get(trackContainerEntry.getKey()));
+            if (f.exists()) {
+                for (File file : inputFilesOrig) {
+                    if (file.getAbsolutePath().equals(f.getAbsolutePath())) {
+                        throw new IOException("Please choose another output directory as current setting causes input files to be overwritten");
+                    }
+                }
+            }
+        }
+        for (Map.Entry<TrackProxy, Container> trackContainerEntry : dashedFiles.entrySet()) {
             l.info("Writing... ");
             TrackProxy t = trackContainerEntry.getKey();
             File f = new File(outputDirectory, trackFilename.get(t));
@@ -636,6 +647,7 @@ public class DashFileSetSequence {
      */
     public Map<TrackProxy, String> createTracks() throws IOException, ExitCodeException {
         List<File> unhandled = new ArrayList<File>();
+        inputFilesOrig = new ArrayList<File>(inputFiles);
 
         Map<TrackProxy, String> track2File = new LinkedHashMap<TrackProxy, String>();
         for (File inputFile : inputFiles) {
