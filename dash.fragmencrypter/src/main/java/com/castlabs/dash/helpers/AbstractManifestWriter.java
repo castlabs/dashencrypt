@@ -199,9 +199,13 @@ public abstract class AbstractManifestWriter {
 
     protected void createInitialization(URLType urlType, Track track) {
         long offset = 0;
+        long start = 0;
         for (Box box : trackContainer.get(track).getBoxes()) {
+            if ("ftyp".equals(box.getType())) {
+                start = offset;
+            }
             if ("moov".equals(box.getType())) {
-                urlType.setRange(String.format("%s-%s", offset, offset + box.getSize() - 1));
+                urlType.setRange(String.format("%s-%s", start, offset + box.getSize() - 1));
                 break;
             }
             offset += box.getSize();
