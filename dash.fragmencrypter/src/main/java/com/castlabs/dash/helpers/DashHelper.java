@@ -1,7 +1,9 @@
 package com.castlabs.dash.helpers;
 
 import com.coremedia.iso.Hex;
+import com.coremedia.iso.boxes.Box;
 import com.coremedia.iso.boxes.OriginalFormatBox;
+import com.coremedia.iso.boxes.SampleDescriptionBox;
 import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
 import com.coremedia.iso.boxes.sampleentry.SampleEntry;
 import com.coremedia.iso.boxes.sampleentry.VisualSampleEntry;
@@ -257,17 +259,17 @@ public final class DashHelper {
      */
     public static String getRfc6381Codec(SampleEntry se) {
 
-        String type = se.getType();
-        if (type.equals("encv")) {
-            OriginalFormatBox frma = ((VisualSampleEntry) se).getBoxes(OriginalFormatBox.class, true).get(0);
+        OriginalFormatBox frma = Path.getPath((Box) se, "sinf/frma");
+        String type;
+        if (frma!=null) {
             type = frma.getDataFormat();
-        } else if (type.equals("enca")) {
-            OriginalFormatBox frma = ((AudioSampleEntry) se).getBoxes(OriginalFormatBox.class, true).get(0);
-            type = frma.getDataFormat();
+        } else {
+            type = se.getType();
         }
 
-        if ("avc1".equals(type) || "avc3".equals(type)) {
-            AvcConfigurationBox avcConfigurationBox = Path.getPath(se, "avcC");
+
+        if ("avc1".equals(type) || "avc2".equals(type) || "avc3".equals(type) || "avc4".equals(type)) {
+            AvcConfigurationBox avcConfigurationBox = Path.getPath((Box) se, "avcC");
             List<byte[]> spsbytes = avcConfigurationBox.getSequenceParameterSets();
             byte[] CodecInit = new byte[3];
             CodecInit[0] = spsbytes.get(0)[1];
@@ -275,9 +277,9 @@ public final class DashHelper {
             CodecInit[2] = spsbytes.get(0)[3];
             return (type + "." + Hex.encodeHex(CodecInit)).toLowerCase();
         } else if (type.equals("mp4a")) {
-            ESDescriptorBox esDescriptorBox = Path.getPath(se, "esds");
+            ESDescriptorBox esDescriptorBox = Path.getPath((Box) se, "esds");
             if (esDescriptorBox == null) {
-                esDescriptorBox = Path.getPath(se, "..../esds"); // Apple does weird things
+                esDescriptorBox = Path.getPath((Box) se, "..../esds"); // Apple does weird things
             }
             final DecoderConfigDescriptor decoderConfigDescriptor = esDescriptorBox.getEsDescriptor().getDecoderConfigDescriptor();
             final AudioSpecificConfig audioSpecificConfig = decoderConfigDescriptor.getAudioSpecificInfo();
@@ -289,9 +291,9 @@ public final class DashHelper {
                 return "mp4a.40.2";
             }
         } else if (type.equals("mp4v")) {
-            ESDescriptorBox esDescriptorBox = Path.getPath(se, "esds");
+            ESDescriptorBox esDescriptorBox = Path.getPath((Box) se, "esds");
             if (esDescriptorBox == null) {
-                esDescriptorBox = Path.getPath(se, "..../esds"); // Apple does weird things
+                esDescriptorBox = Path.getPath((Box) se, "..../esds"); // Apple does weird things
             }
             if (esDescriptorBox.getEsDescriptor().getDecoderConfigDescriptor().getObjectTypeIndication() == 0x6C) {
                 return "mp4v." +
@@ -307,7 +309,7 @@ public final class DashHelper {
             return type;
         } else if (type.equals("hev1") || type.equals("hvc1")) {
             int c;
-            HevcConfigurationBox hvcc = Path.getPath(se, "hvcC");
+            HevcConfigurationBox hvcc = Path.getPath((Box) se, "hvcC");
 
             String codec = "";
 
@@ -399,13 +401,13 @@ public final class DashHelper {
     }
 
     public static String getFormat(Track track) {
-        SampleEntry se = track.getSampleDescriptionBox().getBoxes(SampleEntry.class).get(0);
-        String type = se.getType();
-        if (type.equals("encv") || type.equals("enca") || type.equals("encv")) {
-            OriginalFormatBox frma = Path.getPath(se, "sinf/frma");
-            type = frma.getDataFormat();
+        SampleDescriptionBox stsd = track.getSampleDescriptionBox();
+        OriginalFormatBox frma = Path.getPath(stsd, "enc./sinf/frma");
+        if (frma!=null) {
+            return frma.getDataFormat();
+        } else {
+            return stsd.getSampleEntry().getType();
         }
-        return type;
     }
 
     public static class ChannelConfiguration {
