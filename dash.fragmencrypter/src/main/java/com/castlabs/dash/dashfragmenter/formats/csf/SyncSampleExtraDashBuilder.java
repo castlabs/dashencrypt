@@ -1,10 +1,13 @@
 package com.castlabs.dash.dashfragmenter.formats.csf;
 
+import com.castlabs.dash.dashfragmenter.representation.DashTrackBuilder;
+import com.castlabs.dash.dashfragmenter.representation.ListContainer;
 import com.coremedia.iso.BoxParser;
 import com.coremedia.iso.IsoFile;
 import com.coremedia.iso.IsoTypeWriter;
 import com.coremedia.iso.boxes.*;
 import com.coremedia.iso.boxes.fragment.*;
+import com.googlecode.mp4parser.BasicContainer;
 import com.googlecode.mp4parser.DataSource;
 import com.googlecode.mp4parser.authoring.Edit;
 import com.googlecode.mp4parser.authoring.Sample;
@@ -27,10 +30,10 @@ import java.util.*;
 
 import static com.googlecode.mp4parser.util.CastUtils.l2i;
 
-public class SyncSampleExtraDashBuilder extends AbstractList<List<Box>> implements DashTrackBuilder {
+public class SyncSampleExtraDashBuilder extends AbstractList<Container> implements DashTrackBuilder {
     private Track track;
 
-    public List<Box> getInitSegment() {
+    public Container getInitSegment() {
         List<Box> initSegment = new ArrayList<Box>();
         List<String> minorBrands = new ArrayList<String>();
         minorBrands.add("isom");
@@ -38,7 +41,9 @@ public class SyncSampleExtraDashBuilder extends AbstractList<List<Box>> implemen
         minorBrands.add("avc1");
         initSegment.add(new FileTypeBox("isom", 0, minorBrands));
         initSegment.add(createMoov());
-        return initSegment;
+        BasicContainer bc = new BasicContainer();
+        bc.setBoxes(initSegment);
+        return bc;
     }
 
     public SyncSampleExtraDashBuilder(Track track) {
@@ -51,7 +56,7 @@ public class SyncSampleExtraDashBuilder extends AbstractList<List<Box>> implemen
     }
 
     @Override
-    public List<Box> get(int index) {
+    public Container get(int index) {
         List<Box> moofMdat = new ArrayList<Box>();
         long startSample1 = track.getSyncSamples()[index];
         long startSample2;
@@ -78,7 +83,7 @@ public class SyncSampleExtraDashBuilder extends AbstractList<List<Box>> implemen
             moofMdat.add(createMoof(startSample1, endSample1, track, index * 2 + 2)); // it's one bases
             moofMdat.add(createMdat(startSample1, endSample1));
         }
-        return moofMdat;
+        return new ListContainer(moofMdat);
     }
 
     public Date getDate() {
@@ -607,6 +612,8 @@ public class SyncSampleExtraDashBuilder extends AbstractList<List<Box>> implemen
         return dinf;
     }
 
-
+    public Container getIndexSegment() {
+        return new ListContainer(Collections.<Box>emptyList());
+    }
 }
 

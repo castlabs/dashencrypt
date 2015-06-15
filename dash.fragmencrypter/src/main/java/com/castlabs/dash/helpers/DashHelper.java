@@ -391,7 +391,7 @@ public final class DashHelper {
             }
 
         } else {
-            throw new RuntimeException("I don't know how to get codec of type " + se.getType());
+            return null;
         }
 
     }

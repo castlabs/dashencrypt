@@ -1,38 +1,46 @@
-package com.castlabs.dash.dashfragmenter.formats.csf;
+package com.castlabs.dash.dashfragmenter.representation;
 
+import com.castlabs.dash.helpers.DashHelper;
 import com.coremedia.iso.BoxParser;
 import com.coremedia.iso.IsoFile;
 import com.coremedia.iso.IsoTypeWriter;
 import com.coremedia.iso.boxes.*;
 import com.coremedia.iso.boxes.fragment.*;
+import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
+import com.googlecode.mp4parser.BasicContainer;
 import com.googlecode.mp4parser.DataSource;
 import com.googlecode.mp4parser.authoring.Edit;
-import com.googlecode.mp4parser.authoring.Movie;
 import com.googlecode.mp4parser.authoring.Sample;
 import com.googlecode.mp4parser.authoring.Track;
-import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import com.googlecode.mp4parser.authoring.tracks.CencEncryptedTrack;
 import com.googlecode.mp4parser.boxes.dece.SampleEncryptionBox;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.GroupEntry;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.SampleGroupDescriptionBox;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.SampleToGroupBox;
+import com.googlecode.mp4parser.boxes.threegpp26244.SegmentIndexBox;
 import com.googlecode.mp4parser.util.Path;
 import com.mp4parser.iso14496.part12.SampleAuxiliaryInformationOffsetsBox;
 import com.mp4parser.iso14496.part12.SampleAuxiliaryInformationSizesBox;
 import com.mp4parser.iso14496.part12.TrackReferenceTypeBox;
 import com.mp4parser.iso23001.part7.CencSampleAuxiliaryDataFormat;
 import com.mp4parser.iso23001.part7.TrackEncryptionBox;
+import mpegCenc2013.DefaultKIDAttribute;
+import mpegDashSchemaMpd2011.DescriptorType;
+import mpegDashSchemaMpd2011.RepresentationType;
+import mpegDashSchemaMpd2011.SegmentBaseType;
+import mpegDashSchemaMpd2011.URLType;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 import java.util.*;
 
+import static com.castlabs.dash.helpers.ManifestHelper.convertFramerate;
+import static com.castlabs.dash.helpers.Timing.getPtss;
+import static com.castlabs.dash.helpers.Timing.getTimeMappingEditTime;
 import static com.googlecode.mp4parser.util.CastUtils.l2i;
 
-public class DependentTrackDashBuilder extends AbstractList<List<Box>> implements DashTrackBuilder {
+public class DependentTrackDashBuilder extends AbstractList<Container> implements DashTrackBuilder, SegmentTemplateRepresentation {
     private Track main;
     private Track dependent;
     private String dependencyType;
@@ -56,7 +64,68 @@ public class DependentTrackDashBuilder extends AbstractList<List<Box>> implement
 
     }
 
-    public List<Box> getInitSegment() {
+    public Container getIndexSegment() {
+        SegmentIndexBox sidx = new SegmentIndexBox();
+        sidx.setVersion(0);
+        sidx.setFlags(0);
+        sidx.setReserved(0);
+
+        Container initSegment = getInitSegment();
+        TrackHeaderBox tkhd = Path.getPath(initSegment, "/moov[0]/trak[0]/tkhd[0]");
+        MediaHeaderBox mdhd = Path.getPath(initSegment, "/moov[0]/trak[0]/mdia[0]/mdhd[0]");
+        sidx.setReferenceId(tkhd.getTrackId());
+        sidx.setTimeScale(mdhd.getTimescale());
+        // we only have one
+        long[] ptss = getPtss(Path.<TrackRunBox>getPath(get(0), "/moof[0]/traf[0]/trun[0]"));
+        Arrays.sort(ptss); // index 0 has now the earliest presentation time stamp!
+        long timeMappingEdit = getTimeMappingEditTime(initSegment);
+        sidx.setEarliestPresentationTime(ptss[0] - timeMappingEdit);
+        List<SegmentIndexBox.Entry> entries = sidx.getEntries();
+
+        // ugly code ...
+
+        for (Container c : this) {
+            int size = 0;
+            for (Box box : c.getBoxes()) {
+                size += l2i(box.getSize());
+            }
+            MovieFragmentBox moof = Path.getPath(c, "/moof[0]");
+            SegmentIndexBox.Entry entry =  new SegmentIndexBox.Entry();
+            entries.add(entry);
+            entry.setReferencedSize(size);
+            ptss = getPtss(Path.<TrackRunBox>getPath(moof, "traf[0]/trun[0]"));
+            entry.setSapType(getFirstFrameSapType(ptss));
+            entry.setSubsegmentDuration(getTrunDuration(Path.<TrackRunBox>getPath(moof, "traf[0]/trun[0]")));
+            entry.setStartsWithSap((byte) 1); // we know it - no need to lookup
+        }
+
+        sidx.setFirstOffset(0);
+        return new ListContainer(Collections.<Box>singletonList(sidx));
+    }
+
+    protected long getTrunDuration(TrackRunBox trun) {
+        final List<TrackRunBox.Entry> trunEntries = trun.getEntries();
+        long duration = 0;
+        for (TrackRunBox.Entry trunEntry : trunEntries) {
+            duration += trunEntry.getSampleDuration();
+        }
+        return duration;
+    }
+
+
+    protected byte getFirstFrameSapType(long[] ptss) {
+        long idrTimeStamp = ptss[0];
+        Arrays.sort(ptss);
+        if (idrTimeStamp > ptss[0]) {
+            return 0;
+        } else {
+            return 1;
+        }
+    }
+
+
+    public Container getInitSegment() {
+        BasicContainer bv = new BasicContainer();
         List<Box> initSegment = new ArrayList<Box>();
         List<String> minorBrands = new ArrayList<String>();
         minorBrands.add("isom");
@@ -64,7 +133,8 @@ public class DependentTrackDashBuilder extends AbstractList<List<Box>> implement
         minorBrands.add("avc1");
         initSegment.add(new FileTypeBox("isom", 0, minorBrands));
         initSegment.add(createMoov());
-        return initSegment;
+        bv.setBoxes(initSegment);
+        return bv;
     }
 
     @Override
@@ -73,8 +143,8 @@ public class DependentTrackDashBuilder extends AbstractList<List<Box>> implement
     }
 
     @Override
-    public List<Box> get(int index) {
-        List<Box> moofMdat = new ArrayList<Box>();
+    public Container get(int index) {
+        BasicContainer moofMdat = new BasicContainer();
         long startSample1 = fragmentStartSamples[index];
         long endSample1;
 
@@ -84,11 +154,11 @@ public class DependentTrackDashBuilder extends AbstractList<List<Box>> implement
             endSample1 = main.getSamples().size() - 1;
         }
 
-        moofMdat.add(createMoof(startSample1, endSample1, main, index * 2 + 1)); // it's one bases
-        moofMdat.add(createMdat(startSample1, endSample1, main));
+        moofMdat.addBox(createMoof(startSample1, endSample1, main, index * 2 + 1)); // it's one bases
+        moofMdat.addBox(createMdat(startSample1, endSample1, main));
 
-        moofMdat.add(createMoof(startSample1, endSample1, dependent, index * 2 + 2)); // it's one bases
-        moofMdat.add(createMdat(startSample1, endSample1, dependent));
+        moofMdat.addBox(createMoof(startSample1, endSample1, dependent, index * 2 + 2)); // it's one bases
+        moofMdat.addBox(createMdat(startSample1, endSample1, dependent));
         return moofMdat;
     }
 
@@ -566,7 +636,7 @@ public class DependentTrackDashBuilder extends AbstractList<List<Box>> implement
     protected Box createTrak(Track t) {
         TrackBox trackBox = new TrackBox();
         trackBox.addBox(createTkhd(t));
-        if (t == dependent) {
+        if (t == dependent && dependencyType != null) {
             TrackReferenceBox tref = new TrackReferenceBox();
             TrackReferenceTypeBox vdep = new TrackReferenceTypeBox(dependencyType);
             tref.addBox(vdep);
@@ -612,22 +682,111 @@ public class DependentTrackDashBuilder extends AbstractList<List<Box>> implement
         return dinf;
     }
 
-    public static void main(String[] args) throws IOException {
-        Movie m = MovieCreator.build("C:\\content\\dual_layer_dual_track\\ves_ArtGlassFHD_133427_640x480_560Kbps_hevc_320x240_140Kbps_BL_EL_RPU_pq2gamma_re.mp4");
-        Track main = m.getTracks().get(0);
-        Track dependent = m.getTracks().get(1);
-        DependentTrackDashBuilder builder = new DependentTrackDashBuilder(main, dependent, "vdep", 48);
-        WritableByteChannel wbc = Channels.newChannel(new FileOutputStream("check.mp4"));
-        for (Box box : builder.getInitSegment()) {
-            box.getBox(wbc);
-        }
 
-        for (List<Box> boxes : builder) {
-            for (Box box : boxes) {
-                box.getBox(wbc);
-            }
+    String getCodec() {
+        String codec1 = DashHelper.getRfc6381Codec(main.getSampleDescriptionBox().getSampleEntry());
+        String codec2 = DashHelper.getRfc6381Codec(dependent.getSampleDescriptionBox().getSampleEntry());
+        if (codec2 == null) {
+            codec2 = dependent.getSampleDescriptionBox().getSampleEntry().getType();
         }
+        return codec1 + "," + codec2;
     }
 
+    public RepresentationType getSegmentTemplateRepresentation() {
+        RepresentationType representation = RepresentationType.Factory.newInstance();
+        representation.setProfiles("urn:mpeg:dash:profile:isoff-on-demand:2011");
+        if (main.getHandler().equals("vide")) {
+
+            long videoHeight = (long) main.getTrackMetaData().getHeight();
+            long videoWidth = (long) main.getTrackMetaData().getWidth();
+            double framesPerSecond = (double) (main.getSamples().size() * main.getTrackMetaData().getTimescale()) / main.getDuration();
+
+
+            representation.setMimeType("video/mp4");
+            representation.setCodecs(getCodec());
+            representation.setWidth(videoWidth);
+            representation.setHeight(videoHeight);
+            representation.setFrameRate(convertFramerate(framesPerSecond));
+            representation.setSar("1:1");
+            // too hard to find it out. Ignoring even though it should be set according to DASH-AVC-264-v2.00-hd-mca.pdf
+        }
+
+        if (main.getHandler().equals("soun")) {
+
+
+            AudioSampleEntry ase = (AudioSampleEntry) main.getSampleDescriptionBox().getSampleEntry();
+
+            representation.setMimeType("audio/mp4");
+            representation.setCodecs(DashHelper.getRfc6381Codec(ase));
+            representation.setAudioSamplingRate("" + DashHelper.getAudioSamplingRate(ase));
+
+            DescriptorType audio_channel_conf = representation.addNewAudioChannelConfiguration();
+            DashHelper.ChannelConfiguration cc = DashHelper.getChannelConfiguration(ase);
+            audio_channel_conf.setSchemeIdUri(cc.schemeIdUri);
+            audio_channel_conf.setValue(cc.value);
+
+        }
+
+        if (main.getHandler().equals("subt")) {
+            representation.setMimeType("audio/mp4");
+            representation.setCodecs(getCodec());
+
+            representation.setStartWithSAP(1);
+
+        }
+
+        SegmentBaseType segBaseType = representation.addNewSegmentBase();
+
+        segBaseType.setTimescale(main.getTrackMetaData().getTimescale());
+        segBaseType.setIndexRangeExact(true);
+
+        long initSize = 0;
+        for (Box b : getInitSegment().getBoxes()) {
+            initSize += b.getSize();
+        }
+        segBaseType.setIndexRange(String.format("0-%s", initSize - 1));
+        URLType initialization = segBaseType.addNewInitialization();
+        long indexSize = 0;
+        for (Box b : getIndexSegment().getBoxes()) {
+            indexSize += b.getSize();
+        }
+
+        initialization.setRange(String.format("%s-%s", initSize, initSize + indexSize));
+
+        long size = 0;
+        List<Sample> samples = main.getSamples();
+        for (int i = 0; i < Math.min(samples.size(), 10000); i++) {
+            size += samples.get(i).getSize();
+        }
+        samples = dependent.getSamples();
+        for (int i = 0; i < Math.min(samples.size(), 10000); i++) {
+            size += samples.get(i).getSize();
+        }
+        size = (size / Math.min(main.getSamples().size(), 10000)) * main.getSamples().size();
+
+        double duration = (double) main.getDuration() / main.getTrackMetaData().getTimescale();
+
+        representation.setBandwidth((long) ((size * 8 / duration / 100)) * 100);
+
+
+        List<String> keyIds = new ArrayList<String>();
+        if (main instanceof CencEncryptedTrack) {
+            keyIds.add(((CencEncryptedTrack) main).getDefaultKeyId().toString());
+        }
+        if (dependent instanceof CencEncryptedTrack) {
+            keyIds.add(((CencEncryptedTrack) dependent).getDefaultKeyId().toString());
+        }
+
+        if (!keyIds.isEmpty()) {
+            DescriptorType contentProtection = representation.addNewContentProtection();
+            final DefaultKIDAttribute defaultKIDAttribute = DefaultKIDAttribute.Factory.newInstance();
+
+            defaultKIDAttribute.setDefaultKID(keyIds);
+            contentProtection.set(defaultKIDAttribute);
+            contentProtection.setSchemeIdUri("urn:mpeg:dash:mp4protection:2011");
+            contentProtection.setValue("cenc");
+        }
+        return representation;
+    }
 }
 
