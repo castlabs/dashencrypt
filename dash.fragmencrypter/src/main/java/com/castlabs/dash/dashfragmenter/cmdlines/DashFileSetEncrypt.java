@@ -11,6 +11,8 @@ import com.castlabs.dash.dashfragmenter.ExitCodeException;
 import com.castlabs.dash.dashfragmenter.sequences.DashFileSetSequence;
 import com.coremedia.iso.Hex;
 import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.FileOptionHandler;
 
@@ -89,6 +91,9 @@ public class DashFileSetEncrypt extends AbstractCommand {
     @Option(name = "--dummyIvs", hidden = true)
     protected boolean dummyIvs = false;
 
+    public void postProcessCmdLineArgs(CmdLineParser cmdLineParser) throws CmdLineException {
+        
+    }
 
     public int run() throws IOException, ExitCodeException {
         DashFileSetSequence d = new DashFileSetSequence();

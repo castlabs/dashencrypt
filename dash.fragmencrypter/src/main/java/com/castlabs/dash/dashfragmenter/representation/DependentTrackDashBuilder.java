@@ -7,6 +7,7 @@ import com.coremedia.iso.IsoTypeWriter;
 import com.coremedia.iso.boxes.*;
 import com.coremedia.iso.boxes.fragment.*;
 import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
+import com.coremedia.iso.boxes.sampleentry.SampleEntry;
 import com.googlecode.mp4parser.BasicContainer;
 import com.googlecode.mp4parser.DataSource;
 import com.googlecode.mp4parser.authoring.Edit;
@@ -22,6 +23,7 @@ import com.googlecode.mp4parser.util.Path;
 import com.mp4parser.iso14496.part12.SampleAuxiliaryInformationOffsetsBox;
 import com.mp4parser.iso14496.part12.SampleAuxiliaryInformationSizesBox;
 import com.mp4parser.iso14496.part12.TrackReferenceTypeBox;
+import com.mp4parser.iso14496.part15.HevcConfigurationBox;
 import com.mp4parser.iso23001.part7.CencSampleAuxiliaryDataFormat;
 import com.mp4parser.iso23001.part7.TrackEncryptionBox;
 import mpegCenc2013.DefaultKIDAttribute;
@@ -46,6 +48,9 @@ public class DependentTrackDashBuilder extends AbstractList<Container> implement
     private String dependencyType;
     long[] fragmentStartSamples = new long[0];
 
+    public Track getPrimaryTrack() {
+        return main;
+    }
 
     public DependentTrackDashBuilder(Track main, Track dependent, String dependencyType, int minFramesPerFragment) {
         this.main = main;
@@ -90,7 +95,7 @@ public class DependentTrackDashBuilder extends AbstractList<Container> implement
                 size += l2i(box.getSize());
             }
             MovieFragmentBox moof = Path.getPath(c, "/moof[0]");
-            SegmentIndexBox.Entry entry =  new SegmentIndexBox.Entry();
+            SegmentIndexBox.Entry entry = new SegmentIndexBox.Entry();
             entries.add(entry);
             entry.setReferencedSize(size);
             ptss = getPtss(Path.<TrackRunBox>getPath(moof, "traf[0]/trun[0]"));
@@ -687,7 +692,29 @@ public class DependentTrackDashBuilder extends AbstractList<Container> implement
         String codec1 = DashHelper.getRfc6381Codec(main.getSampleDescriptionBox().getSampleEntry());
         String codec2 = DashHelper.getRfc6381Codec(dependent.getSampleDescriptionBox().getSampleEntry());
         if (codec2 == null) {
-            codec2 = dependent.getSampleDescriptionBox().getSampleEntry().getType();
+            SampleEntry se = dependent.getSampleDescriptionBox().getSampleEntry();
+            OriginalFormatBox frma = Path.getPath((Box) se, "sinf/frma");
+            String type;
+            if (frma != null) {
+                type = frma.getDataFormat();
+            } else {
+                type = se.getType();
+            }
+            if (type.equals("dvhe")) {
+                HevcConfigurationBox hevC = Path.getPath((Box) se, "hvcC");
+                type += ".s";
+                if (hevC.getBitDepthChromaMinus8() == 0) {
+                    type += "e";
+                }
+                if (hevC.getBitDepthChromaMinus8() == 2) {
+                    type += "t";
+                }
+                if (hevC.getBitDepthChromaMinus8() == 4) {
+                    type += "w";
+                }
+                type += "n";
+            }
+            codec2 = type;
         }
         return codec1 + "," + codec2;
     }
@@ -744,14 +771,14 @@ public class DependentTrackDashBuilder extends AbstractList<Container> implement
         for (Box b : getInitSegment().getBoxes()) {
             initSize += b.getSize();
         }
-        segBaseType.setIndexRange(String.format("0-%s", initSize - 1));
         URLType initialization = segBaseType.addNewInitialization();
         long indexSize = 0;
         for (Box b : getIndexSegment().getBoxes()) {
             indexSize += b.getSize();
         }
 
-        initialization.setRange(String.format("%s-%s", initSize, initSize + indexSize));
+        segBaseType.setIndexRange(String.format("%s-%s", initSize, initSize + indexSize));
+        initialization.setRange(String.format("0-%s", initSize - 1));
 
         long size = 0;
         List<Sample> samples = main.getSamples();

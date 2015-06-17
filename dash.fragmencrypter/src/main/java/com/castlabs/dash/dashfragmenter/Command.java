@@ -6,12 +6,16 @@
 
 package com.castlabs.dash.dashfragmenter;
 
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+
 import java.io.IOException;
 
 public interface Command {
+
     int run() throws IOException, ExitCodeException;
 
-
+    void postProcessCmdLineArgs(CmdLineParser cmdLineParser) throws CmdLineException;
 
 
 }

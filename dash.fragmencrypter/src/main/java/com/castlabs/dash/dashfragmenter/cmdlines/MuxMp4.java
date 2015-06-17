@@ -16,6 +16,8 @@ import com.googlecode.mp4parser.authoring.builder.Mp4Builder;
 import com.googlecode.mp4parser.authoring.tracks.*;
 import com.googlecode.mp4parser.authoring.tracks.h264.H264TrackImpl;
 import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.FileOptionHandler;
 
@@ -51,6 +53,10 @@ public class MuxMp4 implements Command {
 
         System.out.println("Finished write in " + (System.currentTimeMillis() - start) + "ms");
         return 0;
+    }
+
+    public void postProcessCmdLineArgs(CmdLineParser cmdLineParser) throws CmdLineException {
+
     }
 
     Mp4Builder getFileBuilder(Movie m) {

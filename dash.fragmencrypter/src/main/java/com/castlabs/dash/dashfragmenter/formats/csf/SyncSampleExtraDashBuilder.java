@@ -33,6 +33,10 @@ import static com.googlecode.mp4parser.util.CastUtils.l2i;
 public class SyncSampleExtraDashBuilder extends AbstractList<Container> implements DashTrackBuilder {
     private Track track;
 
+    public Track getPrimaryTrack() {
+        return track;
+    }
+
     public Container getInitSegment() {
         List<Box> initSegment = new ArrayList<Box>();
         List<String> minorBrands = new ArrayList<String>();

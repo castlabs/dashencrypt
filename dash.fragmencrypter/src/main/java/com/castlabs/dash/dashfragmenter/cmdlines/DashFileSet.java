@@ -10,6 +10,8 @@ import com.castlabs.dash.dashfragmenter.AbstractCommand;
 import com.castlabs.dash.dashfragmenter.ExitCodeException;
 import com.castlabs.dash.dashfragmenter.sequences.DashFileSetSequence;
 import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.FileOptionHandler;
 
@@ -33,6 +35,9 @@ public class DashFileSet extends AbstractCommand {
     @Option(name = "--explode", aliases = "-x", usage = "If this option is set each segement will be written in a single file")
     protected boolean explode = false;
 
+    public void postProcessCmdLineArgs(CmdLineParser cmdLineParser) throws CmdLineException {
+
+    }
 
     public int run() throws IOException, ExitCodeException {
         DashFileSetSequence dashFileSetSequence = new DashFileSetSequence();
