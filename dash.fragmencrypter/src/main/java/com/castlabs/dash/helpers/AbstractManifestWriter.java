@@ -163,7 +163,7 @@ public abstract class AbstractManifestWriter {
             String scheme = role.split("\\|")[0];
             String id = role.split("\\|")[1];
             roleDescriptorType.setSchemeIdUri(scheme);
-            roleDescriptorType.setId(id);
+            roleDescriptorType.setValue(id);
         }
 
         if (!tracks.get(0).getHandler().equals("subt")) {
