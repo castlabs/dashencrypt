@@ -2,6 +2,7 @@ package com.castlabs.dash.dashfragmenter.cmdlines;
 
 import com.castlabs.dash.dashfragmenter.Command;
 import org.apache.commons.io.FileUtils;
+import org.apache.xmlbeans.XmlOptions;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
@@ -13,6 +14,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 import java.util.UUID;
 
 /**
@@ -88,6 +90,20 @@ public abstract class AbstractEncryptOrNotCommand implements Command {
 
     )
     protected File encKeySecretKeyFileAudio = null;
+
+
+    public static XmlOptions getXmlOptions() {
+        XmlOptions xmlOptions = new XmlOptions();
+        //xmlOptions.setUseDefaultNamespace();
+        HashMap<String, String> ns = new HashMap<String, String>();
+        //ns.put("urn:mpeg:DASH:schema:MPD:2011", "");
+        ns.put("urn:mpeg:cenc:2013", "cenc");
+        xmlOptions.setSaveSuggestedPrefixes(ns);
+        xmlOptions.setSaveAggressiveNamespaces();
+        xmlOptions.setUseDefaultNamespace();
+        xmlOptions.setSavePrettyPrint();
+        return xmlOptions;
+    }
 
 
     public void postProcessCmdLineArgs(CmdLineParser cmdLineParser) throws CmdLineException {

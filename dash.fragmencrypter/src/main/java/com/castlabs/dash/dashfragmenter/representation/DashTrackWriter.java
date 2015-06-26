@@ -8,12 +8,12 @@ import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
 public class DashTrackWriter {
-    public static void write(DashTrackBuilder dashTrackBuilder, String out) throws IOException {
+    public static void write(RepresentationBuilder representationBuilder, String out) throws IOException {
         WritableByteChannel wbc = Channels.newChannel(new FileOutputStream(out));
-        dashTrackBuilder.getInitSegment().writeContainer(wbc);
-        dashTrackBuilder.getIndexSegment().writeContainer(wbc);
+        representationBuilder.getInitSegment().writeContainer(wbc);
+        representationBuilder.getIndexSegment().writeContainer(wbc);
 
-        for (Container fragment : dashTrackBuilder) {
+        for (Container fragment : representationBuilder) {
             fragment.writeContainer(wbc);
         }
 

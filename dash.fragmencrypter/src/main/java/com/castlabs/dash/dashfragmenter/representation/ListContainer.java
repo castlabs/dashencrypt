@@ -36,8 +36,7 @@ public class ListContainer implements Container {
         List<T> boxesToBeReturned = null;
         T oneBox = null;
         List<Box> boxes = getBoxes();
-        for (int i = 0; i < boxes.size(); i++) {
-            Box boxe = boxes.get(i);
+        for (Box boxe : boxes) {
             //clazz.isInstance(boxe) / clazz == boxe.getClass()?
             // I hereby finally decide to use isInstance
 
@@ -65,8 +64,7 @@ public class ListContainer implements Container {
     public <T extends Box> List<T> getBoxes(Class<T> clazz, boolean recursive) {
         List<T> boxesToBeReturned = new ArrayList<T>(2);
         List<Box> boxes = getBoxes();
-        for (int i = 0; i < boxes.size(); i++) {
-            Box boxe = boxes.get(i);
+        for (Box boxe : boxes) {
             //clazz.isInstance(boxe) / clazz == boxe.getClass()?
             // I hereby finally decide to use isInstance
 

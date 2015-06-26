@@ -1,6 +1,6 @@
-package com.castlabs.dash.dashfragmenter.formats.csf;
+package com.castlabs.dash.dashfragmenter.representation;
 
-import com.castlabs.dash.dashfragmenter.representation.DashTrackBuilder;
+import com.castlabs.dash.dashfragmenter.representation.RepresentationBuilder;
 import com.castlabs.dash.dashfragmenter.representation.ListContainer;
 import com.coremedia.iso.BoxParser;
 import com.coremedia.iso.IsoFile;
@@ -22,6 +22,7 @@ import com.mp4parser.iso14496.part12.SampleAuxiliaryInformationOffsetsBox;
 import com.mp4parser.iso14496.part12.SampleAuxiliaryInformationSizesBox;
 import com.mp4parser.iso23001.part7.CencSampleAuxiliaryDataFormat;
 import com.mp4parser.iso23001.part7.TrackEncryptionBox;
+import mpegDashSchemaMpd2011.RepresentationType;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -30,10 +31,10 @@ import java.util.*;
 
 import static com.googlecode.mp4parser.util.CastUtils.l2i;
 
-public class SyncSampleExtraDashBuilder extends AbstractList<Container> implements DashTrackBuilder {
+public class SyncSampleExtraRepresentationBuilder extends AbstractList<Container> implements RepresentationBuilder  {
     private Track track;
 
-    public Track getPrimaryTrack() {
+    public Track getTrack() {
         return track;
     }
 
@@ -41,7 +42,7 @@ public class SyncSampleExtraDashBuilder extends AbstractList<Container> implemen
         List<Box> initSegment = new ArrayList<Box>();
         List<String> minorBrands = new ArrayList<String>();
         minorBrands.add("isom");
-        minorBrands.add("iso2");
+        minorBrands.add("iso5");
         minorBrands.add("avc1");
         initSegment.add(new FileTypeBox("isom", 0, minorBrands));
         initSegment.add(createMoov());
@@ -50,7 +51,7 @@ public class SyncSampleExtraDashBuilder extends AbstractList<Container> implemen
         return bc;
     }
 
-    public SyncSampleExtraDashBuilder(Track track) {
+    public SyncSampleExtraRepresentationBuilder(Track track) {
         this.track = track;
     }
 
@@ -618,6 +619,10 @@ public class SyncSampleExtraDashBuilder extends AbstractList<Container> implemen
 
     public Container getIndexSegment() {
         return new ListContainer(Collections.<Box>emptyList());
+    }
+
+    public RepresentationType getSegmentTemplateRepresentation() {
+        return null;
     }
 }
 

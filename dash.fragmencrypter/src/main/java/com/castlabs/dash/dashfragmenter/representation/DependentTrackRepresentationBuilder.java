@@ -1,6 +1,7 @@
 package com.castlabs.dash.dashfragmenter.representation;
 
 import com.castlabs.dash.helpers.DashHelper;
+import com.castlabs.dash.helpers.SapHelper;
 import com.coremedia.iso.BoxParser;
 import com.coremedia.iso.IsoFile;
 import com.coremedia.iso.IsoTypeWriter;
@@ -42,17 +43,17 @@ import static com.castlabs.dash.helpers.Timing.getPtss;
 import static com.castlabs.dash.helpers.Timing.getTimeMappingEditTime;
 import static com.googlecode.mp4parser.util.CastUtils.l2i;
 
-public class DependentTrackDashBuilder extends AbstractList<Container> implements DashTrackBuilder, SegmentTemplateRepresentation {
+public class DependentTrackRepresentationBuilder extends AbstractList<Container> implements RepresentationBuilder {
     private Track main;
     private Track dependent;
     private String dependencyType;
     long[] fragmentStartSamples = new long[0];
 
-    public Track getPrimaryTrack() {
+    public Track getTrack() {
         return main;
     }
 
-    public DependentTrackDashBuilder(Track main, Track dependent, String dependencyType, int minFramesPerFragment) {
+    public DependentTrackRepresentationBuilder(Track main, Track dependent, String dependencyType, int minFramesPerFragment) {
         this.main = main;
         this.dependent = dependent;
         this.dependencyType = dependencyType;
@@ -86,8 +87,8 @@ public class DependentTrackDashBuilder extends AbstractList<Container> implement
         long timeMappingEdit = getTimeMappingEditTime(initSegment);
         sidx.setEarliestPresentationTime(ptss[0] - timeMappingEdit);
         List<SegmentIndexBox.Entry> entries = sidx.getEntries();
+        TrackExtendsBox trex = Path.getPath(initSegment, "/moov[0]/mvex[0]/trex[0]");
 
-        // ugly code ...
 
         for (Container c : this) {
             int size = 0;
@@ -98,8 +99,9 @@ public class DependentTrackDashBuilder extends AbstractList<Container> implement
             SegmentIndexBox.Entry entry = new SegmentIndexBox.Entry();
             entries.add(entry);
             entry.setReferencedSize(size);
-            ptss = getPtss(Path.<TrackRunBox>getPath(moof, "traf[0]/trun[0]"));
-            entry.setSapType(getFirstFrameSapType(ptss));
+            TrackRunBox trun = Path.<TrackRunBox>getPath(moof, "traf[0]/trun[0]");
+            ptss = getPtss(trun);
+            entry.setSapType(SapHelper.getFirstFrameSapType(ptss, SapHelper.getSampleFlags(0,trun, trex)));
             entry.setSubsegmentDuration(getTrunDuration(Path.<TrackRunBox>getPath(moof, "traf[0]/trun[0]")));
             entry.setStartsWithSap((byte) 1); // we know it - no need to lookup
         }
@@ -118,15 +120,6 @@ public class DependentTrackDashBuilder extends AbstractList<Container> implement
     }
 
 
-    protected byte getFirstFrameSapType(long[] ptss) {
-        long idrTimeStamp = ptss[0];
-        Arrays.sort(ptss);
-        if (idrTimeStamp > ptss[0]) {
-            return 0;
-        } else {
-            return 1;
-        }
-    }
 
 
     public Container getInitSegment() {
@@ -134,7 +127,7 @@ public class DependentTrackDashBuilder extends AbstractList<Container> implement
         List<Box> initSegment = new ArrayList<Box>();
         List<String> minorBrands = new ArrayList<String>();
         minorBrands.add("isom");
-        minorBrands.add("iso5");
+        minorBrands.add("iso6");
         minorBrands.add("avc1");
         initSegment.add(new FileTypeBox("isom", 0, minorBrands));
         initSegment.add(createMoov());

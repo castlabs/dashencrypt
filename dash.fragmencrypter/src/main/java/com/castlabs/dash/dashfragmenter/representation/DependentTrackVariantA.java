@@ -20,7 +20,7 @@ import java.util.*;
 
 public class DependentTrackVariantA extends AbstractEncryptOrNotCommand {
 
-    @Argument(required = true, multiValued = true, handler = FileOptionHandler.class, usage = "Bitstream input files", metaVar = "vid1.avc1, aud1.dtshd ...")
+    @Argument(required = true, multiValued = true, handler = FileOptionHandler.class, usage = "Bitstream input files", metaVar = "vid1.mp4, aud1.mp4 ...")
     protected List<File> inputFiles;
 
     @Option(name = "--outputdir", aliases = "-o",
@@ -29,19 +29,6 @@ public class DependentTrackVariantA extends AbstractEncryptOrNotCommand {
             metaVar = "PATH")
     protected File outputDirectory = new File(System.getProperty("user.dir"));
 
-
-    public static XmlOptions getXmlOptions() {
-        XmlOptions xmlOptions = new XmlOptions();
-        //xmlOptions.setUseDefaultNamespace();
-        HashMap<String, String> ns = new HashMap<String, String>();
-        //ns.put("urn:mpeg:DASH:schema:MPD:2011", "");
-        ns.put("urn:mpeg:cenc:2013", "cenc");
-        xmlOptions.setSaveSuggestedPrefixes(ns);
-        xmlOptions.setSaveAggressiveNamespaces();
-        xmlOptions.setUseDefaultNamespace();
-        xmlOptions.setSavePrettyPrint();
-        return xmlOptions;
-    }
 
     private MPDDocument getManifest(List<AdaptationSetType> adaptationSets, double maxDuration) throws IOException {
 
@@ -78,7 +65,7 @@ public class DependentTrackVariantA extends AbstractEncryptOrNotCommand {
             System.err.println("Output directory does not exist and cannot be created.");
         }
         double maxDurationInSeconds = 0;
-        List<DashTrackBuilder> dashTrackBuilders = new ArrayList<DashTrackBuilder>();
+        List<RepresentationBuilder> representationBuilders = new ArrayList<RepresentationBuilder>();
         for (File inputFile : inputFiles) {
             if (!inputFile.getName().endsWith(".mp4")) {
                 throw new ExitCodeException("Only MP4 files are supported as input.", 87263);
@@ -98,23 +85,34 @@ public class DependentTrackVariantA extends AbstractEncryptOrNotCommand {
             for (int i = 0; i < tracks.size(); i++) {
                 String codec = tracks.get(i).getSampleDescriptionBox().getSampleEntry().getType();
                 if (codec.equals("dvhe")) {
+                    if (dvhe != -1) {
+                        throw new RuntimeException("Only one dvhe track allowed");
+                    }
                     dvhe = i;
+
                 }
-                if (codec.equals("hvc1")) {
+                if (codec.equals("hvc1") || codec.equals("hevc")) {
+                    if (hvc1 != -1) {
+                        throw new RuntimeException("Only one HVC track allowed");
+                    }
+
                     hvc1 = i;
                 }
-                if (codec.equals("mp4a") || codec.equals("ac-3") || codec.equals("ec-3") || codec.equals("ec-3") || codec.equals("ec-3")) {
+                if (tracks.get(i).getHandler().equals("soun")) {
+                    if (audio != -1) {
+                        throw new RuntimeException("Only one audio track allowed");
+                    }
                     audio = i;
                 }
             }
-            int aaa = dashTrackBuilders.size();
+            int aaa = representationBuilders.size();
             if (dvhe >= 0 && hvc1 >= 0) {
                 if (videoKeyId != null) {
-                    dashTrackBuilders.add(new DependentTrackDashBuilder(
+                    representationBuilders.add(new DependentTrackRepresentationBuilder(
                             new CencEncryptingTrackImpl(tracks.get(hvc1), videoKeyId, videoKey, false),
                             tracks.get(dvhe), "vdep", 48));
                 } else {
-                    dashTrackBuilders.add(new DependentTrackDashBuilder(tracks.get(hvc1), tracks.get(dvhe), "vdep", 48));
+                    representationBuilders.add(new DependentTrackRepresentationBuilder(tracks.get(hvc1), tracks.get(dvhe), "vdep", 48));
                 }
             } else if (dvhe == 0 && hvc1 >= 0) {
                 throw new ExitCodeException("Only combined tracks are supported momentarily.", 811573);
@@ -122,9 +120,9 @@ public class DependentTrackVariantA extends AbstractEncryptOrNotCommand {
                 throw new ExitCodeException("Only combined tracks are supported momentarily.", 811573);
             }
             if (audio >= 0) {
-                throw new ExitCodeException("Audio tracks are not yet supported.", 8573);
+                representationBuilders.add(new AudioRepresentationBuilder(tracks.get(audio), 500));
             }
-            if (aaa == dashTrackBuilders.size()) {
+            if (aaa == representationBuilders.size()) {
                 throw new ExitCodeException("No Representation has been created", 9873);
             }
         }
@@ -133,39 +131,37 @@ public class DependentTrackVariantA extends AbstractEncryptOrNotCommand {
 
         Map<String, AdaptationSetType> adaptationSets = new HashMap<String, AdaptationSetType>();
 
-        for (DashTrackBuilder dashTrackBuilder : dashTrackBuilders) {
+        for (RepresentationBuilder representationBuilder : representationBuilders) {
 
-            if (dashTrackBuilder instanceof SegmentTemplateRepresentation) {
-                String id;
-                if (dashTrackBuilder.getPrimaryTrack().getHandler().equals("soun")) {
-                    id = "a" + (a++);
-                } else if (dashTrackBuilder.getPrimaryTrack().getHandler().equals("vide")) {
-                    id = "v" + (v++);
-                } else {
-                    throw new ExitCodeException("I don't support " + dashTrackBuilder.getPrimaryTrack().getHandler(), 28763);
-                }
 
-                DashTrackWriter.write(dashTrackBuilder, new File(outputDirectory.getAbsolutePath(), id + ".mp4").getAbsolutePath());
-
-                RepresentationType representation = ((SegmentTemplateRepresentation) dashTrackBuilder).getSegmentTemplateRepresentation();
-                representation.addNewBaseURL().setStringValue(id + ".mp4");
-                representation.setId(id);
-                String type = dashTrackBuilder.getPrimaryTrack().getSampleDescriptionBox().getSampleEntry().getType();
-                type += dashTrackBuilder.getPrimaryTrack().getTrackMetaData().getLanguage();
-
-                AdaptationSetType adaptationSet = adaptationSets.get(type);
-                if (adaptationSet == null) {
-                    adaptationSet = AdaptationSetType.Factory.newInstance();
-                    adaptationSets.put(type, adaptationSet);
-                }
-                RepresentationType[] representationsInThisSet = adaptationSet.getRepresentationArray();
-                representationsInThisSet = Arrays.copyOf(representationsInThisSet, representationsInThisSet.length + 1);
-                representationsInThisSet[representationsInThisSet.length - 1] = representation;
-                adaptationSet.setRepresentationArray(representationsInThisSet);
-
+            String id;
+            if (representationBuilder.getTrack().getHandler().equals("soun")) {
+                id = "a" + (a++);
+            } else if (representationBuilder.getTrack().getHandler().equals("vide")) {
+                id = "v" + (v++);
             } else {
-                throw new ExitCodeException("Only SegmentTemplateRepresentation are working by now", 9183);
+                throw new ExitCodeException("I don't support " + representationBuilder.getTrack().getHandler(), 28763);
             }
+
+            DashTrackWriter.write(representationBuilder, new File(outputDirectory.getAbsolutePath(), id + ".mp4").getAbsolutePath());
+
+            RepresentationType representation = representationBuilder.getSegmentTemplateRepresentation();
+            representation.addNewBaseURL().setStringValue(id + ".mp4");
+            representation.setId(id);
+            String type = representationBuilder.getTrack().getSampleDescriptionBox().getSampleEntry().getType();
+            type += representationBuilder.getTrack().getTrackMetaData().getLanguage();
+
+            AdaptationSetType adaptationSet = adaptationSets.get(type);
+            if (adaptationSet == null) {
+                adaptationSet = AdaptationSetType.Factory.newInstance();
+                adaptationSets.put(type, adaptationSet);
+            }
+            RepresentationType[] representationsInThisSet = adaptationSet.getRepresentationArray();
+            representationsInThisSet = Arrays.copyOf(representationsInThisSet, representationsInThisSet.length + 1);
+            representationsInThisSet[representationsInThisSet.length - 1] = representation;
+            adaptationSet.setRepresentationArray(representationsInThisSet);
+
+
         }
 
         MPDDocument mpd = getManifest(new ArrayList<AdaptationSetType>(adaptationSets.values()), maxDurationInSeconds);
