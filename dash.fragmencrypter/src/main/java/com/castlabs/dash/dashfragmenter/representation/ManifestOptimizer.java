@@ -17,12 +17,12 @@ public class ManifestOptimizer {
     }
 
     public void optimize(AdaptationSetType adaptationSetType) {
-        optimizeContentProtection(adaptationSetType);
+        optimizeContentProtection(adaptationSetType, adaptationSetType.getRepresentationArray());
     }
 
-    public void optimizeContentProtection(AdaptationSetType adaptationSetType) {
+    public void optimizeContentProtection(RepresentationBaseType parent, RepresentationBaseType[] children ) {
         mpegDashSchemaMpd2011.DescriptorType[] contentProtection = null;
-        for (RepresentationType representationType : adaptationSetType.getRepresentationArray()) {
+        for (RepresentationBaseType representationType : children) {
             if (contentProtection == null) {
                 List<DescriptorType> aaa = new ArrayList<DescriptorType>();
                 for (DescriptorType descriptorType : representationType.getContentProtectionArray()) {
@@ -44,10 +44,10 @@ public class ManifestOptimizer {
             }
         }
         if (contentProtection != null) {
-            for (RepresentationType representationType : adaptationSetType.getRepresentationArray()) {
+            for (RepresentationBaseType representationType : children) {
                 representationType.setContentProtectionArray(new DescriptorType[0]);
             }
-            adaptationSetType.setContentProtectionArray(contentProtection);
+            parent.setContentProtectionArray(contentProtection);
         }
 
     }

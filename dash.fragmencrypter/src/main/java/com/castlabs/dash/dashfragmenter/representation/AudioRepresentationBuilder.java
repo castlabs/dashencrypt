@@ -24,6 +24,7 @@ import com.googlecode.mp4parser.util.Path;
 import com.mp4parser.iso14496.part12.SampleAuxiliaryInformationOffsetsBox;
 import com.mp4parser.iso14496.part12.SampleAuxiliaryInformationSizesBox;
 import com.mp4parser.iso23001.part7.CencSampleAuxiliaryDataFormat;
+import com.mp4parser.iso23001.part7.ProtectionSystemSpecificHeaderBox;
 import com.mp4parser.iso23001.part7.TrackEncryptionBox;
 import mpegCenc2013.DefaultKIDAttribute;
 import mpegDashSchemaMpd2011.DescriptorType;
@@ -41,30 +42,13 @@ import static com.castlabs.dash.helpers.Timing.getPtss;
 import static com.castlabs.dash.helpers.Timing.getTimeMappingEditTime;
 import static com.googlecode.mp4parser.util.CastUtils.l2i;
 
-public class AudioRepresentationBuilder extends AbstractList<Container> implements RepresentationBuilder {
-    private Track track;
+public class AudioRepresentationBuilder extends AbstractRepresentationBuilder {
 
     long[] fragmentStartSamples;
 
-    public Track getTrack() {
-        return track;
-    }
 
-    public Container getInitSegment() {
-        List<Box> initSegment = new ArrayList<Box>();
-        List<String> minorBrands = new ArrayList<String>();
-        minorBrands.add("isom");
-        minorBrands.add("iso6");
-        minorBrands.add("avc1");
-        initSegment.add(new FileTypeBox("isom", 0, minorBrands));
-        initSegment.add(createMoov());
-        BasicContainer bc = new BasicContainer();
-        bc.setBoxes(initSegment);
-        return bc;
-    }
-
-    public AudioRepresentationBuilder(Track track, int framesPerSegment) {
-        this.track = track;
+    public AudioRepresentationBuilder(Track track, int framesPerSegment, List<ProtectionSystemSpecificHeaderBox> psshs) {
+        super(track, psshs);
         fragmentStartSamples = track.getSyncSamples();
         if (fragmentStartSamples == null || fragmentStartSamples.length == 0) {
             int samples = track.getSamples().size();
@@ -75,12 +59,10 @@ public class AudioRepresentationBuilder extends AbstractList<Container> implemen
         }
     }
 
-    @Override
     public int size() {
         return fragmentStartSamples.length;
     }
 
-    @Override
     public Container get(int index) {
         List<Box> moofMdat = new ArrayList<Box>();
         long startSample = fragmentStartSamples[index];
@@ -88,18 +70,16 @@ public class AudioRepresentationBuilder extends AbstractList<Container> implemen
         if (index + 1 < fragmentStartSamples.length) {
             endSample = fragmentStartSamples[index + 1];
         } else {
-            endSample = track.getSamples().size() - 1;
+            endSample = theTrack.getSamples().size() - 1;
         }
 
 
-        moofMdat.add(createMoof(startSample, endSample, track, index * 2 + 1)); // it's one bases
+        moofMdat.add(createMoof(startSample, endSample, theTrack, index * 2 + 1)); // it's one bases
         moofMdat.add(createMdat(startSample, endSample));
         return new ListContainer(moofMdat);
     }
 
-    public Date getDate() {
-        return new Date();
-    }
+
 
     protected Box createMdat(final long startSample, final long endSample) {
 
@@ -162,7 +142,7 @@ public class AudioRepresentationBuilder extends AbstractList<Container> implemen
 
         tfhd.setDefaultSampleFlags(sf);
         tfhd.setBaseDataOffset(-1);
-        tfhd.setTrackId(track.getTrackMetaData().getTrackId());
+        tfhd.setTrackId(theTrack.getTrackMetaData().getTrackId());
         tfhd.setDefaultBaseIsMoof(true);
         parent.addBox(tfhd);
     }
@@ -301,7 +281,7 @@ public class AudioRepresentationBuilder extends AbstractList<Container> implemen
      */
     protected List<Sample> getSamples(long startSample, long endSample) {
         // since startSample and endSample are one-based substract 1 before addressing list elements
-        return track.getSamples().subList(l2i(startSample) - 1, l2i(endSample) - 1);
+        return theTrack.getSamples().subList(l2i(startSample) - 1, l2i(endSample) - 1);
     }
 
     /**
@@ -334,7 +314,7 @@ public class AudioRepresentationBuilder extends AbstractList<Container> implemen
     }
 
     /**
-     * Creates one or more track run boxes for a given sequence.
+     * Creates one or more theTrack run boxes for a given sequence.
      *
      * @param startSample low endpoint (inclusive) of the sample sequence
      * @param endSample   high endpoint (exclusive) of the sample sequence
@@ -422,6 +402,8 @@ public class AudioRepresentationBuilder extends AbstractList<Container> implemen
         parent.addBox(trun);
     }
 
+
+
     /**
      * Creates a 'moof' box for a given sequence of samples.
      *
@@ -443,185 +425,7 @@ public class AudioRepresentationBuilder extends AbstractList<Container> implemen
         return moof;
     }
 
-    protected Box createMvhd() {
-        MovieHeaderBox mvhd = new MovieHeaderBox();
-        mvhd.setVersion(1);
-        mvhd.setCreationTime(getDate());
-        mvhd.setModificationTime(getDate());
-        mvhd.setDuration(0);//no duration in moov for fragmented movies
-        long movieTimeScale = track.getTrackMetaData().getTimescale();
-        mvhd.setTimescale(movieTimeScale);
-        mvhd.setNextTrackId(track.getTrackMetaData().getTrackId() + 1);
-        return mvhd;
-    }
 
-
-    protected Box createMoov() {
-        MovieBox movieBox = new MovieBox();
-
-        movieBox.addBox(createMvhd());
-        movieBox.addBox(createTrak());
-        movieBox.addBox(createMvex());
-
-        // metadata here
-        return movieBox;
-    }
-
-
-    protected Box createTrex() {
-        TrackExtendsBox trex = new TrackExtendsBox();
-        trex.setTrackId(track.getTrackMetaData().getTrackId());
-        trex.setDefaultSampleDescriptionIndex(1);
-        trex.setDefaultSampleDuration(0);
-        trex.setDefaultSampleSize(0);
-        SampleFlags sf = new SampleFlags();
-        if ("soun".equals(track.getHandler()) || "subt".equals(track.getHandler())) {
-            // as far as I know there is no audio encoding
-            // where the sample are not self contained.
-            // same seems to be true for subtitle tracks
-            sf.setSampleDependsOn(2);
-            sf.setSampleIsDependedOn(2);
-        }
-        trex.setDefaultSampleFlags(sf);
-        return trex;
-    }
-
-    protected Box createMvex() {
-        MovieExtendsBox mvex = new MovieExtendsBox();
-        final MovieExtendsHeaderBox mved = new MovieExtendsHeaderBox();
-        mved.setVersion(1);
-        mved.setFragmentDuration(track.getDuration());
-        mvex.addBox(mved);
-
-        mvex.addBox(createTrex());
-        return mvex;
-    }
-
-    protected Box createTkhd() {
-        TrackHeaderBox tkhd = new TrackHeaderBox();
-        tkhd.setVersion(1);
-        tkhd.setFlags(7); // enabled, in movie, in previe, in poster
-
-        tkhd.setAlternateGroup(track.getTrackMetaData().getGroup());
-        tkhd.setCreationTime(track.getTrackMetaData().getCreationTime());
-        // We need to take edit list box into account in trackheader duration
-        // but as long as I don't support edit list boxes it is sufficient to
-        // just translate media duration to movie timescale
-        tkhd.setDuration(0);//no duration in moov for fragmented movies
-        tkhd.setHeight(track.getTrackMetaData().getHeight());
-        tkhd.setWidth(track.getTrackMetaData().getWidth());
-        tkhd.setLayer(track.getTrackMetaData().getLayer());
-        tkhd.setModificationTime(getDate());
-        tkhd.setTrackId(track.getTrackMetaData().getTrackId());
-        tkhd.setVolume(track.getTrackMetaData().getVolume());
-        return tkhd;
-    }
-
-    protected Box createMdhd() {
-        MediaHeaderBox mdhd = new MediaHeaderBox();
-        mdhd.setCreationTime(track.getTrackMetaData().getCreationTime());
-        mdhd.setModificationTime(getDate());
-        mdhd.setDuration(0);//no duration in moov for fragmented movies
-        mdhd.setTimescale(track.getTrackMetaData().getTimescale());
-        mdhd.setLanguage(track.getTrackMetaData().getLanguage());
-        return mdhd;
-    }
-
-    protected Box createStbl() {
-        SampleTableBox stbl = new SampleTableBox();
-
-        createStsd(track, stbl);
-        stbl.addBox(new TimeToSampleBox());
-        stbl.addBox(new SampleToChunkBox());
-        stbl.addBox(new SampleSizeBox());
-        stbl.addBox(new StaticChunkOffsetBox());
-        return stbl;
-    }
-
-    protected void createStsd(Track track, SampleTableBox stbl) {
-        stbl.addBox(track.getSampleDescriptionBox());
-    }
-
-    protected Box createMinf() {
-        MediaInformationBox minf = new MediaInformationBox();
-        if (track.getHandler().equals("vide")) {
-            minf.addBox(new VideoMediaHeaderBox());
-        } else if (track.getHandler().equals("soun")) {
-            minf.addBox(new SoundMediaHeaderBox());
-        } else if (track.getHandler().equals("text")) {
-            minf.addBox(new NullMediaHeaderBox());
-        } else if (track.getHandler().equals("subt")) {
-            minf.addBox(new SubtitleMediaHeaderBox());
-        } else if (track.getHandler().equals("hint")) {
-            minf.addBox(new HintMediaHeaderBox());
-        } else if (track.getHandler().equals("sbtl")) {
-            minf.addBox(new NullMediaHeaderBox());
-        }
-        minf.addBox(createDinf());
-        minf.addBox(createStbl());
-        return minf;
-    }
-
-    protected Box createMdiaHdlr() {
-        HandlerBox hdlr = new HandlerBox();
-        hdlr.setHandlerType(track.getHandler());
-        return hdlr;
-    }
-
-    protected Box createMdia() {
-        MediaBox mdia = new MediaBox();
-        mdia.addBox(createMdhd());
-
-
-        mdia.addBox(createMdiaHdlr());
-
-
-        mdia.addBox(createMinf());
-        return mdia;
-    }
-
-    protected Box createTrak() {
-        TrackBox trackBox = new TrackBox();
-        trackBox.addBox(createTkhd());
-        Box edts = createEdts();
-        if (edts != null) {
-            trackBox.addBox(edts);
-        }
-        trackBox.addBox(createMdia());
-        return trackBox;
-    }
-
-    protected Box createEdts() {
-        if (track.getEdits() != null && track.getEdits().size() > 0) {
-            EditListBox elst = new EditListBox();
-            elst.setVersion(1);
-            List<EditListBox.Entry> entries = new ArrayList<EditListBox.Entry>();
-
-            for (Edit edit : track.getEdits()) {
-                entries.add(new EditListBox.Entry(elst,
-                        Math.round(edit.getSegmentDuration() * track.getTrackMetaData().getTimescale()),
-                        edit.getMediaTime() * track.getTrackMetaData().getTimescale() / edit.getTimeScale(),
-                        edit.getMediaRate()));
-            }
-
-            elst.setEntries(entries);
-            EditBox edts = new EditBox();
-            edts.addBox(elst);
-            return edts;
-        } else {
-            return null;
-        }
-    }
-
-    protected DataInformationBox createDinf() {
-        DataInformationBox dinf = new DataInformationBox();
-        DataReferenceBox dref = new DataReferenceBox();
-        dinf.addBox(dref);
-        DataEntryUrlBox url = new DataEntryUrlBox();
-        url.setFlags(1);
-        dref.addBox(url);
-        return dinf;
-    }
 
     public Container getIndexSegment() {
         SegmentIndexBox sidx = new SegmentIndexBox();
@@ -670,7 +474,7 @@ public class AudioRepresentationBuilder extends AbstractList<Container> implemen
         RepresentationType representation = RepresentationType.Factory.newInstance();
         representation.setProfiles("urn:mpeg:dash:profile:isoff-on-demand:2011");
 
-        AudioSampleEntry ase = (AudioSampleEntry) track.getSampleDescriptionBox().getSampleEntry();
+        AudioSampleEntry ase = (AudioSampleEntry) theTrack.getSampleDescriptionBox().getSampleEntry();
 
         representation.setMimeType("audio/mp4");
         representation.setCodecs(DashHelper.getRfc6381Codec(ase));
@@ -684,7 +488,7 @@ public class AudioRepresentationBuilder extends AbstractList<Container> implemen
 
         SegmentBaseType segBaseType = representation.addNewSegmentBase();
 
-        segBaseType.setTimescale(track.getTrackMetaData().getTimescale());
+        segBaseType.setTimescale(theTrack.getTrackMetaData().getTimescale());
         segBaseType.setIndexRangeExact(true);
 
         long initSize = 0;
@@ -701,31 +505,18 @@ public class AudioRepresentationBuilder extends AbstractList<Container> implemen
         initialization.setRange(String.format("0-%s", initSize - 1));
 
         long size = 0;
-        List<Sample> samples = track.getSamples();
+        List<Sample> samples = theTrack.getSamples();
         for (int i = 0; i < Math.min(samples.size(), 10000); i++) {
             size += samples.get(i).getSize();
         }
-        size = (size / Math.min(track.getSamples().size(), 10000)) * track.getSamples().size();
+        size = (size / Math.min(theTrack.getSamples().size(), 10000)) * theTrack.getSamples().size();
 
-        double duration = (double) track.getDuration() / track.getTrackMetaData().getTimescale();
+        double duration = (double) theTrack.getDuration() / theTrack.getTrackMetaData().getTimescale();
 
         representation.setBandwidth((long) ((size * 8 / duration / 100)) * 100);
 
 
-        List<String> keyIds = new ArrayList<String>();
-        if (track instanceof CencEncryptedTrack) {
-            keyIds.add(((CencEncryptedTrack) track).getDefaultKeyId().toString());
-        }
-
-        if (!keyIds.isEmpty()) {
-            DescriptorType contentProtection = representation.addNewContentProtection();
-            final DefaultKIDAttribute defaultKIDAttribute = DefaultKIDAttribute.Factory.newInstance();
-
-            defaultKIDAttribute.setDefaultKID(keyIds);
-            contentProtection.set(defaultKIDAttribute);
-            contentProtection.setSchemeIdUri("urn:mpeg:dash:mp4protection:2011");
-            contentProtection.setValue("cenc");
-        }
+        addContentProtection(representation);
         return representation;
     }
 }
