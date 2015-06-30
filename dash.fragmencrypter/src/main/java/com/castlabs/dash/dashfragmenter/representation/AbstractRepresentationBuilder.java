@@ -238,7 +238,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
     }
 
 
-    void addContentProtection(RepresentationType representation) {
+    protected void addContentProtection(RepresentationType representation) {
         List<String> keyIds = new ArrayList<String>();
         if (theTrack instanceof CencEncryptedTrack) {
             keyIds.add(((CencEncryptedTrack) theTrack).getDefaultKeyId().toString());
