@@ -35,8 +35,8 @@ import static com.googlecode.mp4parser.util.CastUtils.l2i;
 public class SyncSampleExtraRepresentationBuilder extends AbstractRepresentationBuilder {
 
 
-    public SyncSampleExtraRepresentationBuilder(Track track, List<ProtectionSystemSpecificHeaderBox> psshs) {
-        super(track, psshs);
+    public SyncSampleExtraRepresentationBuilder(Track track, String source, List<ProtectionSystemSpecificHeaderBox> psshs) {
+        super(track, psshs, source);
     }
 
     @Override

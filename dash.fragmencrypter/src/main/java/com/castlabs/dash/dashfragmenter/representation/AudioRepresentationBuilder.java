@@ -47,8 +47,8 @@ public class AudioRepresentationBuilder extends AbstractRepresentationBuilder {
     long[] fragmentStartSamples;
 
 
-    public AudioRepresentationBuilder(Track track, int framesPerSegment, List<ProtectionSystemSpecificHeaderBox> psshs) {
-        super(track, psshs);
+    public AudioRepresentationBuilder(Track track, String source, int framesPerSegment, List<ProtectionSystemSpecificHeaderBox> psshs) {
+        super(track, psshs, source);
         fragmentStartSamples = track.getSyncSamples();
         if (fragmentStartSamples == null || fragmentStartSamples.length == 0) {
             int samples = track.getSamples().size();

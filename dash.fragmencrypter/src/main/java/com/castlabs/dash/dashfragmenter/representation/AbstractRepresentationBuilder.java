@@ -1,7 +1,35 @@
 package com.castlabs.dash.dashfragmenter.representation;
 
-import com.coremedia.iso.boxes.*;
-import com.coremedia.iso.boxes.fragment.*;
+import com.coremedia.iso.boxes.Box;
+import com.coremedia.iso.boxes.Container;
+import com.coremedia.iso.boxes.DataEntryUrlBox;
+import com.coremedia.iso.boxes.DataInformationBox;
+import com.coremedia.iso.boxes.DataReferenceBox;
+import com.coremedia.iso.boxes.EditBox;
+import com.coremedia.iso.boxes.EditListBox;
+import com.coremedia.iso.boxes.FileTypeBox;
+import com.coremedia.iso.boxes.HandlerBox;
+import com.coremedia.iso.boxes.HintMediaHeaderBox;
+import com.coremedia.iso.boxes.MediaBox;
+import com.coremedia.iso.boxes.MediaHeaderBox;
+import com.coremedia.iso.boxes.MediaInformationBox;
+import com.coremedia.iso.boxes.MovieBox;
+import com.coremedia.iso.boxes.MovieHeaderBox;
+import com.coremedia.iso.boxes.NullMediaHeaderBox;
+import com.coremedia.iso.boxes.SampleSizeBox;
+import com.coremedia.iso.boxes.SampleTableBox;
+import com.coremedia.iso.boxes.SampleToChunkBox;
+import com.coremedia.iso.boxes.SoundMediaHeaderBox;
+import com.coremedia.iso.boxes.StaticChunkOffsetBox;
+import com.coremedia.iso.boxes.SubtitleMediaHeaderBox;
+import com.coremedia.iso.boxes.TimeToSampleBox;
+import com.coremedia.iso.boxes.TrackBox;
+import com.coremedia.iso.boxes.TrackHeaderBox;
+import com.coremedia.iso.boxes.VideoMediaHeaderBox;
+import com.coremedia.iso.boxes.fragment.MovieExtendsBox;
+import com.coremedia.iso.boxes.fragment.MovieExtendsHeaderBox;
+import com.coremedia.iso.boxes.fragment.SampleFlags;
+import com.coremedia.iso.boxes.fragment.TrackExtendsBox;
 import com.googlecode.mp4parser.authoring.Edit;
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.tracks.CencEncryptedTrack;
@@ -16,10 +44,12 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.channels.Channels;
-import java.util.*;
+import java.util.AbstractList;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Date;
+import java.util.List;
 
 import static com.castlabs.dash.helpers.BoxHelper.boxToBytes;
 
@@ -30,10 +60,16 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
     protected Track theTrack;
     protected final List<ProtectionSystemSpecificHeaderBox> psshs;
     protected Date date = new Date();
+    protected String source;
 
-    public AbstractRepresentationBuilder(Track track, List<ProtectionSystemSpecificHeaderBox> psshs) {
+    public AbstractRepresentationBuilder(Track track, List<ProtectionSystemSpecificHeaderBox> psshs, String source) {
         this.theTrack = track;
         this.psshs = psshs;
+        this.source = source;
+    }
+
+    public String getSource() {
+        return source;
     }
 
     public Track getTrack() {
