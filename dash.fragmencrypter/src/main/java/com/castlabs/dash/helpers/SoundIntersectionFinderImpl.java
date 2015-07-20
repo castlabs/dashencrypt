@@ -22,7 +22,7 @@ public class SoundIntersectionFinderImpl implements FragmentIntersectionFinder {
      * @param tracks                  all sound tracks
      * @param desiredFragmentDuration desired fragment duration in seconds
      */
-    public SoundIntersectionFinderImpl(List<Track> tracks, int desiredFragmentDuration) {
+    public SoundIntersectionFinderImpl(List<Track> tracks, double desiredFragmentDuration) {
 
         for (Track track : tracks) {
             timscale = lcmcal(timscale, track.getTrackMetaData().getTimescale());

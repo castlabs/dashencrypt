@@ -75,12 +75,35 @@ public class DashFileSetSequence {
 
     protected Logger l;
 
-    // This is purely for debugging purposes and WILL weaken security weh set to true
+    // This is purely for debugging purposes and WILL weaken security when set to true
     protected boolean dummyIvs = false;
     protected boolean encryptButClear = false;
 
+    protected int minAudioSegmentDuration = 15;
+    protected int minVideoSegmentDuration = 4;
+
+
+    /**
+     * Sets the minimum audio segment duration.
+     *
+     * @param minAudioSegmentDuration shortest allowable audio segment duration
+     */
+    public void setMinAudioSegmentDuration(int minAudioSegmentDuration) {
+        this.minAudioSegmentDuration = minAudioSegmentDuration;
+    }
+
+    /**
+     * Sets the minimum video segment duration.
+     *
+     * @param minVideoSegmentDuration shortest allowable video segment duration
+     */
+    public void setMinVideoSegmentDuration(int minVideoSegmentDuration) {
+        this.minVideoSegmentDuration = minVideoSegmentDuration;
+    }
+
     /**
      * Turns off the random number generator for IVs and therefore they start at 0x0000000000000000.
+     *
      * @param dummyIvs <code>true</code> turns off the RNG
      */
     public void setDummyIvs(boolean dummyIvs) {
@@ -625,11 +648,11 @@ public class DashFileSetSequence {
             movie.setTracks(tracks);
             for (TrackProxy track : trackProxies) {
                 if (track.getHandler().startsWith("vide")) {
-                    FragmentIntersectionFinder videoIntersectionFinder = new SyncSampleIntersectFinderImpl(movie, null, 4);
+                    FragmentIntersectionFinder videoIntersectionFinder = new SyncSampleIntersectFinderImpl(movie, null, minVideoSegmentDuration);
                     fragmentStartSamples.put(track, videoIntersectionFinder.sampleNumbers(track.getTarget()));
                     //fragmentStartSamples.put(track, checkMaxFragmentDuration(track, videoIntersectionFinder.sampleNumbers(track)));
                 } else if (track.getHandler().startsWith("soun") || track.getHandler().startsWith("subt")) {
-                    FragmentIntersectionFinder soundIntersectionFinder = new SoundIntersectionFinderImpl(tracks, 15);
+                    FragmentIntersectionFinder soundIntersectionFinder = new SoundIntersectionFinderImpl(tracks, minAudioSegmentDuration);
                     fragmentStartSamples.put(track, soundIntersectionFinder.sampleNumbers(track.getTarget()));
                 } else {
                     throw new RuntimeException("An engineer needs to tell me if " + key + " is audio or video!");
@@ -977,7 +1000,7 @@ public class DashFileSetSequence {
 
                     String xml = FileUtils.readFileToString(subtitle);
                     Document xmlDocument = builder.parse(new ByteArrayInputStream(xml.getBytes()));
-                    String lang  = xmlDocument.getDocumentElement().getAttribute("xml:lang");
+                    String lang = xmlDocument.getDocumentElement().getAttribute("xml:lang");
                     if (lang != null) {
                         languages.put(subtitle, lang);
                     } else {
@@ -995,9 +1018,6 @@ public class DashFileSetSequence {
                     e.printStackTrace();
                     throw new ExitCodeException("Cannot parse XML to extract subtitle language", 87433);
                 }
-
-
-
 
 
             }

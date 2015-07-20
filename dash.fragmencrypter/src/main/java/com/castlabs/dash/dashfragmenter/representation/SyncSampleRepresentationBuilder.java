@@ -1,17 +1,22 @@
 package com.castlabs.dash.dashfragmenter.representation;
 
 import com.castlabs.dash.helpers.DashHelper;
-import com.castlabs.dash.helpers.SapHelper;
-import com.castlabs.dash.helpers.Timing;
 import com.coremedia.iso.BoxParser;
 import com.coremedia.iso.IsoFile;
 import com.coremedia.iso.IsoTypeWriter;
-import com.coremedia.iso.boxes.*;
-import com.coremedia.iso.boxes.fragment.*;
-import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
-import com.googlecode.mp4parser.BasicContainer;
+import com.coremedia.iso.boxes.Box;
+import com.coremedia.iso.boxes.CompositionTimeToSample;
+import com.coremedia.iso.boxes.Container;
+import com.coremedia.iso.boxes.SampleDependencyTypeBox;
+import com.coremedia.iso.boxes.SampleDescriptionBox;
+import com.coremedia.iso.boxes.fragment.MovieFragmentBox;
+import com.coremedia.iso.boxes.fragment.MovieFragmentHeaderBox;
+import com.coremedia.iso.boxes.fragment.SampleFlags;
+import com.coremedia.iso.boxes.fragment.TrackFragmentBaseMediaDecodeTimeBox;
+import com.coremedia.iso.boxes.fragment.TrackFragmentBox;
+import com.coremedia.iso.boxes.fragment.TrackFragmentHeaderBox;
+import com.coremedia.iso.boxes.fragment.TrackRunBox;
 import com.googlecode.mp4parser.DataSource;
-import com.googlecode.mp4parser.authoring.Edit;
 import com.googlecode.mp4parser.authoring.Sample;
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.tracks.CencEncryptedTrack;
@@ -19,15 +24,13 @@ import com.googlecode.mp4parser.boxes.dece.SampleEncryptionBox;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.GroupEntry;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.SampleGroupDescriptionBox;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.SampleToGroupBox;
-import com.googlecode.mp4parser.boxes.threegpp26244.SegmentIndexBox;
+import com.googlecode.mp4parser.util.Mp4Arrays;
 import com.googlecode.mp4parser.util.Path;
 import com.mp4parser.iso14496.part12.SampleAuxiliaryInformationOffsetsBox;
 import com.mp4parser.iso14496.part12.SampleAuxiliaryInformationSizesBox;
 import com.mp4parser.iso23001.part7.CencSampleAuxiliaryDataFormat;
 import com.mp4parser.iso23001.part7.ProtectionSystemSpecificHeaderBox;
 import com.mp4parser.iso23001.part7.TrackEncryptionBox;
-import mpegCenc2013.DefaultKIDAttribute;
-import mpegDashSchemaMpd2011.DescriptorType;
 import mpegDashSchemaMpd2011.RepresentationType;
 import mpegDashSchemaMpd2011.SegmentBaseType;
 import mpegDashSchemaMpd2011.URLType;
@@ -35,51 +38,50 @@ import mpegDashSchemaMpd2011.URLType;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static com.castlabs.dash.helpers.ManifestHelper.convertFramerate;
-import static com.castlabs.dash.helpers.Timing.getPtss;
-import static com.castlabs.dash.helpers.Timing.getTimeMappingEditTime;
 import static com.googlecode.mp4parser.util.CastUtils.l2i;
 
-public class AudioRepresentationBuilder extends AbstractRepresentationBuilder {
+public class SyncSampleRepresentationBuilder extends AbstractRepresentationBuilder {
+    long segmentStartSamples[];
 
-    long[] fragmentStartSamples;
-
-
-    public AudioRepresentationBuilder(Track track, String source, int framesPerSegment, List<ProtectionSystemSpecificHeaderBox> psshs) {
+    public SyncSampleRepresentationBuilder(Track track, String source, int minFragmentSamples, List<ProtectionSystemSpecificHeaderBox> psshs) {
         super(track, psshs, source);
-        fragmentStartSamples = track.getSyncSamples();
-        if (fragmentStartSamples == null || fragmentStartSamples.length == 0) {
-            int samples = track.getSamples().size();
-            fragmentStartSamples = new long[samples / framesPerSegment];
-            for (int i = 0; i < fragmentStartSamples.length; i++) {
-                fragmentStartSamples[i] = i * framesPerSegment + 1;
+        long ss[] = track.getSyncSamples();
+        segmentStartSamples = new long[]{ss[0]};
+        for (long s : ss) {
+            if (segmentStartSamples[segmentStartSamples.length - 1] + minFragmentSamples <= s) {
+                segmentStartSamples = Mp4Arrays.copyOfAndAppend(segmentStartSamples, new long[]{s});
             }
         }
     }
 
+    @Override
     public int size() {
-        return fragmentStartSamples.length;
+        return segmentStartSamples.length;
     }
 
+    @Override
     public Container get(int index) {
         List<Box> moofMdat = new ArrayList<Box>();
-        long startSample = fragmentStartSamples[index];
-        long endSample;
-        if (index + 1 < fragmentStartSamples.length) {
-            endSample = fragmentStartSamples[index + 1];
+        long startSample1 = segmentStartSamples[index];
+        long endSample2;
+        if (index + 1 < segmentStartSamples.length) {
+            endSample2 = segmentStartSamples[index + 1];
         } else {
-            endSample = theTrack.getSamples().size() - 1;
+            endSample2 = theTrack.getSamples().size() - 1;
         }
 
+        moofMdat.add(createMoof(startSample1, endSample2, theTrack, index * 2 + 1)); // it's one bases
+        moofMdat.add(createMdat(startSample1, endSample2));
 
-        moofMdat.add(createMoof(startSample, endSample, theTrack, index * 2 + 1)); // it's one bases
-        moofMdat.add(createMdat(startSample, endSample));
         return new ListContainer(moofMdat);
     }
-
-
 
     protected Box createMdat(final long startSample, final long endSample) {
 
@@ -402,8 +404,6 @@ public class AudioRepresentationBuilder extends AbstractRepresentationBuilder {
         parent.addBox(trun);
     }
 
-
-
     /**
      * Creates a 'moof' box for a given sequence of samples.
      *
@@ -425,21 +425,40 @@ public class AudioRepresentationBuilder extends AbstractRepresentationBuilder {
         return moof;
     }
 
+
+    String getCodec() {
+        return DashHelper.getRfc6381Codec(theTrack.getSampleDescriptionBox().getSampleEntry());
+    }
+
+
     public RepresentationType getSegmentTemplateRepresentation() {
+
         RepresentationType representation = RepresentationType.Factory.newInstance();
         representation.setProfiles("urn:mpeg:dash:profile:isoff-on-demand:2011");
+        if (theTrack.getHandler().equals("vide")) {
 
-        AudioSampleEntry ase = (AudioSampleEntry) theTrack.getSampleDescriptionBox().getSampleEntry();
+            long videoHeight = (long) theTrack.getTrackMetaData().getHeight();
+            long videoWidth = (long) theTrack.getTrackMetaData().getWidth();
+            double framesPerSecond = (double) (theTrack.getSamples().size() * theTrack.getTrackMetaData().getTimescale()) / theTrack.getDuration();
 
-        representation.setMimeType("audio/mp4");
-        representation.setCodecs(DashHelper.getRfc6381Codec(ase));
-        representation.setAudioSamplingRate("" + DashHelper.getAudioSamplingRate(ase));
 
-        DescriptorType audio_channel_conf = representation.addNewAudioChannelConfiguration();
-        DashHelper.ChannelConfiguration cc = DashHelper.getChannelConfiguration(ase);
-        audio_channel_conf.setSchemeIdUri(cc.schemeIdUri);
-        audio_channel_conf.setValue(cc.value);
+            representation.setMimeType("video/mp4");
+            representation.setCodecs(getCodec());
+            representation.setWidth(videoWidth);
+            representation.setHeight(videoHeight);
+            representation.setFrameRate(convertFramerate(framesPerSecond));
+            representation.setSar("1:1");
+            // too hard to find it out. Ignoring even though it should be set according to DASH-AVC-264-v2.00-hd-mca.pdf
+        }
 
+
+        if (theTrack.getHandler().equals("subt")) {
+            representation.setMimeType("audio/mp4");
+            representation.setCodecs(getCodec());
+
+            representation.setStartWithSAP(1);
+
+        }
 
         SegmentBaseType segBaseType = representation.addNewSegmentBase();
 
@@ -470,9 +489,10 @@ public class AudioRepresentationBuilder extends AbstractRepresentationBuilder {
 
         representation.setBandwidth((long) ((size * 8 / duration / 100)) * 100);
 
-
         addContentProtection(representation);
         return representation;
+
+
     }
 }
 

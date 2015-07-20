@@ -421,9 +421,6 @@ public class SyncSampleExtraRepresentationBuilder extends AbstractRepresentation
 
 
 
-    public Container getIndexSegment() {
-        return new ListContainer(Collections.<Box>emptyList());
-    }
 
     public RepresentationType getSegmentTemplateRepresentation() {
         return null;

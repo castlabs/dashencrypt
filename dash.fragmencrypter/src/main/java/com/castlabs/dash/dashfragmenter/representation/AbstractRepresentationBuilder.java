@@ -1,5 +1,7 @@
 package com.castlabs.dash.dashfragmenter.representation;
 
+import com.castlabs.dash.helpers.SapHelper;
+import com.castlabs.dash.helpers.Timing;
 import com.coremedia.iso.boxes.Box;
 import com.coremedia.iso.boxes.Container;
 import com.coremedia.iso.boxes.DataEntryUrlBox;
@@ -28,13 +30,17 @@ import com.coremedia.iso.boxes.TrackHeaderBox;
 import com.coremedia.iso.boxes.VideoMediaHeaderBox;
 import com.coremedia.iso.boxes.fragment.MovieExtendsBox;
 import com.coremedia.iso.boxes.fragment.MovieExtendsHeaderBox;
+import com.coremedia.iso.boxes.fragment.MovieFragmentBox;
 import com.coremedia.iso.boxes.fragment.SampleFlags;
 import com.coremedia.iso.boxes.fragment.TrackExtendsBox;
+import com.coremedia.iso.boxes.fragment.TrackRunBox;
 import com.googlecode.mp4parser.authoring.Edit;
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.tracks.CencEncryptedTrack;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.CencSampleEncryptionInformationGroupEntry;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.GroupEntry;
+import com.googlecode.mp4parser.boxes.threegpp26244.SegmentIndexBox;
+import com.googlecode.mp4parser.util.Path;
 import com.googlecode.mp4parser.util.UUIDConverter;
 import com.mp4parser.iso23001.part7.ProtectionSystemSpecificHeaderBox;
 import mpegCenc2013.DefaultKIDAttribute;
@@ -48,10 +54,14 @@ import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
 import static com.castlabs.dash.helpers.BoxHelper.boxToBytes;
+import static com.castlabs.dash.helpers.Timing.getPtss;
+import static com.castlabs.dash.helpers.Timing.getTimeMappingEditTime;
+import static com.googlecode.mp4parser.util.CastUtils.l2i;
 
 /**
  * Created by sannies on 26.06.2015.
@@ -327,6 +337,48 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
                 }
             }
         }
+    }
+
+    public Container getIndexSegment() {
+        SegmentIndexBox sidx = new SegmentIndexBox();
+        sidx.setVersion(0);
+        sidx.setFlags(0);
+        sidx.setReserved(0);
+
+        Container initSegment = getInitSegment();
+        TrackHeaderBox tkhd = Path.getPath(initSegment, "/moov[0]/trak[0]/tkhd[0]");
+        MediaHeaderBox mdhd = Path.getPath(initSegment, "/moov[0]/trak[0]/mdia[0]/mdhd[0]");
+        sidx.setReferenceId(tkhd.getTrackId());
+        sidx.setTimeScale(mdhd.getTimescale());
+        // we only have one
+        long[] ptss = getPtss(Path.<TrackRunBox>getPath(get(0), "/moof[0]/traf[0]/trun[0]"));
+        Arrays.sort(ptss); // index 0 has now the earliest presentation time stamp!
+        long timeMappingEdit = getTimeMappingEditTime(initSegment);
+        sidx.setEarliestPresentationTime(ptss[0] - timeMappingEdit);
+        List<SegmentIndexBox.Entry> entries = sidx.getEntries();
+
+        TrackExtendsBox trex = Path.getPath(initSegment, "/moov[0]/mvex[0]/trex[0]");
+
+        // ugly code ...
+
+        for (Container c : this) {
+            int size = 0;
+            for (Box box : c.getBoxes()) {
+                size += l2i(box.getSize());
+            }
+            MovieFragmentBox moof = Path.getPath(c, "/moof[0]");
+            SegmentIndexBox.Entry entry = new SegmentIndexBox.Entry();
+            entries.add(entry);
+            entry.setReferencedSize(size);
+            TrackRunBox trun = Path.getPath(moof, "traf[0]/trun[0]");
+            ptss = getPtss(trun);
+            entry.setSapType(SapHelper.getFirstFrameSapType(ptss, SapHelper.getSampleFlags(0, trun, trex)));
+            entry.setSubsegmentDuration(Timing.getDuration(Path.<TrackRunBox>getPath(moof, "traf[0]/trun[0]")));
+            entry.setStartsWithSap((byte) 1); // we know it - no need to lookup
+        }
+
+        sidx.setFirstOffset(0);
+        return new ListContainer(Collections.<Box>singletonList(sidx));
     }
 
 }

@@ -5,6 +5,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.xmlbeans.XmlOptions;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.Localizable;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.UuidOptionHandler;
 
@@ -15,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -119,43 +121,68 @@ public abstract class AbstractEncryptOrNotCommand implements Command {
                 audioKeyId = UUID.randomUUID();
             }
         } catch (NoSuchAlgorithmException e) {
-            throw new CmdLineException(cmdLineParser, "The AES encryption algorithm is not supported by your VM");
+            throw new CmdLineException(cmdLineParser, new Message("The AES encryption algorithm is not supported by your VM"));
         }
 
         if (audioKeyId != null) {
             if (encKeySecretKeyAudio == null && encKeySecretKeyFileAudio == null && audioKey == null) {
-                throw new CmdLineException(cmdLineParser, "--uuid\\:a requires either --secretKeyFile\\:a, --secretKey\\:a or --keyseed");
+                throw new CmdLineException(cmdLineParser, new Message("--uuid:a requires either --secretKeyFile:a, --secretKey:a or --keyseed"));
             }
         }
         if (videoKeyId != null) {
             if (encKeySecretKeyVideo == null && encKeySecretKeyFileVideo == null && videoKey == null) {
-                throw new CmdLineException(cmdLineParser, "--uuid:v requires either --secretKeyFile:v, --secretKey:v or --keyseed");
-            }
-            if (audioKeyId == null) {
-                audioKeyId = videoKeyId;
+                throw new CmdLineException(cmdLineParser, new Message("--uuid:v requires either --secretKeyFile:v, --secretKey:v or --keyseed"));
             }
         }
 
         if (this.encKeySecretKeyVideo != null) {
-            audioKey = videoKey = new SecretKeySpec(com.coremedia.iso.Hex.decodeHex(this.encKeySecretKeyVideo), "AES");
+            videoKey = new SecretKeySpec(com.coremedia.iso.Hex.decodeHex(this.encKeySecretKeyVideo), "AES");
         } else if (this.encKeySecretKeyFileVideo != null) {
             try {
-                audioKey = videoKey = new SecretKeySpec(com.coremedia.iso.Hex.decodeHex(FileUtils.readFileToString(this.encKeySecretKeyFileVideo)), "AES");
+                videoKey = new SecretKeySpec(com.coremedia.iso.Hex.decodeHex(FileUtils.readFileToString(this.encKeySecretKeyFileVideo)), "AES");
             } catch (IOException e) {
-                throw new CmdLineException(cmdLineParser, "Content Encryption Key file " + this.encKeySecretKeyFileAudio.getAbsolutePath() + " could not be read");
+                throw new CmdLineException(cmdLineParser, new Message("Content Encryption Key file " + this.encKeySecretKeyFileAudio.getAbsolutePath() + " could not be read"));
             }
         }
 
-        if (videoKeyId != null) {
-            if (this.encKeySecretKeyAudio != null) {
-                audioKey = new SecretKeySpec(com.coremedia.iso.Hex.decodeHex(this.encKeySecretKeyAudio), "AES");
-            } else if (this.encKeySecretKeyFileAudio != null) {
-                try {
-                    audioKey = new SecretKeySpec(com.coremedia.iso.Hex.decodeHex(FileUtils.readFileToString((this.encKeySecretKeyFileAudio))), "AES");
-                } catch (IOException e) {
-                    throw new CmdLineException(cmdLineParser, "Content Encryption Key file " + this.encKeySecretKeyFileAudio.getAbsolutePath() + " could not be read");
-                }
+        if (this.encKeySecretKeyAudio != null) {
+            audioKey = new SecretKeySpec(com.coremedia.iso.Hex.decodeHex(this.encKeySecretKeyAudio), "AES");
+        } else if (this.encKeySecretKeyFileAudio != null) {
+            try {
+                audioKey = new SecretKeySpec(com.coremedia.iso.Hex.decodeHex(FileUtils.readFileToString((this.encKeySecretKeyFileAudio))), "AES");
+            } catch (IOException e) {
+                throw new CmdLineException(cmdLineParser, new Message("Content Encryption Key file " + this.encKeySecretKeyFileAudio.getAbsolutePath() + " could not be read"));
             }
         }
+
+        if (audioKeyId == null && videoKeyId != null) {
+            audioKeyId = videoKeyId;
+        }
+        if (videoKeyId == null && audioKeyId != null) {
+            videoKeyId = audioKeyId;
+        }
+        if (audioKey == null && videoKey != null) {
+            audioKey = videoKey;
+        }
+        if (videoKey == null && audioKey != null) {
+            videoKey = audioKey;
+        }
+    }
+
+    static class Message implements Localizable {
+        private String message;
+
+        public String formatWithLocale(Locale locale, Object... args) {
+            return format(args);
+        }
+
+        public String format(Object... args) {
+            return String.format(message, args);
+        }
+
+        public Message(String message) {
+            this.message = message;
+        }
+
     }
 }

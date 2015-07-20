@@ -6,6 +6,7 @@
 
 package com.castlabs.dash.dashfragmenter;
 
+import com.castlabs.dash.dashfragmenter.cmdlines.CencEncryptAndMux;
 import com.castlabs.dash.dashfragmenter.cmdlines.DashFileSet;
 import com.castlabs.dash.dashfragmenter.cmdlines.DashFileSetEncrypt;
 import com.castlabs.dash.dashfragmenter.cmdlines.MuxMp4;
@@ -33,7 +34,9 @@ public class Main {
     @SubCommands({
             @SubCommand(name = "dash", impl = DashFileSet.class),
             @SubCommand(name = "encrypt", impl = DashFileSetEncrypt.class),
-            @SubCommand(name = "mux", impl = MuxMp4.class)
+            @SubCommand(name = "mux", impl = MuxMp4.class),
+            @SubCommand(name = "cenc", impl = CencEncryptAndMux.class)
+
 
     })
     Command command;

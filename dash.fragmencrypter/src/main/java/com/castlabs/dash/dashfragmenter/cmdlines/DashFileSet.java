@@ -32,7 +32,7 @@ public class DashFileSet extends AbstractCommand {
     protected File outputDirectory = new File("");
 
 
-    @Option(name = "--explode", aliases = "-x", usage = "If this option is set each segement will be written in a single file")
+    @Option(name = "--explode", aliases = "-x", usage = "If this option is set each segment will be written in a single file")
     protected boolean explode = false;
 
     public void postProcessCmdLineArgs(CmdLineParser cmdLineParser) throws CmdLineException {
