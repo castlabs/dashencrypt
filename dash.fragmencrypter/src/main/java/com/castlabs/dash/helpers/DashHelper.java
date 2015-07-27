@@ -406,7 +406,11 @@ public final class DashHelper {
         if (frma!=null) {
             return frma.getDataFormat();
         } else {
-            return stsd.getSampleEntry().getType();
+            if (stsd.getSampleEntry()!=null) {
+                return stsd.getSampleEntry().getType();
+            } else {
+                return null;
+            }
         }
     }
 
