@@ -53,7 +53,7 @@ import java.util.regex.Pattern;
  *
  */
 public class DashFileSetSequence {
-    static Set<String> supportedTypes = new HashSet<String>(Arrays.asList("ac-3", "ec-3", "dtsl", "dtsh", "dtse", "avc1", "avc3", "mp4a", "h264", "hev1", "hvc1", "stpp"));
+    static Set<String> supportedTypes = new HashSet<String>(Arrays.asList("ac-3", "ec-3", "dtsl", "dtsh", "dtse", "avc1", "avc3", "mp4a", "h264", "hev1", "hvc1"));
     protected UUID audioKeyid;
     protected SecretKey audioKey;
     protected UUID videoKeyid;
@@ -82,6 +82,18 @@ public class DashFileSetSequence {
     protected int minAudioSegmentDuration = 15;
     protected int minVideoSegmentDuration = 4;
 
+    protected List<File> subtitles;
+
+    protected List<File> closedCaptions;
+
+
+    public void setSubtitles(List<File> subtitles) {
+        this.subtitles = subtitles;
+    }
+
+    public void setClosedCaptions(List<File> closedCaptions) {
+        this.closedCaptions = closedCaptions;
+    }
 
     /**
      * Sets the minimum audio segment duration.
@@ -209,8 +221,7 @@ public class DashFileSetSequence {
         long start = System.currentTimeMillis();
 
         Map<TrackProxy, String> track2File = createTracks();
-        List<File> subtitles = findSubtitles();
-        Map<File, String> subtitleLanguages = getSubtitleLanguages(subtitles);
+
         checkUnhandledFile();
 
         alignEditsToZero(track2File);
@@ -247,7 +258,7 @@ public class DashFileSetSequence {
 
         Map<TrackProxy, List<File>> trackToFileRepresentation = writeFiles(trackFilename, track2CsfStructure, trackBitrate);
 
-        MPDDocument manifest = createManifest(subtitleLanguages,
+        MPDDocument manifest = createManifest(
                 adaptationSets, trackBitrate, trackFilename, track2CsfStructure, trackToFileRepresentation, adaptationSet2Role);
 
         writeManifest(manifest);
@@ -314,8 +325,7 @@ public class DashFileSetSequence {
     }
 
 
-    public MPDDocument createManifest(Map<File, String> subtitleLanguages,
-                                      Map<String, List<TrackProxy>> trackFamilies, Map<TrackProxy, Long> trackBitrate,
+    public MPDDocument createManifest(Map<String, List<TrackProxy>> trackFamilies, Map<TrackProxy, Long> trackBitrate,
                                       Map<TrackProxy, String> representationIds,
                                       Map<TrackProxy, Container> dashedFiles, Map<TrackProxy, List<File>> trackToFile, Map<String, String> adaptationSet2Role) throws IOException {
         MPDDocument mpdDocument;
@@ -324,7 +334,8 @@ public class DashFileSetSequence {
         } else {
             mpdDocument = getManifestSegmentList(trackFamilies, trackBitrate, representationIds, dashedFiles, trackToFile, adaptationSet2Role);
         }
-        addSubtitles(mpdDocument, subtitleLanguages);
+        addTextTracks(mpdDocument, subtitles, "subtitle");
+        addTextTracks(mpdDocument, closedCaptions, "caption");
 
         return mpdDocument;
     }
@@ -377,29 +388,38 @@ public class DashFileSetSequence {
                 t(trackBitrate), t(representationIds), true, adaptationSet2Role).getManifest();
     }
 
-    public void addSubtitles(MPDDocument mpdDocument, Map<File, String> subtitleLanguages) throws IOException {
-        for (File subtitle : subtitleLanguages.keySet()) {
-            PeriodType period = mpdDocument.getMPD().getPeriodArray()[0];
-            AdaptationSetType adaptationSet = period.addNewAdaptationSet();
-            if (subtitle.getName().endsWith(".xml")) {
-                adaptationSet.setMimeType("application/ttml+xml");
-            } else if (subtitle.getName().endsWith(".vtt")) {
-                adaptationSet.setMimeType("text/vtt");
-            } else {
-                throw new RuntimeException("Not sure what kind of subtitle " + subtitle.getName() + " is.");
+    public void addTextTracks(MPDDocument mpdDocument, List<File> textTracks, String role) throws IOException {
+        if (textTracks != null) {
+            for (File textTrack : textTracks) {
+                addRawTextTrack(mpdDocument, textTrack, role);
             }
-            adaptationSet.setLang(subtitleLanguages.get(subtitle));
-            DescriptorType descriptor = adaptationSet.addNewRole();
-            descriptor.setSchemeIdUri("urn:mpeg:dash:role");
-            descriptor.setValue("subtitle");
-            RepresentationType representation = adaptationSet.addNewRepresentation();
-            representation.setId(FilenameUtils.getBaseName(subtitle.getName()));
-            representation.setBandwidth(128); // pointless - just invent a small number
-            BaseURLType baseURL = representation.addNewBaseURL();
-            baseURL.setStringValue(subtitle.getName());
-            FileUtils.copyFileToDirectory(subtitle, outputDirectory);
-
         }
+    }
+
+
+    public void addRawTextTrack(MPDDocument mpdDocument, File textTrack, String role) throws IOException {
+        PeriodType period = mpdDocument.getMPD().getPeriodArray()[0];
+        AdaptationSetType adaptationSet = period.addNewAdaptationSet();
+        if (textTrack.getName().endsWith(".xml")) {
+            adaptationSet.setMimeType("application/ttml+xml");
+        } else if (textTrack.getName().endsWith(".dfxp")) {
+            adaptationSet.setMimeType("application/ttaf+xml");
+        } else if (textTrack.getName().endsWith(".vtt")) {
+            adaptationSet.setMimeType("text/vtt");
+        } else {
+            throw new RuntimeException("Not sure what kind of textTrack " + textTrack.getName() + " is.");
+        }
+        Locale locale = getTextTrackLocale(textTrack);
+        adaptationSet.setLang(locale.getLanguage() + ("".equals(locale.getScript()) ? "" : "-" + locale.getScript()));
+        DescriptorType descriptor = adaptationSet.addNewRole();
+        descriptor.setSchemeIdUri("urn:mpeg:dash:role");
+        descriptor.setValue(role);
+        RepresentationType representation = adaptationSet.addNewRepresentation();
+        representation.setId(FilenameUtils.getBaseName(textTrack.getName()));
+        representation.setBandwidth(128); // pointless - just invent a small number
+        BaseURLType baseURL = representation.addNewBaseURL();
+        baseURL.setStringValue(textTrack.getName());
+        FileUtils.copyFileToDirectory(textTrack, outputDirectory);
     }
 
     protected XmlOptions getXmlOptions() {
@@ -430,22 +450,6 @@ public class DashFileSetSequence {
         if (inputFiles.size() > 0) {
             throw new ExitCodeException("Only extensions mp4, ismv, mov, m4v, aac, ac3, ec3, dtshd and xml/vtt are known.", 1);
         }
-    }
-
-    private List<File> findSubtitles() {
-        List<File> subs = new ArrayList<File>();
-        List<File> unhandled = new ArrayList<File>();
-        for (File inputFile : inputFiles) {
-            if (inputFile.getName().endsWith(".xml")) {
-                subs.add(inputFile);
-            } else if (inputFile.getName().endsWith(".vtt")) {
-                subs.add(inputFile);
-            } else {
-                unhandled.add(inputFile);
-            }
-        }
-        inputFiles.retainAll(unhandled);
-        return subs;
     }
 
     public Map<TrackProxy, List<File>> writeFilesExploded(
@@ -978,51 +982,50 @@ public class DashFileSetSequence {
     }
 
 
-    public Map<File, String> getSubtitleLanguages(List<File> subtitles) throws ExitCodeException, IOException {
-        Map<File, String> languages = new HashMap<File, String>();
-
-        Pattern patternFilenameIncludesLanguage = Pattern.compile(".*-([a-z][a-z])");
-        for (File subtitle : subtitles) {
-            String ext = FilenameUtils.getExtension(subtitle.getName());
-            String basename = FilenameUtils.getBaseName(subtitle.getName());
-            if (ext.equals("vtt")) {
-                Matcher m = patternFilenameIncludesLanguage.matcher(basename);
-                if (m.matches()) {
-                    languages.put(subtitle, m.group(1));
-                } else {
-                    throw new ExitCodeException("Cannot determine language of " + subtitle + " please use the pattern name-[2-letter-lang].vtt", 1387);
-                }
-            } else if (ext.equals("xml")) {
-                DocumentBuilderFactory builderFactory =
-                        DocumentBuilderFactory.newInstance();
-                try {
-                    DocumentBuilder builder = builderFactory.newDocumentBuilder();
-
-                    String xml = FileUtils.readFileToString(subtitle);
-                    Document xmlDocument = builder.parse(new ByteArrayInputStream(xml.getBytes()));
-                    String lang = xmlDocument.getDocumentElement().getAttribute("xml:lang");
-                    if (lang != null) {
-                        languages.put(subtitle, lang);
-                    } else {
-                        Matcher m2 = patternFilenameIncludesLanguage.matcher(basename);
-                        if (m2.matches()) {
-                            languages.put(subtitle, m2.group(1));
-                        } else {
-                            throw new ExitCodeException("Cannot determine language of " + subtitle + " please use either the xml:lang attribute or a filename pattern like name-[2-letter-lang].xml", 1388);
-                        }
-                    }
-                } catch (ParserConfigurationException e) {
-                    e.printStackTrace();
-                    throw new ExitCodeException("Cannot instantiate XML parser to determine subtitle language", 3242);
-                } catch (SAXException e) {
-                    e.printStackTrace();
-                    throw new ExitCodeException("Cannot parse XML to extract subtitle language", 87433);
-                }
-
-
+    public Locale getTextTrackLocale(File textTrack) throws IOException {
+        Pattern patternFilenameIncludesLanguage = Pattern.compile(".*-(.+)$");
+        String ext = FilenameUtils.getExtension(textTrack.getName());
+        String basename = FilenameUtils.getBaseName(textTrack.getName());
+        if (ext.equals("vtt")) {
+            Matcher m = patternFilenameIncludesLanguage.matcher(basename);
+            if (m.matches()) {
+                return Locale.forLanguageTag(m.group(1));
+            } else {
+                throw new IOException("Cannot determine language of " + textTrack + " please use the pattern filename-[language-tag].vtt");
             }
+        } else if (ext.equals("xml") || ext.equals("dfxp")) {
+            DocumentBuilderFactory builderFactory =
+                    DocumentBuilderFactory.newInstance();
+            try {
+                DocumentBuilder builder = builderFactory.newDocumentBuilder();
+
+                String xml = FileUtils.readFileToString(textTrack);
+                Document xmlDocument = builder.parse(new ByteArrayInputStream(xml.getBytes()));
+                String lang = xmlDocument.getDocumentElement().getAttribute("xml:lang");
+                if (lang != null) {
+                    return Locale.forLanguageTag(lang);
+                } else {
+                    Matcher m2 = patternFilenameIncludesLanguage.matcher(basename);
+                    if (m2.matches()) {
+                        return Locale.forLanguageTag(m2.group(1));
+                    } else {
+                        throw new IOException("Cannot determine language of " + textTrack + " please use either the xml:lang attribute or a filename pattern like filename-[language-tag].[xml|dfxp]");
+                    }
+                }
+            } catch (ParserConfigurationException e) {
+                e.printStackTrace();
+                throw new IOException("Cannot instantiate XML parser to determine textTrack language");
+            } catch (SAXException e) {
+                e.printStackTrace();
+                throw new IOException("Cannot parse XML to extract text track's language");
+            }
+
+
+        } else {
+            throw new IOException("Unknown subtitle format in " + textTrack);
         }
-        return languages;
+
+
     }
 
     private class StsdCorrectingTrack extends WrappingTrack {

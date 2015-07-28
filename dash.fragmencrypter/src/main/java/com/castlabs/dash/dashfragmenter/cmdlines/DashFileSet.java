@@ -31,12 +31,23 @@ public class DashFileSet extends AbstractCommand {
             metaVar = "PATH")
     protected File outputDirectory = new File("");
 
+    @Option(name = "--subtitles", aliases = "-st")
+    protected List<File> subtitles;
 
-    @Option(name = "--explode", aliases = "-x", usage = "If this option is set each segment will be written in a single file")
+    @Option(name = "--closed-captions", aliases = "-cc")
+    protected List<File> closedCaptions;
+
+
+    @Option(name = "--live-profile", aliases = "-x", usage = "If this option is set each segment will be written in a single file")
     protected boolean explode = false;
 
-    public void postProcessCmdLineArgs(CmdLineParser cmdLineParser) throws CmdLineException {
 
+    public void postProcessCmdLineArgs(CmdLineParser cmdLineParser) throws CmdLineException {
+        for (File inputFile : inputFiles) {
+            if (inputFile.getName().endsWith(".xml") || inputFile.getName().endsWith(".vtt") || inputFile.getName().endsWith(".dfxp")) {
+                throw new CmdLineException(cmdLineParser, new AbstractEncryptOrNotCommand.Message("Subtitle files must either be supplied via command line option --subtitles or --closed-captions"));
+            }
+        }
     }
 
     public int run() throws IOException, ExitCodeException {
@@ -45,7 +56,8 @@ public class DashFileSet extends AbstractCommand {
         dashFileSetSequence.setLogger(setupLogger());
         dashFileSetSequence.setOutputDirectory(outputDirectory);
         dashFileSetSequence.setInputFiles(inputFiles);
-
+        dashFileSetSequence.setSubtitles(subtitles);
+        dashFileSetSequence.setClosedCaptions(closedCaptions);
         return dashFileSetSequence.run();
     }
 }

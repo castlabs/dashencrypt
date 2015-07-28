@@ -60,20 +60,19 @@ public class DashFileSetEncrypt extends AbstractCommand {
 
     @Option(name = "--sparse",
             aliases = "-s",
-            usage = "0=encrypt everything, 1=encrypted if default, some sample clear, 2=clear is default, important samples are encrypted"
+            usage = "0=encrypt everything, 1=encrypted if default, some sample clear, 2=clear is default, important samples are encrypted",
+            hidden = true
     )
     protected int sparse = 0;
 
 
     @Option(name = "--clearlead",
             aliases = "-C",
-            usage = "seconds of unencrypted content after start"
+            usage = "seconds of unencrypted content after start",
+            hidden = true
     )
     protected int clearLead = 0;
 
-
-    @Option(name = "--certificate", aliases = "-c", usage = "X509 certificate for generation of KDF documents")
-    protected List<File> certificates = new LinkedList<File>();
 
     @Argument(required = true, multiValued = true, handler = FileOptionHandler.class, usage = "MP4 and bitstream input files", metaVar = "vid1.mp4, vid2.mp4, aud1.mp4, aud2.ec3 ...")
     protected List<File> inputFiles;
@@ -91,8 +90,20 @@ public class DashFileSetEncrypt extends AbstractCommand {
     @Option(name = "--dummyIvs", hidden = true)
     protected boolean dummyIvs = false;
 
+    @Option(name = "--subtitles", aliases = "-st")
+    protected List<File> subtitles;
+
+    @Option(name = "--closed-captions", aliases = "-cc")
+    protected List<File> closedCaptions;
+
+
     public void postProcessCmdLineArgs(CmdLineParser cmdLineParser) throws CmdLineException {
-        
+        for (File inputFile : inputFiles) {
+            if (inputFile.getName().endsWith(".xml") || inputFile.getName().endsWith(".vtt") || inputFile.getName().endsWith(".dfxp")) {
+                throw new CmdLineException(cmdLineParser, new AbstractEncryptOrNotCommand.Message("Subtitle files must either be supplied via command line option --subtitles or --closed-captions"));
+            }
+        }
+
     }
 
     public int run() throws IOException, ExitCodeException {
@@ -105,6 +116,9 @@ public class DashFileSetEncrypt extends AbstractCommand {
         d.setInputFiles(inputFiles);
         d.setEncryptionAlgo("cenc");
         d.setDummyIvs(dummyIvs);
+
+        d.setSubtitles(subtitles);
+        d.setClosedCaptions(closedCaptions);
 
         SecretKey audioKey;
         SecretKey videoKey;

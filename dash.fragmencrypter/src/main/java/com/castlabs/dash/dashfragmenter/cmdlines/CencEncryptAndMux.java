@@ -21,6 +21,7 @@ public class CencEncryptAndMux extends AbstractEncryptOrNotCommand {
     @Argument(required = true, handler = FileOptionHandler.class, usage = "Clear MP4 file", metaVar = "myVideo.mp4, myAudio.mp4")
     protected List<File> inputFiles;
 
+
     @Option(name = "--outputfile", aliases = "-o",
             usage = "output file - if no output file is given output.mp4 is used",
             metaVar = "PATH")

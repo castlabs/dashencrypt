@@ -1,64 +1,50 @@
-<?xml version="1.0"?>
-<MPD
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xmlns="urn:mpeg:dash:schema:mpd:2011"
-        type="static"
-        mediaPresentationDuration="PT0H1M19S"
-        minBufferTime="PT9S"
-        profiles="urn:mpeg:dash:profile:isoff-live:2011,urn:com:dashif:dash264">
 
-    <!--
-        Test Case:      D) Playback of Audio/Video content with multiple bitrates adaptation sets
-        Audio Codec:    DTS-HD High Resolution ('dtsh')
-    -->
-
-    <BaseURL>http://dash.edgesuite.net/dash264/TestCasesMCA/DTS/segments/</BaseURL>
-
-    <Period start="PT0S" duration="">
-
-        <!-- Video -->
-        <AdaptationSet
-                mimeType="video/mp4"
-                codecs="avc1.42c01e"
-                segmentAlignment="true"
-                startWithSAP="1"
-                width="854"
-                height="480"
-                frameRate="24000/1001"
-                par="16:9" >
-            <SegmentTemplate
-                    duration=""
-                    timescale="48000"
-                    media="$RepresentationID$.$Number%03d$"
-                    initialization="$RepresentationID$.000">
-                <SegmentTimeline>
-                    <S t="0" d="144144" r="26"/>
-                </SegmentTimeline>
-            </SegmentTemplate>
-            <Representation id="Paint_t01_V_480p23_baseL3_2000Kbps.mp4" bandwidth="2000000" sar="1:1" />
+<MPD xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="urn:mpeg:dash:schema:mpd:2011" xsi:schemaLocation="urn:mpeg:dash:schema:mpd:2011 http://standards.iso.org/ittf/PubliclyAvailableStandards/MPEG-DASH_schema_files/DASH-MPD.xsd" minBufferTime="PT1S" profiles="urn:mpeg:dash:profile:isoff-live:2011" type="dynamic" timeShiftBufferDepth="PT10800S" minimumUpdatePeriod="PT4S" publishTime="2015-07-28T04:47:36Z" availabilityStartTime="2015-07-28T01:47:36Z">
+    <Period id="1" start="PT0S">
+        <AdaptationSet id="video0" mimeType="video/mp4" segmentAlignment="true" startWithSAP="1">
+            <Representation id="v0" codecs="avc1.4d401e" width="768" height="432" frameRate="25" bandwidth="1300000">
+                <SegmentTemplate duration="4" presentationTimeOffset="0" media="video$Number$-1300.m4s?z32=MNUGC3TOMVWD2QKSIQTGG43JMQ6TEMBZMVRGMOLBMY3GIYRWMZRDENRQGU2WGOLGGNTGGNLFGY4DMOBGNVQXQ4TBORST2MJVGAYCM5DTNFSD2YJXHA3DSNRXMZRTKOLBMVSDINRYGU3TOZDDMY3GMMRYMJRTANZYEZ2XK2LEHUZTKMRRG4YDGOJVGQ4TIMJTHETHG2LHHU2V6ZJYHFSTKY3DGQZTKODBMQ3GGNBSG5STKYTFGI3DEYZYGEZGCZTB" initialization="video-1300.mp4?z32=MNUGC3TOMVWD2QKSIQTGG43JMQ6TEMBZMVRGMOLBMY3GIYRWMZRDENRQGU2WGOLGGNTGGNLFGY4DMOBGNVQXQ4TBORST2MJVGAYCM5DTNFSD2YJXHA3DSNRXMZRTKOLBMVSDINRYGU3TOZDDMY3GMMRYMJRTANZYEZ2XK2LEHUZTKMRRG4YDGOJVGQ4TIMJTHETHG2LHHU2V6ZJYHFSTKY3DGQZTKODBMQ3GGNBSG5STKYTFGI3DEYZYGEZGCZTB" startNumber="1614">
+                    <SegmentTimeline>
+                        <S t="6452" d="4" r="2700"/>
+                    </SegmentTimeline>
+                </SegmentTemplate>
+            </Representation>
+            <Representation id="v1" codecs="avc1.4d4015" width="512" height="288" frameRate="25" bandwidth="700000">
+                <SegmentTemplate duration="4" presentationTimeOffset="0" media="video$Number$-700.m4s?z32=MNUGC3TOMVWD2QKSIQTGG43JMQ6TEMBZMVRGMOLBMY3GIYRWMZRDENRQGU2WGOLGGNTGGNLFGY4DMOBGNVQXQ4TBORST2MJVGAYCM5DTNFSD2YJXHA3DSNRXMZRTKOLBMVSDINRYGU3TOZDDMY3GMMRYMJRTANZYEZ2XK2LEHUZTKMRRG4YDGOJVGQ4TIMJTHETHG2LHHU2V6ZJYHFSTKY3DGQZTKODBMQ3GGNBSG5STKYTFGI3DEYZYGEZGCZTB" initialization="video-700.mp4?z32=MNUGC3TOMVWD2QKSIQTGG43JMQ6TEMBZMVRGMOLBMY3GIYRWMZRDENRQGU2WGOLGGNTGGNLFGY4DMOBGNVQXQ4TBORST2MJVGAYCM5DTNFSD2YJXHA3DSNRXMZRTKOLBMVSDINRYGU3TOZDDMY3GMMRYMJRTANZYEZ2XK2LEHUZTKMRRG4YDGOJVGQ4TIMJTHETHG2LHHU2V6ZJYHFSTKY3DGQZTKODBMQ3GGNBSG5STKYTFGI3DEYZYGEZGCZTB" startNumber="1614">
+                    <SegmentTimeline>
+                        <S t="6452" d="4" r="2700"/>
+                    </SegmentTimeline>
+                </SegmentTemplate>
+            </Representation>
+            <Representation id="v2" codecs="avc1.4d4015" width="512" height="288" frameRate="25" bandwidth="500000">
+                <SegmentTemplate duration="4" presentationTimeOffset="0" media="video$Number$-500.m4s?z32=MNUGC3TOMVWD2QKSIQTGG43JMQ6TEMBZMVRGMOLBMY3GIYRWMZRDENRQGU2WGOLGGNTGGNLFGY4DMOBGNVQXQ4TBORST2MJVGAYCM5DTNFSD2YJXHA3DSNRXMZRTKOLBMVSDINRYGU3TOZDDMY3GMMRYMJRTANZYEZ2XK2LEHUZTKMRRG4YDGOJVGQ4TIMJTHETHG2LHHU2V6ZJYHFSTKY3DGQZTKODBMQ3GGNBSG5STKYTFGI3DEYZYGEZGCZTB" initialization="video-500.mp4?z32=MNUGC3TOMVWD2QKSIQTGG43JMQ6TEMBZMVRGMOLBMY3GIYRWMZRDENRQGU2WGOLGGNTGGNLFGY4DMOBGNVQXQ4TBORST2MJVGAYCM5DTNFSD2YJXHA3DSNRXMZRTKOLBMVSDINRYGU3TOZDDMY3GMMRYMJRTANZYEZ2XK2LEHUZTKMRRG4YDGOJVGQ4TIMJTHETHG2LHHU2V6ZJYHFSTKY3DGQZTKODBMQ3GGNBSG5STKYTFGI3DEYZYGEZGCZTB" startNumber="1614">
+                    <SegmentTimeline>
+                        <S t="6452" d="4" r="2700"/>
+                    </SegmentTimeline>
+                </SegmentTemplate>
+            </Representation>
+            <Role schemeIdUri="urn:mpeg:dash:role:2011" value="main"/>
         </AdaptationSet>
-
-        <!-- Audio -->
-        <AdaptationSet
-                mimeType="audio/mp4"
-                codecs="dtsh"
-                lang="en"
-                segmentAlignment="true"
-                startWithSAP="1"
-                audioSamplingRate="48000">
-            <AudioChannelConfiguration
-                    schemeIdUri="urn:dts:dash:audio_channel_configuration:2012"
-                    value="6"/>
-            <SegmentTemplate
-                    timescale="48000"
-                    media="$RepresentationID$.$Number%03d$"
-                    initialization="$RepresentationID$.000" >
-                <SegmentTimeline>
-                    <S t="0" d="144000" r="26"/>
-                </SegmentTimeline>
-            </SegmentTemplate>
-            <Representation id="Paint_t11_A_5-1ch_HR_2000Kbps.mp4" bandwidth="2000000"/>
-            <Representation id="Paint_t12_A_5-1ch_HR_3000Kbps.mp4" bandwidth="3000000"/>
+        <AdaptationSet id="audio0" lang="ger" mimeType="audio/mp4" codecs="mp4a.40.2" segmentAlignment="true" startWithSAP="1">
+            <AudioChannelConfiguration schemeIdUri="urn:mpeg:mpegB:cicp:ChannelConfiguration" value="2"/>
+            <Representation id="a0" bandwidth="128000">
+                <SegmentTemplate duration="4" presentationTimeOffset="0" media="audio$Number$-128-0.m4s?z32=MNUGC3TOMVWD2QKSIQTGG43JMQ6TEMBZMVRGMOLBMY3GIYRWMZRDENRQGU2WGOLGGNTGGNLFGY4DMOBGORZWSZB5ME3TQNRZGY3WMYZVHFQWKZBUGY4DKNZXMRRWMNTGGI4GEYZQG44CM5LVNFSD2MZVGIYTOMBTHE2TIOJUGEZTSJTTNFTT2NK7HE4TAOLGMVTDSODEGY2TIYTEMQZTGYJVMYYTKM3BGA2TQMZTGJSA" initialization="audio-128-0.mp4?z32=MNUGC3TOMVWD2QKSIQTGG43JMQ6TEMBZMVRGMOLBMY3GIYRWMZRDENRQGU2WGOLGGNTGGNLFGY4DMOBGORZWSZB5ME3TQNRZGY3WMYZVHFQWKZBUGY4DKNZXMRRWMNTGGI4GEYZQG44CM5LVNFSD2MZVGIYTOMBTHE2TIOJUGEZTSJTTNFTT2NK7HE4TAOLGMVTDSODEGY2TIYTEMQZTGYJVMYYTKM3BGA2TQMZTGJSA" startNumber="1614">
+                    <SegmentTimeline>
+                        <S t="6452" d="4" r="2700"/>
+                    </SegmentTimeline>
+                </SegmentTemplate>
+            </Representation>
+        </AdaptationSet>
+        <AdaptationSet id="audio1" lang="mis" mimeType="audio/mp4" codecs="mp4a.40.2" segmentAlignment="true" startWithSAP="1">
+            <AudioChannelConfiguration schemeIdUri="urn:mpeg:mpegB:cicp:ChannelConfiguration" value="2"/>
+            <Representation id="a1" bandwidth="128000">
+                <SegmentTemplate duration="4" presentationTimeOffset="0" media="audio$Number$-128-1.m4s?z32=MNUGC3TOMVWD2QKSIQTGG43JMQ6TEMBZMVRGMOLBMY3GIYRWMZRDENRQGU2WGOLGGNTGGNLFGY4DMOBGORZWSZB5ME3TQNRZGY3WMYZVHFQWKZBUGY4DKNZXMRRWMNTGGI4GEYZQG44CM5LVNFSD2MZVGIYTOMBTHE2TIOJUGEZTSJTTNFTT2NK7HE4TAOLGMVTDSODEGY2TIYTEMQZTGYJVMYYTKM3BGA2TQMZTGJSA" initialization="audio-128-1.mp4?z32=MNUGC3TOMVWD2QKSIQTGG43JMQ6TEMBZMVRGMOLBMY3GIYRWMZRDENRQGU2WGOLGGNTGGNLFGY4DMOBGORZWSZB5ME3TQNRZGY3WMYZVHFQWKZBUGY4DKNZXMRRWMNTGGI4GEYZQG44CM5LVNFSD2MZVGIYTOMBTHE2TIOJUGEZTSJTTNFTT2NK7HE4TAOLGMVTDSODEGY2TIYTEMQZTGYJVMYYTKM3BGA2TQMZTGJSA" startNumber="1614">
+                    <SegmentTimeline>
+                        <S t="6452" d="4" r="2700"/>
+                    </SegmentTimeline>
+                </SegmentTemplate>
+            </Representation>
         </AdaptationSet>
     </Period>
 </MPD>
+
