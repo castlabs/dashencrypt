@@ -1,9 +1,14 @@
 package com.castlabs.dash.helpers;
 
+import com.castlabs.dash.dashfragmenter.sequences.DashFileSetSequence;
 import com.coremedia.iso.IsoFile;
 import com.coremedia.iso.boxes.sampleentry.SampleEntry;import com.googlecode.mp4parser.util.Path;
 import junit.framework.TestCase;
-import org.junit.Assert;import java.lang.Exception;
+import org.junit.Assert;
+
+import java.io.File;
+import java.lang.Exception;
+import java.util.Locale;
 
 public class DashHelperTest extends TestCase {
 
@@ -14,5 +19,13 @@ public class DashHelperTest extends TestCase {
 
         Assert.assertEquals("hev1.1.c.L93.80", DashHelper.getRfc6381Codec(sampleEntry));
 
+    }
+
+
+    public void testGetSubtitleLanguages() throws Exception {
+        File subtitle = new File(DashHelperTest.class.getProtectionDomain().getCodeSource().getLocation().getFile() + "/ttml-sub.xml");
+
+        Locale lang = DashHelper.getTextTrackLocale(subtitle);
+        assertEquals(Locale.ENGLISH, lang);
     }
 }

@@ -48,6 +48,8 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.castlabs.dash.helpers.DashHelper.getTextTrackLocale;
+
 
 /**
  *
@@ -982,51 +984,6 @@ public class DashFileSetSequence {
     }
 
 
-    public Locale getTextTrackLocale(File textTrack) throws IOException {
-        Pattern patternFilenameIncludesLanguage = Pattern.compile(".*-(.+)$");
-        String ext = FilenameUtils.getExtension(textTrack.getName());
-        String basename = FilenameUtils.getBaseName(textTrack.getName());
-        if (ext.equals("vtt")) {
-            Matcher m = patternFilenameIncludesLanguage.matcher(basename);
-            if (m.matches()) {
-                return Locale.forLanguageTag(m.group(1));
-            } else {
-                throw new IOException("Cannot determine language of " + textTrack + " please use the pattern filename-[language-tag].vtt");
-            }
-        } else if (ext.equals("xml") || ext.equals("dfxp")) {
-            DocumentBuilderFactory builderFactory =
-                    DocumentBuilderFactory.newInstance();
-            try {
-                DocumentBuilder builder = builderFactory.newDocumentBuilder();
-
-                String xml = FileUtils.readFileToString(textTrack);
-                Document xmlDocument = builder.parse(new ByteArrayInputStream(xml.getBytes()));
-                String lang = xmlDocument.getDocumentElement().getAttribute("xml:lang");
-                if (lang != null) {
-                    return Locale.forLanguageTag(lang);
-                } else {
-                    Matcher m2 = patternFilenameIncludesLanguage.matcher(basename);
-                    if (m2.matches()) {
-                        return Locale.forLanguageTag(m2.group(1));
-                    } else {
-                        throw new IOException("Cannot determine language of " + textTrack + " please use either the xml:lang attribute or a filename pattern like filename-[language-tag].[xml|dfxp]");
-                    }
-                }
-            } catch (ParserConfigurationException e) {
-                e.printStackTrace();
-                throw new IOException("Cannot instantiate XML parser to determine textTrack language");
-            } catch (SAXException e) {
-                e.printStackTrace();
-                throw new IOException("Cannot parse XML to extract text track's language");
-            }
-
-
-        } else {
-            throw new IOException("Unknown subtitle format in " + textTrack);
-        }
-
-
-    }
 
     private class StsdCorrectingTrack extends WrappingTrack {
         SampleDescriptionBox stsd;

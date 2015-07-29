@@ -19,8 +19,21 @@ import com.googlecode.mp4parser.util.Path;
 import com.mp4parser.iso14496.part15.AvcConfigurationBox;
 import com.mp4parser.iso14496.part15.HevcConfigurationBox;
 import com.mp4parser.iso14496.part30.XMLSubtitleSampleEntry;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
+import org.w3c.dom.Document;
+import org.xml.sax.SAXException;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Gets the precise MIME type according to RFC6381.
@@ -418,4 +431,52 @@ public final class DashHelper {
         public String schemeIdUri = "";
         public String value = "";
     }
+
+    public static Locale getTextTrackLocale(File textTrack) throws IOException {
+        Pattern patternFilenameIncludesLanguage = Pattern.compile(".*-(.+)$");
+        String ext = FilenameUtils.getExtension(textTrack.getName());
+        String basename = FilenameUtils.getBaseName(textTrack.getName());
+        if (ext.equals("vtt")) {
+            Matcher m = patternFilenameIncludesLanguage.matcher(basename);
+            if (m.matches()) {
+                return Locale.forLanguageTag(m.group(1));
+            } else {
+                throw new IOException("Cannot determine language of " + textTrack + " please use the pattern filename-[language-tag].vtt");
+            }
+        } else if (ext.equals("xml") || ext.equals("dfxp")) {
+            DocumentBuilderFactory builderFactory =
+                    DocumentBuilderFactory.newInstance();
+            try {
+                DocumentBuilder builder = builderFactory.newDocumentBuilder();
+
+                String xml = FileUtils.readFileToString(textTrack);
+                Document xmlDocument = builder.parse(new ByteArrayInputStream(xml.getBytes()));
+                String lang = xmlDocument.getDocumentElement().getAttribute("xml:lang");
+                if (lang != null) {
+                    return Locale.forLanguageTag(lang);
+                } else {
+                    Matcher m2 = patternFilenameIncludesLanguage.matcher(basename);
+                    if (m2.matches()) {
+                        return Locale.forLanguageTag(m2.group(1));
+                    } else {
+                        throw new IOException("Cannot determine language of " + textTrack + " please use either the xml:lang attribute or a filename pattern like filename-[language-tag].[xml|dfxp]");
+                    }
+                }
+            } catch (ParserConfigurationException e) {
+                e.printStackTrace();
+                throw new IOException("Cannot instantiate XML parser to determine textTrack language");
+            } catch (SAXException e) {
+                e.printStackTrace();
+                throw new IOException("Cannot parse XML to extract text track's language");
+            }
+
+
+        } else {
+            throw new IOException("Unknown subtitle format in " + textTrack);
+        }
+
+
+    }
+
+
 }
