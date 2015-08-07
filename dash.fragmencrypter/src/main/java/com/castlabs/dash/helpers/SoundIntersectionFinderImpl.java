@@ -1,15 +1,16 @@
 package com.castlabs.dash.helpers;
 
-import com.googlecode.mp4parser.authoring.Movie;
 import com.googlecode.mp4parser.authoring.Track;
-import com.googlecode.mp4parser.authoring.builder.FragmentIntersectionFinder;
+import com.googlecode.mp4parser.authoring.builder.Fragmenter;
 
-import java.lang.Error;import java.util.*;import java.util.ArrayList;import java.util.Arrays;import java.util.List;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Created by sannies on 05.02.2015.
  */
-public class SoundIntersectionFinderImpl implements FragmentIntersectionFinder {
+public class SoundIntersectionFinderImpl implements Fragmenter {
 
 
     long timscale = 1;

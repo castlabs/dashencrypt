@@ -14,39 +14,57 @@ import com.coremedia.iso.boxes.Container;
 import com.coremedia.iso.boxes.SampleDescriptionBox;
 import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
 import com.googlecode.mp4parser.FileDataSourceImpl;
-import com.googlecode.mp4parser.authoring.*;
-import com.googlecode.mp4parser.authoring.builder.FragmentIntersectionFinder;
+import com.googlecode.mp4parser.authoring.Edit;
+import com.googlecode.mp4parser.authoring.Movie;
+import com.googlecode.mp4parser.authoring.Sample;
+import com.googlecode.mp4parser.authoring.Track;
+import com.googlecode.mp4parser.authoring.WrappingTrack;
+import com.googlecode.mp4parser.authoring.builder.Fragmenter;
 import com.googlecode.mp4parser.authoring.builder.StaticFragmentIntersectionFinderImpl;
 import com.googlecode.mp4parser.authoring.builder.SyncSampleIntersectFinderImpl;
 import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
-import com.googlecode.mp4parser.authoring.tracks.*;
+import com.googlecode.mp4parser.authoring.tracks.AACTrackImpl;
+import com.googlecode.mp4parser.authoring.tracks.AC3TrackImpl;
+import com.googlecode.mp4parser.authoring.tracks.Avc1ToAvc3TrackImpl;
+import com.googlecode.mp4parser.authoring.tracks.CencEncryptedTrack;
+import com.googlecode.mp4parser.authoring.tracks.CencEncryptingTrackImpl;
+import com.googlecode.mp4parser.authoring.tracks.DTSTrackImpl;
+import com.googlecode.mp4parser.authoring.tracks.EC3TrackImpl;
 import com.googlecode.mp4parser.authoring.tracks.h264.H264TrackImpl;
 import com.googlecode.mp4parser.boxes.mp4.ESDescriptorBox;
 import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.AudioSpecificConfig;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.CencSampleEncryptionInformationGroupEntry;
 import com.googlecode.mp4parser.util.Path;
 import mpegCenc2013.DefaultKIDAttribute;
-import mpegDashSchemaMpd2011.*;
+import mpegDashSchemaMpd2011.AdaptationSetType;
+import mpegDashSchemaMpd2011.BaseURLType;
+import mpegDashSchemaMpd2011.DescriptorType;
+import mpegDashSchemaMpd2011.MPDDocument;
+import mpegDashSchemaMpd2011.PeriodType;
+import mpegDashSchemaMpd2011.RepresentationType;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.xmlbeans.XmlOptions;
-import org.w3c.dom.Document;
-import org.xml.sax.SAXException;
 
 import javax.crypto.SecretKey;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 import java.security.SecureRandom;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.logging.Logger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static com.castlabs.dash.helpers.DashHelper.getTextTrackLocale;
 
@@ -508,7 +526,7 @@ public class DashFileSetSequence {
         return track2Files;
     }
 
-    public DashBuilder getFileBuilder(FragmentIntersectionFinder fragmentIntersectionFinder, Movie m) {
+    public DashBuilder getFileBuilder(Fragmenter fragmentIntersectionFinder, Movie m) {
         DashBuilder dashBuilder = new DashBuilder();
         dashBuilder.setIntersectionFinder(fragmentIntersectionFinder);
         return dashBuilder;
@@ -654,11 +672,11 @@ public class DashFileSetSequence {
             movie.setTracks(tracks);
             for (TrackProxy track : trackProxies) {
                 if (track.getHandler().startsWith("vide")) {
-                    FragmentIntersectionFinder videoIntersectionFinder = new SyncSampleIntersectFinderImpl(movie, null, minVideoSegmentDuration);
+                    Fragmenter videoIntersectionFinder = new SyncSampleIntersectFinderImpl(movie, null, minVideoSegmentDuration);
                     fragmentStartSamples.put(track, videoIntersectionFinder.sampleNumbers(track.getTarget()));
                     //fragmentStartSamples.put(track, checkMaxFragmentDuration(track, videoIntersectionFinder.sampleNumbers(track)));
                 } else if (track.getHandler().startsWith("soun") || track.getHandler().startsWith("subt")) {
-                    FragmentIntersectionFinder soundIntersectionFinder = new SoundIntersectionFinderImpl(tracks, minAudioSegmentDuration);
+                    Fragmenter soundIntersectionFinder = new SoundIntersectionFinderImpl(tracks, minAudioSegmentDuration);
                     fragmentStartSamples.put(track, soundIntersectionFinder.sampleNumbers(track.getTarget()));
                 } else {
                     throw new RuntimeException("An engineer needs to tell me if " + key + " is audio or video!");
@@ -982,7 +1000,6 @@ public class DashFileSetSequence {
 
         return trackFamilies;
     }
-
 
 
     private class StsdCorrectingTrack extends WrappingTrack {
