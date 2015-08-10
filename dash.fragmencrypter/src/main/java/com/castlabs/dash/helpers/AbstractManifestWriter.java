@@ -16,9 +16,7 @@ import com.coremedia.iso.boxes.fragment.TrackFragmentHeaderBox;
 import com.coremedia.iso.boxes.fragment.TrackRunBox;
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.tracks.CencEncryptedTrack;
-import com.googlecode.mp4parser.util.Iso639;
 import com.googlecode.mp4parser.util.Path;
-import mpegCenc2013.DefaultKIDAttribute;
 import mpegDashSchemaMpd2011.*;
 import org.apache.xmlbeans.GDuration;
 
@@ -174,7 +172,7 @@ public abstract class AbstractManifestWriter {
             adaptationSet.setBitstreamSwitching(true);
         }
         if (!"und".equals(language)) {
-            adaptationSet.setLang(Iso639.convert3to2(language));
+            adaptationSet.setLang(Locale.forLanguageTag(language).getLanguage());
         }
 
         if (tracks.get(0).getHandler().equals("soun")) {

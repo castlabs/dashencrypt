@@ -31,8 +31,6 @@ public class DashFileSet extends AbstractCommand {
             metaVar = "PATH")
     protected File outputDirectory = new File("");
 
-    @Option(name = "--segment-ttml", usage = "Set to fragment interval. Otherwise the whole file is ")
-
     @Option(name = "--subtitles", aliases = "-st", usage = ".xml, .dfxp and .vtt are supported")
     protected List<File> subtitles;
 
