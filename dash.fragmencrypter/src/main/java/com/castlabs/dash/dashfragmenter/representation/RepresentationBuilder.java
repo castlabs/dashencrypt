@@ -11,5 +11,6 @@ public interface RepresentationBuilder extends List<Container> {
     Container getInitSegment();
     Container getIndexSegment();
     RepresentationType getOnDemandRepresentation();
+    RepresentationType getLiveRepresentation();
     String getSource();
 }

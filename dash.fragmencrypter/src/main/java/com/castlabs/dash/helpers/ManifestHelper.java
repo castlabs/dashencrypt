@@ -18,6 +18,8 @@ import mpegDashSchemaMpd2011.RepresentationType;
 import org.apache.commons.lang.math.Fraction;
 
 import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Some conversion from Track representation to Manifest specifics shared by DASH manifests of all kinds.
@@ -107,5 +109,30 @@ public class ManifestHelper {
         return representation;
     }
 
+    static Pattern REPRESENTATION_PATTERN = Pattern.compile("(\\$RepresentationID(%0[0-9]+d)?\\$)");
+    static Pattern NUMBER_PATTERN = Pattern.compile("(\\$Number(%0[0-9]+d)?\\$)");
+    static Pattern TIME_PATTERN = Pattern.compile("(\\$Time(%0[0-9]+d)?\\$)");
+    static Pattern BANDWIDTH_PATTERN = Pattern.compile("(\\$Bandwidth(%0[0-9]+d)?\\$)");
 
+
+    private static String replace(Matcher m, String rv, Object value) {
+        while (m.find()) {
+            if (m.group(2) != null) {
+                rv = rv.replace(m.group(0), String.format(m.group(2), value));
+            } else {
+                rv = rv.replace(m.group(0), String.valueOf(value));
+            }
+        }
+        return rv;
+    }
+
+    public static String templateReplace(String input_string, String representation_id, long number, long bandwidth, long time) {
+        String rv = input_string;
+        rv = rv.replace("$$", "$");
+        rv = replace(REPRESENTATION_PATTERN.matcher(rv), rv, representation_id);
+        rv = replace(NUMBER_PATTERN.matcher(rv), rv, number);
+        rv = replace(TIME_PATTERN.matcher(rv), rv, time);
+        rv = replace(BANDWIDTH_PATTERN.matcher(rv), rv, bandwidth);
+        return rv;
+    }
 }

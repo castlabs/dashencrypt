@@ -463,23 +463,29 @@ public class DashFileSetSequence {
         }
         RepresentationBuilder representationBuilder =
                 new SyncSampleAssistedRepresentationBuilder(textTrack, textTrackFile.getName(), 10, Collections.<ProtectionSystemSpecificHeaderBox>emptyList());
+        RepresentationType representation;
+        String id = FilenameUtils.getBaseName(representationBuilder.getSource());
         if (explode) {
-            throw new RuntimeException("Cannot yet explode");
+            representation= representationBuilder.getLiveRepresentation();
+            representation.getSegmentTemplate().setInitialization2(initPattern);
+            representation.getSegmentTemplate().setMedia(mediaPattern);
+            representation.setId(id);
+            RepresentationBuilderToFile.writeLive(representationBuilder, representation, outputDirectory);
         } else {
-            String id = representationBuilder.getSource();
-            RepresentationBuilderToFile.writeOnDemand(representationBuilder, new File(outputDirectory.getAbsolutePath(), id + ".mp4"));
-            RepresentationType representation = representationBuilder.getOnDemandRepresentation();
+            representation = representationBuilder.getOnDemandRepresentation();
             representation.addNewBaseURL().setStringValue(id + ".mp4");
             representation.setId(id);
-            AdaptationSetType adaptationSet = period.addNewAdaptationSet();
-            Locale locale = getTextTrackLocale(textTrackFile);
-            adaptationSet.setLang(locale.getLanguage() + ("".equals(locale.getScript()) ? "" : "-" + locale.getScript()));
-            adaptationSet.setMimeType("application/mp4");
-            adaptationSet.setRepresentationArray(new RepresentationType[]{representation});
-            DescriptorType descriptor = adaptationSet.addNewRole();
-            descriptor.setSchemeIdUri("urn:mpeg:dash:role");
-            descriptor.setValue(role);
+            RepresentationBuilderToFile.writeOnDemand(representationBuilder, representation, outputDirectory);
         }
+        AdaptationSetType adaptationSet = period.addNewAdaptationSet();
+        Locale locale = getTextTrackLocale(textTrackFile);
+        adaptationSet.setLang(locale.getLanguage() + ("".equals(locale.getScript()) ? "" : "-" + locale.getScript()));
+        adaptationSet.setMimeType("application/mp4");
+        adaptationSet.setRepresentationArray(new RepresentationType[]{representation});
+        DescriptorType descriptor = adaptationSet.addNewRole();
+        descriptor.setSchemeIdUri("urn:mpeg:dash:role");
+        descriptor.setValue(role);
+
 
     }
 
@@ -554,7 +560,7 @@ public class DashFileSetSequence {
                     dashedFiles.get(t), trackFilename.get(t),
                     trackBitrate.get(t), outputDirectory, initPattern, mediaPattern);
 
-            l.info("Done.");
+            //l.info("Done.");
             trackToSegments.put(t, segments);
         }
         return trackToSegments;

@@ -1,5 +1,6 @@
 package com.castlabs.dash.dashfragmenter.representation;
 
+import com.castlabs.dash.helpers.DashHelper;
 import com.castlabs.dash.helpers.SapHelper;
 import com.castlabs.dash.helpers.Timing;
 import com.coremedia.iso.BoxParser;
@@ -7,11 +8,11 @@ import com.coremedia.iso.IsoFile;
 import com.coremedia.iso.IsoTypeWriter;
 import com.coremedia.iso.boxes.*;
 import com.coremedia.iso.boxes.fragment.*;
+import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
 import com.googlecode.mp4parser.DataSource;
 import com.googlecode.mp4parser.authoring.Edit;
 import com.googlecode.mp4parser.authoring.Sample;
 import com.googlecode.mp4parser.authoring.Track;
-import com.googlecode.mp4parser.authoring.builder.Fragmenter;
 import com.googlecode.mp4parser.authoring.tracks.CencEncryptedTrack;
 import com.googlecode.mp4parser.boxes.dece.SampleEncryptionBox;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.CencSampleEncryptionInformationGroupEntry;
@@ -27,18 +28,21 @@ import com.mp4parser.iso23001.part7.CencSampleAuxiliaryDataFormat;
 import com.mp4parser.iso23001.part7.ProtectionSystemSpecificHeaderBox;
 import com.mp4parser.iso23001.part7.TrackEncryptionBox;
 import mpegCenc2013.DefaultKIDAttribute;
-import mpegDashSchemaMpd2011.DescriptorType;
-import mpegDashSchemaMpd2011.RepresentationType;
+import mpegDashSchemaMpd2011.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
+import java.io.File;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.*;
 
 import static com.castlabs.dash.helpers.BoxHelper.boxToBytes;
+import static com.castlabs.dash.helpers.ManifestHelper.convertFramerate;
+import static com.castlabs.dash.helpers.Timing.getDuration;
 import static com.castlabs.dash.helpers.Timing.getPtss;
 import static com.castlabs.dash.helpers.Timing.getTimeMappingEditTime;
 import static com.googlecode.mp4parser.util.CastUtils.l2i;
@@ -343,7 +347,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
             if (fIndex + 1 < fragmentStartSamples.length) {
                 fragmentEndSample = fragmentStartSamples[index + 1];
             } else {
-                fragmentEndSample = theTrack.getSamples().size() +1;
+                fragmentEndSample = theTrack.getSamples().size() + 1;
             }
             moofMdat.add(createMoof(fragmentStartSample, fragmentEndSample, theTrack, fIndex + 1)); // it's one bases
             moofMdat.add(createMdat(fragmentStartSample, fragmentEndSample));
@@ -740,4 +744,133 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         // since startSample and endSample are one-based substract 1 before addressing list elements
         return theTrack.getSamples().subList(l2i(startSample) - 1, l2i(endSample) - 1);
     }
+
+    String getCodec() {
+        return DashHelper.getRfc6381Codec(theTrack.getSampleDescriptionBox().getSampleEntry());
+    }
+
+    public RepresentationType getLiveRepresentation() {
+        RepresentationType representation = getBaseRepresentation();
+        SegmentTemplateType segmentTemplate = representation.addNewSegmentTemplate();
+        SegmentTimelineType segmentTimeline = segmentTemplate.addNewSegmentTimeline();
+
+
+        TrackRunBox firstTrun = Path.getPath(this.get(0), "moof/traf/trun");
+
+        long[] ptss = getPtss(firstTrun);
+        Arrays.sort(ptss); // index 0 has now the earliest presentation time stamp!
+        long timeMappingEdit = getTimeMappingEditTime(getInitSegment());
+        long startTime = ptss[0] - timeMappingEdit;
+
+        SegmentTimelineType.S lastSegmentTimelineS = null;
+        for (Container container : this) {
+            long duration = 0;
+            List<TrackRunBox> truns = Path.getPaths(container, "moof/traf/trun");
+            for (TrackRunBox trun : truns) {
+                duration += getDuration(trun);
+            }
+
+            if (lastSegmentTimelineS != null && lastSegmentTimelineS.getD().equals(BigInteger.valueOf(duration))) {
+                if (lastSegmentTimelineS.isSetR()) {
+                    lastSegmentTimelineS.setR(lastSegmentTimelineS.getR().add(BigInteger.ONE));
+                } else {
+                    lastSegmentTimelineS.setR(BigInteger.ONE);
+                }
+
+            } else {
+                SegmentTimelineType.S s = segmentTimeline.addNewS();
+                s.setD((BigInteger.valueOf(duration)));
+                s.setT(BigInteger.valueOf(startTime));
+                lastSegmentTimelineS = s;
+            }
+
+            startTime += duration;
+        }
+
+
+        return representation;
+    }
+
+    public RepresentationType getBaseRepresentation() {
+        RepresentationType representation = RepresentationType.Factory.newInstance();
+        representation.setProfiles("urn:mpeg:dash:profile:isoff-on-demand:2011");
+        if (theTrack.getHandler().equals("vide")) {
+
+            long videoHeight = (long) theTrack.getTrackMetaData().getHeight();
+            long videoWidth = (long) theTrack.getTrackMetaData().getWidth();
+            double framesPerSecond = (double) (theTrack.getSamples().size() * theTrack.getTrackMetaData().getTimescale()) / theTrack.getDuration();
+
+
+            representation.setMimeType("video/mp4");
+            representation.setCodecs(getCodec());
+            representation.setWidth(videoWidth);
+            representation.setHeight(videoHeight);
+            representation.setFrameRate(convertFramerate(framesPerSecond));
+            representation.setSar("1:1");
+            // too hard to find it out. Ignoring even though it should be set according to DASH-AVC-264-v2.00-hd-mca.pdf
+        } else if (theTrack.getHandler().equals("soun")) {
+
+            AudioSampleEntry ase = (AudioSampleEntry) theTrack.getSampleDescriptionBox().getSampleEntry();
+
+            representation.setMimeType("audio/mp4");
+            representation.setCodecs(DashHelper.getRfc6381Codec(ase));
+            representation.setAudioSamplingRate("" + DashHelper.getAudioSamplingRate(ase));
+
+            DescriptorType audio_channel_conf = representation.addNewAudioChannelConfiguration();
+            DashHelper.ChannelConfiguration cc = DashHelper.getChannelConfiguration(ase);
+            audio_channel_conf.setSchemeIdUri(cc.schemeIdUri);
+            audio_channel_conf.setValue(cc.value);
+
+
+        } else if (theTrack.getHandler().equals("subt")) {
+            representation.setMimeType("audio/mp4");
+            representation.setCodecs(getCodec());
+
+            representation.setStartWithSAP(1);
+
+        }
+
+        long size = 0;
+        List<Sample> samples = theTrack.getSamples();
+        for (int i = 0; i < Math.min(samples.size(), 10000); i++) {
+            size += samples.get(i).getSize();
+        }
+        size = (size / Math.min(theTrack.getSamples().size(), 10000)) * theTrack.getSamples().size();
+
+        double duration = (double) theTrack.getDuration() / theTrack.getTrackMetaData().getTimescale();
+
+        representation.setBandwidth((long) ((size * 8 / duration / 100)) * 100);
+
+        addContentProtection(representation);
+
+        return representation;
+    }
+
+    public RepresentationType getOnDemandRepresentation() {
+        RepresentationType representation = getBaseRepresentation();
+
+
+        SegmentBaseType segBaseType = representation.addNewSegmentBase();
+
+        segBaseType.setTimescale(theTrack.getTrackMetaData().getTimescale());
+        segBaseType.setIndexRangeExact(true);
+
+        long initSize = 0;
+        for (Box b : getInitSegment().getBoxes()) {
+            initSize += b.getSize();
+        }
+        URLType initialization = segBaseType.addNewInitialization();
+        long indexSize = 0;
+        for (Box b : getIndexSegment().getBoxes()) {
+            indexSize += b.getSize();
+        }
+
+        segBaseType.setIndexRange(String.format("%s-%s", initSize, initSize + indexSize));
+        initialization.setRange(String.format("0-%s", initSize - 1));
+
+        return representation;
+
+
+    }
+
 }

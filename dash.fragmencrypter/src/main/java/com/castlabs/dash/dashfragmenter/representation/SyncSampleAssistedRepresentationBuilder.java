@@ -49,85 +49,8 @@ public class SyncSampleAssistedRepresentationBuilder extends AbstractRepresentat
     }
 
 
-    String getCodec() {
-        return DashHelper.getRfc6381Codec(theTrack.getSampleDescriptionBox().getSampleEntry());
-    }
-
-
-    public RepresentationType getOnDemandRepresentation() {
-
-        RepresentationType representation = RepresentationType.Factory.newInstance();
-        representation.setProfiles("urn:mpeg:dash:profile:isoff-on-demand:2011");
-        if (theTrack.getHandler().equals("vide")) {
-
-            long videoHeight = (long) theTrack.getTrackMetaData().getHeight();
-            long videoWidth = (long) theTrack.getTrackMetaData().getWidth();
-            double framesPerSecond = (double) (theTrack.getSamples().size() * theTrack.getTrackMetaData().getTimescale()) / theTrack.getDuration();
-
-
-            representation.setMimeType("video/mp4");
-            representation.setCodecs(getCodec());
-            representation.setWidth(videoWidth);
-            representation.setHeight(videoHeight);
-            representation.setFrameRate(convertFramerate(framesPerSecond));
-            representation.setSar("1:1");
-            // too hard to find it out. Ignoring even though it should be set according to DASH-AVC-264-v2.00-hd-mca.pdf
-        } else if (theTrack.getHandler().equals("soun")) {
-
-            AudioSampleEntry ase = (AudioSampleEntry) theTrack.getSampleDescriptionBox().getSampleEntry();
-
-            representation.setMimeType("audio/mp4");
-            representation.setCodecs(DashHelper.getRfc6381Codec(ase));
-            representation.setAudioSamplingRate("" + DashHelper.getAudioSamplingRate(ase));
-
-            DescriptorType audio_channel_conf = representation.addNewAudioChannelConfiguration();
-            DashHelper.ChannelConfiguration cc = DashHelper.getChannelConfiguration(ase);
-            audio_channel_conf.setSchemeIdUri(cc.schemeIdUri);
-            audio_channel_conf.setValue(cc.value);
 
 
 
-        } else if (theTrack.getHandler().equals("subt")) {
-            representation.setMimeType("audio/mp4");
-            representation.setCodecs(getCodec());
-
-            representation.setStartWithSAP(1);
-
-        }
-
-        SegmentBaseType segBaseType = representation.addNewSegmentBase();
-
-        segBaseType.setTimescale(theTrack.getTrackMetaData().getTimescale());
-        segBaseType.setIndexRangeExact(true);
-
-        long initSize = 0;
-        for (Box b : getInitSegment().getBoxes()) {
-            initSize += b.getSize();
-        }
-        URLType initialization = segBaseType.addNewInitialization();
-        long indexSize = 0;
-        for (Box b : getIndexSegment().getBoxes()) {
-            indexSize += b.getSize();
-        }
-
-        segBaseType.setIndexRange(String.format("%s-%s", initSize, initSize + indexSize));
-        initialization.setRange(String.format("0-%s", initSize - 1));
-
-        long size = 0;
-        List<Sample> samples = theTrack.getSamples();
-        for (int i = 0; i < Math.min(samples.size(), 10000); i++) {
-            size += samples.get(i).getSize();
-        }
-        size = (size / Math.min(theTrack.getSamples().size(), 10000)) * theTrack.getSamples().size();
-
-        double duration = (double) theTrack.getDuration() / theTrack.getTrackMetaData().getTimescale();
-
-        representation.setBandwidth((long) ((size * 8 / duration / 100)) * 100);
-
-        addContentProtection(representation);
-        return representation;
-
-
-    }
 }
 

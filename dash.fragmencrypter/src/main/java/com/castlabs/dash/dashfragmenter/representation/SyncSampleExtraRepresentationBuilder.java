@@ -36,8 +36,5 @@ public class SyncSampleExtraRepresentationBuilder extends AbstractRepresentation
         super(track, psshs, source, calcSegmentStartSamples(track, 50), calcFragmentStartSamples(track, 50));
     }
 
-    public RepresentationType getOnDemandRepresentation() {
-        return null;
-    }
 }
 
