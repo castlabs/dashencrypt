@@ -10,6 +10,6 @@ public interface RepresentationBuilder extends List<Container> {
     Track getTrack();
     Container getInitSegment();
     Container getIndexSegment();
-    RepresentationType getSegmentTemplateRepresentation();
+    RepresentationType getOnDemandRepresentation();
     String getSource();
 }

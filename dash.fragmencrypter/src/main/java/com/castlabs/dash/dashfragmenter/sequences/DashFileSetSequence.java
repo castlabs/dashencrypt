@@ -5,8 +5,11 @@ import com.castlabs.dash.dashfragmenter.formats.csf.DashBuilder;
 import com.castlabs.dash.dashfragmenter.formats.csf.SegmentBaseSingleSidxManifestWriterImpl;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegmenttemplate.ExplodedSegmentListManifestWriterImpl;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegmenttemplate.SingleSidxExplode;
+import com.castlabs.dash.dashfragmenter.representation.RepresentationBuilder;
+import com.castlabs.dash.dashfragmenter.representation.SyncSampleAssistedRepresentationBuilder;
 import com.castlabs.dash.dashfragmenter.tracks.NegativeCtsInsteadOfEdit;
 import com.castlabs.dash.helpers.DashHelper;
+import com.castlabs.dash.helpers.RepresentationBuilderToFile;
 import com.castlabs.dash.helpers.SoundIntersectionFinderImpl;
 import com.coremedia.iso.boxes.Box;
 import com.coremedia.iso.boxes.CompositionTimeToSample;
@@ -31,10 +34,13 @@ import com.googlecode.mp4parser.authoring.tracks.CencEncryptingTrackImpl;
 import com.googlecode.mp4parser.authoring.tracks.DTSTrackImpl;
 import com.googlecode.mp4parser.authoring.tracks.EC3TrackImpl;
 import com.googlecode.mp4parser.authoring.tracks.h264.H264TrackImpl;
+import com.googlecode.mp4parser.authoring.tracks.ttml.TtmlTrackImpl;
 import com.googlecode.mp4parser.boxes.mp4.ESDescriptorBox;
 import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.AudioSpecificConfig;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.CencSampleEncryptionInformationGroupEntry;
 import com.googlecode.mp4parser.util.Path;
+import com.mp4parser.iso14496.part30.WebVTTTrack;
+import com.mp4parser.iso23001.part7.ProtectionSystemSpecificHeaderBox;
 import mpegCenc2013.DefaultKIDAttribute;
 import mpegDashSchemaMpd2011.AdaptationSetType;
 import mpegDashSchemaMpd2011.BaseURLType;
@@ -45,11 +51,17 @@ import mpegDashSchemaMpd2011.RepresentationType;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.xmlbeans.XmlOptions;
+import org.xml.sax.SAXException;
 
 import javax.crypto.SecretKey;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathExpressionException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.channels.WritableByteChannel;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -240,6 +252,11 @@ public class DashFileSetSequence {
 
         long start = System.currentTimeMillis();
 
+        long totalSize = 0;
+        for (File inputFile : inputFiles) {
+            totalSize += inputFile.length();
+        }
+
         Map<TrackProxy, String> track2File = createTracks();
 
         checkUnhandledFile();
@@ -283,7 +300,7 @@ public class DashFileSetSequence {
 
         writeManifest(manifest);
 
-        l.info("Finished write in " + (System.currentTimeMillis() - start) + "ms");
+        l.info(String.format("Finished fragmenting of %dMB in %.1fs", totalSize / 1024 / 1024, (double) (System.currentTimeMillis() - start) / 1000));
         return 0;
     }
 
@@ -412,8 +429,58 @@ public class DashFileSetSequence {
         if (textTracks != null) {
             for (File textTrack : textTracks) {
                 addRawTextTrack(mpdDocument, textTrack, role);
+                addMuxedTextTrack(mpdDocument, textTrack, role);
             }
         }
+    }
+
+    private void addMuxedTextTrack(MPDDocument mpdDocument, File textTrackFile, String role) throws IOException {
+        PeriodType period = mpdDocument.getMPD().getPeriodArray()[0];
+
+        Track textTrack;
+        if (textTrackFile.getName().endsWith(".xml") || textTrackFile.getName().endsWith(".dfxp")) {
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            dbf.setNamespaceAware(true);
+            try {
+                DocumentBuilder db = dbf.newDocumentBuilder();
+                textTrack = new TtmlTrackImpl(textTrackFile.getName(),
+                        Collections.singletonList(db.parse(textTrackFile)));
+
+            } catch (ParserConfigurationException e) {
+                throw new IOException(e);
+            } catch (SAXException e) {
+                throw new IOException(e);
+            } catch (XPathExpressionException e) {
+                throw new IOException(e);
+            } catch (URISyntaxException e) {
+                throw new IOException(e);
+            }
+
+        } else if (textTrackFile.getName().endsWith(".vtt")) {
+            textTrack = new WebVTTTrack(new FileDataSourceImpl(textTrackFile));
+        } else {
+            throw new RuntimeException("Not sure what kind of textTrack " + textTrackFile.getName() + " is.");
+        }
+        RepresentationBuilder representationBuilder =
+                new SyncSampleAssistedRepresentationBuilder(textTrack, textTrackFile.getName(), 10, Collections.<ProtectionSystemSpecificHeaderBox>emptyList());
+        if (explode) {
+            throw new RuntimeException("Cannot yet explode");
+        } else {
+            String id = representationBuilder.getSource();
+            RepresentationBuilderToFile.writeOnDemand(representationBuilder, new File(outputDirectory.getAbsolutePath(), id + ".mp4"));
+            RepresentationType representation = representationBuilder.getOnDemandRepresentation();
+            representation.addNewBaseURL().setStringValue(id + ".mp4");
+            representation.setId(id);
+            AdaptationSetType adaptationSet = period.addNewAdaptationSet();
+            Locale locale = getTextTrackLocale(textTrackFile);
+            adaptationSet.setLang(locale.getLanguage() + ("".equals(locale.getScript()) ? "" : "-" + locale.getScript()));
+            adaptationSet.setMimeType("application/mp4");
+            adaptationSet.setRepresentationArray(new RepresentationType[]{representation});
+            DescriptorType descriptor = adaptationSet.addNewRole();
+            descriptor.setSchemeIdUri("urn:mpeg:dash:role");
+            descriptor.setValue(role);
+        }
+
     }
 
 
@@ -457,9 +524,9 @@ public class DashFileSetSequence {
 
     public void writeManifest(MPDDocument mpdDocument) throws IOException {
         File manifest1 = new File(outputDirectory, "Manifest.mpd");
-        l.info("Writing " + manifest1 + "... ");
+        l.info("Writing " + manifest1);
         mpdDocument.save(manifest1, getXmlOptions());
-        l.info("Done.");
+        //l.info("Done.");
 
     }
 
@@ -506,9 +573,10 @@ public class DashFileSetSequence {
             }
         }
         for (Map.Entry<TrackProxy, Container> trackContainerEntry : dashedFiles.entrySet()) {
-            l.info("Writing... ");
+
             TrackProxy t = trackContainerEntry.getKey();
             File f = new File(outputDirectory, trackFilename.get(t));
+            l.info("Writing " + f.getAbsolutePath());
             WritableByteChannel wbc = new FileOutputStream(f).getChannel();
             try {
                 List<Box> boxes = trackContainerEntry.getValue().getBoxes();
@@ -520,7 +588,7 @@ public class DashFileSetSequence {
             } finally {
                 wbc.close();
             }
-            l.info("Done.");
+            //l.info("Done.");
             track2Files.put(t, Collections.singletonList(f));
         }
         return track2Files;
@@ -938,8 +1006,9 @@ public class DashFileSetSequence {
         }
         for (TrackProxy track : track2File.keySet()) {
             double adjustedStartTime = startTimes.get(track) - earliestMoviePresentationTime - ctsOffset.get(track);
-
-            l.info("Adjusted earliest presentation of " + track.getName() + " from " + startTimes.get(track) + " to " + (startTimes.get(track) - earliestMoviePresentationTime));
+            if (earliestMoviePresentationTime != 0) {
+                l.info("Adjusted earliest presentation of " + track.getName() + " from " + startTimes.get(track) + " to " + (startTimes.get(track) - earliestMoviePresentationTime));
+            }
 
             final List<Edit> edits = new ArrayList<Edit>();
             if (adjustedStartTime < 0) {

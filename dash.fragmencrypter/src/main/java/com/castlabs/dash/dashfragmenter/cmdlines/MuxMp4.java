@@ -51,7 +51,7 @@ public class MuxMp4 implements Command {
         // export the dashed single track MP4s
         writeMp4(tracks);
 
-        System.out.println("Finished write in " + (System.currentTimeMillis() - start) + "ms");
+        //System.out.println("Finished writeOnDemand in " + (System.currentTimeMillis() - start) + "ms");
         return 0;
     }
 

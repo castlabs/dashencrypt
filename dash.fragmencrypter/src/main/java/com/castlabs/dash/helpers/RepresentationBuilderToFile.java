@@ -10,7 +10,7 @@ import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
 public class RepresentationBuilderToFile {
-    public static void write(RepresentationBuilder representationBuilder, File out) throws IOException {
+    public static void writeOnDemand(RepresentationBuilder representationBuilder, File out) throws IOException {
         WritableByteChannel wbc = Channels.newChannel(new FileOutputStream(out));
         representationBuilder.getInitSegment().writeContainer(wbc);
         representationBuilder.getIndexSegment().writeContainer(wbc);
