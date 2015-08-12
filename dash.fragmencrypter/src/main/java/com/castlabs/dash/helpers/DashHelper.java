@@ -433,7 +433,7 @@ public final class DashHelper {
     }
 
     public static Locale getTextTrackLocale(File textTrack) throws IOException {
-        Pattern patternFilenameIncludesLanguage = Pattern.compile(".*-(.+)$");
+        Pattern patternFilenameIncludesLanguage = Pattern.compile(".*[-_](.+)$");
         String ext = FilenameUtils.getExtension(textTrack.getName());
         String basename = FilenameUtils.getBaseName(textTrack.getName());
         if (ext.equals("vtt")) {

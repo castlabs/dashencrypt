@@ -35,11 +35,11 @@ import com.googlecode.mp4parser.authoring.tracks.DTSTrackImpl;
 import com.googlecode.mp4parser.authoring.tracks.EC3TrackImpl;
 import com.googlecode.mp4parser.authoring.tracks.h264.H264TrackImpl;
 import com.googlecode.mp4parser.authoring.tracks.ttml.TtmlTrackImpl;
+import com.googlecode.mp4parser.authoring.tracks.webvtt.WebVttTrack;
 import com.googlecode.mp4parser.boxes.mp4.ESDescriptorBox;
 import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.AudioSpecificConfig;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.CencSampleEncryptionInformationGroupEntry;
 import com.googlecode.mp4parser.util.Path;
-import com.mp4parser.iso14496.part30.WebVTTTrack;
 import com.mp4parser.iso23001.part7.ProtectionSystemSpecificHeaderBox;
 import mpegCenc2013.DefaultKIDAttribute;
 import mpegDashSchemaMpd2011.AdaptationSetType;
@@ -59,6 +59,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathExpressionException;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -457,7 +458,7 @@ public class DashFileSetSequence {
             }
 
         } else if (textTrackFile.getName().endsWith(".vtt")) {
-            textTrack = new WebVTTTrack(new FileDataSourceImpl(textTrackFile));
+            textTrack = new WebVttTrack(new FileInputStream(textTrackFile), textTrackFile.getName(), getTextTrackLocale(textTrackFile));
         } else {
             throw new RuntimeException("Not sure what kind of textTrack " + textTrackFile.getName() + " is.");
         }
