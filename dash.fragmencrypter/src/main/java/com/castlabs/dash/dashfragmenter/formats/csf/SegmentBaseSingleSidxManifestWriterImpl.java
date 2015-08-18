@@ -66,7 +66,7 @@ public class SegmentBaseSingleSidxManifestWriterImpl extends AbstractManifestWri
         for (String adaptationSetId : adaptationSets.keySet()) {
             List<Track> tracks = adaptationSets.get(adaptationSetId);
 
-            AdaptationSetType adaptationSet = createAdaptationSet(periodType, tracks, adaptationSet2Role.get(adaptationSetId));
+            AdaptationSetType adaptationSet = createAdaptationSet(periodType, tracks, adaptationSet2Role.get(adaptationSetId), "vide".equals(tracks.get(0).getHandler())?1:-1);
 
 
             for (Track track : tracks) {

@@ -96,6 +96,9 @@ public class DashFileSetEncrypt extends AbstractCommand {
     @Option(name = "--closed-captions", aliases = "-cc")
     protected List<File> closedCaptions;
 
+    @Option(name = "--trick-mode-files", aliases = "-tmh", usage = "Add reduced framerate representations here.")
+    protected List<File> trickmodefiles;
+
 
     public void postProcessCmdLineArgs(CmdLineParser cmdLineParser) throws CmdLineException {
         for (File inputFile : inputFiles) {
@@ -116,6 +119,7 @@ public class DashFileSetEncrypt extends AbstractCommand {
         d.setInputFiles(inputFiles);
         d.setEncryptionAlgo("cenc");
         d.setDummyIvs(dummyIvs);
+        d.setTrickModeFiles(trickmodefiles);
 
         d.setSubtitles(subtitles);
         d.setClosedCaptions(closedCaptions);

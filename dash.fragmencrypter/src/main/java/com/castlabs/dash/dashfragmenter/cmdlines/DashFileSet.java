@@ -41,6 +41,8 @@ public class DashFileSet extends AbstractCommand {
     @Option(name = "--live-profile", aliases = "-x", usage = "If this option is set each segment will be written in a single file")
     protected boolean explode = false;
 
+    @Option(name = "--trick-mode-files", aliases = "-tmh", usage = "Add reduced framerate representations here.")
+    protected List<File> trickmodefiles;
 
     public void postProcessCmdLineArgs(CmdLineParser cmdLineParser) throws CmdLineException {
         for (File inputFile : inputFiles) {
@@ -57,6 +59,7 @@ public class DashFileSet extends AbstractCommand {
         dashFileSetSequence.setOutputDirectory(outputDirectory);
         dashFileSetSequence.setInputFiles(inputFiles);
         dashFileSetSequence.setSubtitles(subtitles);
+        dashFileSetSequence.setTrickModeFiles(trickmodefiles);
         dashFileSetSequence.setClosedCaptions(closedCaptions);
         return dashFileSetSequence.run();
     }

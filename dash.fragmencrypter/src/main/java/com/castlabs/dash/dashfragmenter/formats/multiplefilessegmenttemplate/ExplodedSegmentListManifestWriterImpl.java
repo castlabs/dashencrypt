@@ -74,7 +74,7 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
                 double durationInSeconds = (double) track.getDuration() / track.getTrackMetaData().getTimescale();
                 maxDurationInSeconds = Math.max(maxDurationInSeconds, durationInSeconds);
             }
-            AdaptationSetType adaptationSet = createAdaptationSet(periodType, tracks, adaptationSet2Role.get(adaptationSetId));
+            AdaptationSetType adaptationSet = createAdaptationSet(periodType, tracks, adaptationSet2Role.get(adaptationSetId), "vide".equals(tracks.get(0).getHandler())?1:-1);
             Track firstTrack = tracks.get(0);
             SegmentTemplateType segmentTemplate = adaptationSet.addNewSegmentTemplate();
             segmentTemplate.setMedia(mediaPattern.replace("%lang%", tracks.get(0).getTrackMetaData().getLanguage()));

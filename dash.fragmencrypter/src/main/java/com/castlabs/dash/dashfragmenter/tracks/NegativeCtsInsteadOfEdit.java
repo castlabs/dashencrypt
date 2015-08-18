@@ -1,5 +1,6 @@
 package com.castlabs.dash.dashfragmenter.tracks;
 
+import com.castlabs.dash.helpers.DashHelper;
 import com.coremedia.iso.boxes.CompositionTimeToSample;
 import com.googlecode.mp4parser.authoring.Edit;
 import com.googlecode.mp4parser.authoring.Track;
@@ -36,24 +37,9 @@ public class NegativeCtsInsteadOfEdit extends WrappingTrack {
                 ctt.setOffset(ctt.getOffset() - ptss[0]);
             }
             List<Edit> orgEdits = original.getEdits();
-            boolean acceptEdit = true;
-            boolean acceptDwell = true;
-            double earliestTrackPresentationTime = 0;
-            for (Edit edit : orgEdits) {
-                if (edit.getMediaTime() == -1 && !acceptDwell) {
-                    throw new RuntimeException("Cannot accept edit list for processing (1)");
-                }
-                if (edit.getMediaTime() >= 0 && !acceptEdit) {
-                    throw new RuntimeException("Cannot accept edit list for processing (2)");
-                }
-                if (edit.getMediaTime() == -1) {
-                    earliestTrackPresentationTime += edit.getSegmentDuration();
-                } else /* if edit.getMediaTime() >= 0 */ {
-                    earliestTrackPresentationTime -= (double) edit.getMediaTime() / edit.getTimeScale();
-                    acceptEdit = false;
-                    acceptDwell = false;
-                }
-            }
+
+            double earliestTrackPresentationTime = DashHelper.getEarliestTrackPresentationTime(orgEdits);
+
             double adjustedStartTime = earliestTrackPresentationTime + (double)ptss[0] / original.getTrackMetaData().getTimescale();
             edits = new ArrayList<Edit>();
             if (adjustedStartTime < 0) {
@@ -77,10 +63,12 @@ public class NegativeCtsInsteadOfEdit extends WrappingTrack {
     }
 
     public static boolean benefitsFromChange(Track track) {
-        boolean acceptEdit = true;
-        boolean acceptDwell = true;
+
         List<Edit> edits = track.getEdits();
         double decodingStartInMovie = 0;
+
+        boolean acceptEdit = true;
+        boolean acceptDwell = true;
         for (Edit edit : edits) {
             if (edit.getMediaTime() == -1 && !acceptDwell) {
                 throw new RuntimeException("Cannot accept edit list for processing (1)");

@@ -26,13 +26,13 @@ import java.util.*;
 
 public abstract class AbstractManifestWriter {
 
-    private final Map<? extends  Track, Container> trackContainer;
-    private final Map<? extends  Track, Long> trackBitrates;
+    private final Map<? extends Track, Container> trackContainer;
+    private final Map<? extends Track, Long> trackBitrates;
     DashFileSetSequence dashFileSetSequence;
 
 
-    public AbstractManifestWriter(Map<? extends  Track, Container> trackContainer,
-                                  Map<? extends  Track, Long> trackBitrates,
+    public AbstractManifestWriter(Map<? extends Track, Container> trackContainer,
+                                  Map<? extends Track, Long> trackBitrates,
                                   DashFileSetSequence dashFileSetSequence) {
 
         this.trackContainer = trackContainer;
@@ -43,7 +43,7 @@ public abstract class AbstractManifestWriter {
 
     public GDuration getMinBufferTime() {
         int requiredTimeInS = 0;
-        for (Map.Entry<? extends  Track, Container> trackContainerEntry : trackContainer.entrySet()) {
+        for (Map.Entry<? extends Track, Container> trackContainerEntry : trackContainer.entrySet()) {
             long bitrate = trackBitrates.get(trackContainerEntry.getKey());
             long timescale = ((MediaHeaderBox) Path.getPath(trackContainerEntry.getValue(), "/moov[0]/trak[0]/mdia[0]/mdhd[0]")).getTimescale();
             long requiredBuffer = 0;
@@ -137,7 +137,7 @@ public abstract class AbstractManifestWriter {
 
     }
 
-    protected AdaptationSetType createAdaptationSet(PeriodType periodType, List<Track> tracks, String role) {
+    protected AdaptationSetType createAdaptationSet(PeriodType periodType, List<Track> tracks, String role, long id) {
         UUID keyId = null;
         String language = null;
         for (Track track : tracks) {
@@ -155,13 +155,16 @@ public abstract class AbstractManifestWriter {
 
 
         AdaptationSetType adaptationSet = periodType.addNewAdaptationSet();
+        if (id != -1) {
+            adaptationSet.setId(id);
+        }
 
         if (role != null) {
             DescriptorType roleDescriptorType = adaptationSet.addNewRole();
             String scheme = role.split("\\|")[0];
-            String id = role.split("\\|")[1];
+            String value = role.split("\\|")[1];
             roleDescriptorType.setSchemeIdUri(scheme);
-            roleDescriptorType.setValue(id);
+            roleDescriptorType.setValue(value);
         }
 
         if (!tracks.get(0).getHandler().equals("subt")) {

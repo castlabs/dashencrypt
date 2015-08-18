@@ -7,6 +7,7 @@ import com.coremedia.iso.boxes.SampleDescriptionBox;
 import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
 import com.coremedia.iso.boxes.sampleentry.SampleEntry;
 import com.coremedia.iso.boxes.sampleentry.VisualSampleEntry;
+import com.googlecode.mp4parser.authoring.Edit;
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.boxes.AC3SpecificBox;
 import com.googlecode.mp4parser.boxes.DTSSpecificBox;
@@ -141,6 +142,29 @@ public final class DashHelper {
         return audioChannelValue;
     }
 
+
+    public static double getEarliestTrackPresentationTime(List<Edit> edits) {
+        double earliestTrackPresentationTime = 0;
+        boolean acceptEdit = true;
+        boolean acceptDwell = true;
+        for (Edit edit : edits) {
+            if (edit.getMediaTime() == -1 && !acceptDwell) {
+                throw new RuntimeException("Cannot accept edit list for processing (1)");
+            }
+            if (edit.getMediaTime() >= 0 && !acceptEdit) {
+                throw new RuntimeException("Cannot accept edit list for processing (2)");
+            }
+            if (edit.getMediaTime() == -1) {
+                earliestTrackPresentationTime += edit.getSegmentDuration();
+            } else /* if edit.getMediaTime() >= 0 */ {
+                earliestTrackPresentationTime -= (double) edit.getMediaTime() / edit.getTimeScale();
+                acceptEdit = false;
+                acceptDwell = false;
+            }
+        }
+        return earliestTrackPresentationTime;
+    }
+
     private static ChannelConfiguration getAACChannelConfig(AudioSampleEntry e, ESDescriptorBox esds) {
 
         final DecoderConfigDescriptor decoderConfigDescriptor = esds.getEsDescriptor().getDecoderConfigDescriptor();
@@ -149,6 +173,18 @@ public final class DashHelper {
         cc.schemeIdUri = "urn:mpeg:dash:23003:3:audio_channel_configuration:2011";
         cc.value = String.valueOf(audioSpecificConfig != null ? audioSpecificConfig.getChannelConfiguration() : "2");
         return cc;
+    }
+
+    /**
+     * Returns the number of frame which correspond to the time given.
+     */
+    public static int time2Frames(Track track, double timeInSeconds) {
+        int i = 0;
+        while (timeInSeconds > 0) {
+            timeInSeconds -= (double) track.getSampleDurations()[i] / track.getTrackMetaData().getTimescale();
+            i++;
+        }
+        return i;
     }
 
     private static int getNumChannels(DTSSpecificBox dtsSpecificBox) {
@@ -274,7 +310,7 @@ public final class DashHelper {
 
         OriginalFormatBox frma = Path.getPath((Box) se, "sinf/frma");
         String type;
-        if (frma!=null) {
+        if (frma != null) {
             type = frma.getDataFormat();
         } else {
             type = se.getType();
@@ -416,10 +452,10 @@ public final class DashHelper {
     public static String getFormat(Track track) {
         SampleDescriptionBox stsd = track.getSampleDescriptionBox();
         OriginalFormatBox frma = Path.getPath(stsd, "enc./sinf/frma");
-        if (frma!=null) {
+        if (frma != null) {
             return frma.getDataFormat();
         } else {
-            if (stsd.getSampleEntry()!=null) {
+            if (stsd.getSampleEntry() != null) {
                 return stsd.getSampleEntry().getType();
             } else {
                 return null;

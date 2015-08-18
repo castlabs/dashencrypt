@@ -40,6 +40,7 @@ import com.googlecode.mp4parser.boxes.mp4.ESDescriptorBox;
 import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.AudioSpecificConfig;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.CencSampleEncryptionInformationGroupEntry;
 import com.googlecode.mp4parser.util.Path;
+import com.googlecode.mp4parser.util.UUIDConverter;
 import com.mp4parser.iso23001.part7.ProtectionSystemSpecificHeaderBox;
 import mpegCenc2013.DefaultKIDAttribute;
 import mpegDashSchemaMpd2011.AdaptationSetType;
@@ -51,6 +52,9 @@ import mpegDashSchemaMpd2011.RepresentationType;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.xmlbeans.XmlOptions;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
 
 import javax.crypto.SecretKey;
@@ -58,28 +62,17 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPathExpressionException;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.URISyntaxException;
+import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.logging.Logger;
 
+import static com.castlabs.dash.helpers.DashHelper.getEarliestTrackPresentationTime;
 import static com.castlabs.dash.helpers.DashHelper.getTextTrackLocale;
+import static com.castlabs.dash.helpers.DashHelper.time2Frames;
 
 
 /**
@@ -91,6 +84,8 @@ public class DashFileSetSequence {
     protected SecretKey audioKey;
     protected UUID videoKeyid;
     protected SecretKey videoKey;
+
+    protected Map<UUID, List<ProtectionSystemSpecificHeaderBox>> psshBoxes = new HashMap<UUID, List<ProtectionSystemSpecificHeaderBox>>();
 
     protected List<File> inputFilesOrig;
     protected List<File> inputFiles;
@@ -118,7 +113,22 @@ public class DashFileSetSequence {
     protected List<File> subtitles;
 
     protected List<File> closedCaptions;
+    private List<File> trickModeFiles;
 
+
+    /**
+     * Sets the PSSH boxes as map from keyId to a map of protection system uuid and preotection system specific content:
+     * <pre>
+     *     videoKey ->
+     *                 Widevine UUID  ->  Widevine PSSH content
+     *                 PlayReady UUID ->
+     * </pre>
+     *
+     * @param psshBoxes
+     */
+    public void setPsshBoxes(Map<UUID, List<ProtectionSystemSpecificHeaderBox>> psshBoxes) {
+        this.psshBoxes = psshBoxes;
+    }
 
     public void setSubtitles(List<File> subtitles) {
         this.subtitles = subtitles;
@@ -374,9 +384,78 @@ public class DashFileSetSequence {
         }
         addTextTracks(mpdDocument, subtitles, "subtitle");
         addTextTracks(mpdDocument, closedCaptions, "caption");
-
+        addTrickModeTracks(mpdDocument);
         return mpdDocument;
     }
+
+
+    private void addTrickModeTracks(MPDDocument mpdDocument) throws IOException {
+        List<RepresentationBuilder> trickModeRepresentations = new ArrayList<RepresentationBuilder>();
+        for (File trickModeFile : trickModeFiles) {
+            if (trickModeFile.getName().endsWith(".mp4") ||
+                    trickModeFile.getName().endsWith(".mov") ||
+                    trickModeFile.getName().endsWith(".ismv") ||
+                    trickModeFile.getName().endsWith(".m4a") ||
+                    trickModeFile.getName().endsWith(".m4v")) {
+                Movie movie = MovieCreator.build(new FileDataSourceImpl(trickModeFile));
+                for (Track track : movie.getTracks()) {
+                    if ("vide".equals(track.getHandler())) {
+                        if (videoKeyid != null) {
+                            track = new CencEncryptingTrackImpl(track, videoKeyid, videoKey, false);
+                        }
+                        trickModeRepresentations.add(new SyncSampleAssistedRepresentationBuilder(track, trickModeFile.getName(), time2Frames(track, 3), psshBoxes.get(videoKeyid)));
+                    } else {
+                        l.warning("Excluding " + trickModeFile + " track " + track.getTrackMetaData().getTrackId() + " as it's not a video track");
+
+                    }
+                }
+            } else if (trickModeFile.getName().endsWith(".h264") || trickModeFile.getName().endsWith(".264")) {
+                Track track = new H264TrackImpl(new FileDataSourceImpl(trickModeFile));
+                if (videoKeyid != null) {
+                    track = new CencEncryptingTrackImpl(track, videoKeyid, videoKey, false);
+                }
+                trickModeRepresentations.add(new SyncSampleAssistedRepresentationBuilder(track, trickModeFile.getName(), time2Frames(track, 3), psshBoxes.get(videoKeyid)));
+            } else {
+                throw new IOException("Trick Mode file " + trickModeFile + " is not a valid trick mode file. Expecting *.[h]264 or *.mp4");
+            }
+        }
+
+        if (!trickModeRepresentations.isEmpty()) {
+            AdaptationSetType adaptationSet = mpdDocument.getMPD().getPeriodArray(0).addNewAdaptationSet();
+            ArrayList<RepresentationType> representations = new ArrayList<RepresentationType>();
+            for (RepresentationBuilder representationBuilder : trickModeRepresentations) {
+                double seconds = (double)representationBuilder.getTrack().getDuration() / representationBuilder.getTrack().getTrackMetaData().getTimescale();
+                // todo find actual main video FPS - will happen when
+                long maxPlayoutRate = Math.round((double)25 / ((double)representationBuilder.getTrack().getSamples().size() / seconds));
+                RepresentationType representation = writeRepresentation(representationBuilder);
+                representation.setMaxPlayoutRate(maxPlayoutRate);
+                DescriptorType essentialProperty = representation.addNewEssentialProperty();
+                essentialProperty.setSchemeIdUri("http://dashif.org/guide-lines/trickmode");
+                essentialProperty.setValue("1"); // an AdaptationSet built with ExplodedSegmentListManifestWriter or SegmentBaseSingleSidxManifestWriterImpl always has id "1" if it's a video.
+                representations.add(representation);
+            }
+            adaptationSet.setRepresentationArray(representations.toArray(new RepresentationType[representations.size()]));
+        }
+    }
+
+    private RepresentationType writeRepresentation(RepresentationBuilder representationBuilder) throws IOException {
+        RepresentationType representation;
+        String id = FilenameUtils.getBaseName(representationBuilder.getSource());
+        if (explode) {
+            representation = representationBuilder.getLiveRepresentation();
+            representation.getSegmentTemplate().setInitialization2(initPattern);
+            representation.getSegmentTemplate().setMedia(mediaPattern);
+            representation.setId(id);
+            RepresentationBuilderToFile.writeLive(representationBuilder, representation, outputDirectory);
+        } else {
+            representation = representationBuilder.getOnDemandRepresentation();
+            representation.addNewBaseURL().setStringValue(id + ".mp4");
+            representation.setId(id);
+            RepresentationBuilderToFile.writeOnDemand(representationBuilder, representation, outputDirectory);
+        }
+        return representation;
+    }
+
 
     public <T> Map<Track, T> t(Map<TrackProxy, T> mapIn) {
         Map<Track, T> mapOut = new HashMap<Track, T>();
@@ -464,20 +543,7 @@ public class DashFileSetSequence {
         }
         RepresentationBuilder representationBuilder =
                 new SyncSampleAssistedRepresentationBuilder(textTrack, textTrackFile.getName(), 10, Collections.<ProtectionSystemSpecificHeaderBox>emptyList());
-        RepresentationType representation;
-        String id = FilenameUtils.getBaseName(representationBuilder.getSource());
-        if (explode) {
-            representation= representationBuilder.getLiveRepresentation();
-            representation.getSegmentTemplate().setInitialization2(initPattern);
-            representation.getSegmentTemplate().setMedia(mediaPattern);
-            representation.setId(id);
-            RepresentationBuilderToFile.writeLive(representationBuilder, representation, outputDirectory);
-        } else {
-            representation = representationBuilder.getOnDemandRepresentation();
-            representation.addNewBaseURL().setStringValue(id + ".mp4");
-            representation.setId(id);
-            RepresentationBuilderToFile.writeOnDemand(representationBuilder, representation, outputDirectory);
-        }
+        RepresentationType representation = writeRepresentation(representationBuilder);
         AdaptationSetType adaptationSet = period.addNewAdaptationSet();
         Locale locale = getTextTrackLocale(textTrackFile);
         adaptationSet.setLang(locale.getLanguage() + ("".equals(locale.getScript()) ? "" : "-" + locale.getScript()));
@@ -975,25 +1041,10 @@ public class DashFileSetSequence {
         Map<TrackProxy, Double> ctsOffset = new HashMap<TrackProxy, Double>();
 
         for (TrackProxy track : track2File.keySet()) {
-            boolean acceptEdit = true;
-            boolean acceptDwell = true;
+
             List<Edit> edits = track.getEdits();
-            double earliestTrackPresentationTime = 0;
-            for (Edit edit : edits) {
-                if (edit.getMediaTime() == -1 && !acceptDwell) {
-                    throw new RuntimeException("Cannot accept edit list for processing (1)");
-                }
-                if (edit.getMediaTime() >= 0 && !acceptEdit) {
-                    throw new RuntimeException("Cannot accept edit list for processing (2)");
-                }
-                if (edit.getMediaTime() == -1) {
-                    earliestTrackPresentationTime += edit.getSegmentDuration();
-                } else /* if edit.getMediaTime() >= 0 */ {
-                    earliestTrackPresentationTime -= (double) edit.getMediaTime() / edit.getTimeScale();
-                    acceptEdit = false;
-                    acceptDwell = false;
-                }
-            }
+
+            double earliestTrackPresentationTime = getEarliestTrackPresentationTime(edits);
 
             if (track.getCompositionTimeEntries() != null && track.getCompositionTimeEntries().size() > 0) {
                 long currentTime = 0;
@@ -1032,6 +1083,7 @@ public class DashFileSetSequence {
             });
         }
     }
+
 
     public Map<String, List<TrackProxy>> findAdaptationSets(Set<TrackProxy> allTracks) throws IOException, ExitCodeException {
         HashMap<String, List<TrackProxy>> trackFamilies = new HashMap<String, List<TrackProxy>>();
@@ -1077,6 +1129,10 @@ public class DashFileSetSequence {
         return trackFamilies;
     }
 
+    public void setTrickModeFiles(List<File> trickModeFiles) {
+        this.trickModeFiles = trickModeFiles;
+    }
+
 
     private class StsdCorrectingTrack extends WrappingTrack {
         SampleDescriptionBox stsd;
@@ -1099,5 +1155,53 @@ public class DashFileSetSequence {
         contentProtection.set(defaultKIDAttribute);
         contentProtection.setSchemeIdUri("urn:mpeg:dash:mp4protection:2011");
         contentProtection.setValue("cenc");
+
+        List<ProtectionSystemSpecificHeaderBox> psshs = psshBoxes.get(keyId);
+        if (psshs != null) {
+            for (ProtectionSystemSpecificHeaderBox pssh : psshs) {
+
+                if (Arrays.equals(ProtectionSystemSpecificHeaderBox.PLAYREADY_SYSTEM_ID, pssh.getSystemId())) {
+
+                    Node playReadyCPN = createContentProctionNode(adaptationSet, "urn:uuid:" + UUIDConverter.convert(pssh.getSystemId()).toString(), "MSPR 2.0");
+                    Document d = playReadyCPN.getOwnerDocument();
+                    Element pro = d.createElementNS("urn:microsoft:playready", "pro");
+                    Element prPssh = d.createElementNS("urn:mpeg:cenc:2013", "pssh");
+
+                    pro.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(pssh.getContent())));
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    try {
+                        pssh.getBox(Channels.newChannel(baos));
+                    } catch (IOException e) {
+                        throw new RuntimeException(e); // unexpected
+                    }
+                    prPssh.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(baos.toByteArray())));
+
+                    playReadyCPN.appendChild(pro);
+                    playReadyCPN.appendChild(prPssh);
+                }
+                if (Arrays.equals(ProtectionSystemSpecificHeaderBox.WIDEVINE, pssh.getSystemId())) {
+                    // Widevvine
+                    Node widevineCPN = createContentProctionNode(adaptationSet, "urn:uuid:" + UUIDConverter.convert(pssh.getSystemId()).toString(), null);
+                    Document d = widevineCPN.getOwnerDocument();
+                    Element wvPssh = d.createElementNS("urn:mpeg:cenc:2013", "pssh");
+                    wvPssh.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(pssh.getContent())));
+
+                    widevineCPN.appendChild(wvPssh);
+                }
+            }
+        }
+
+    }
+
+    private Node createContentProctionNode(AdaptationSetType adaptationSet, String schemeIdUri, String value) {
+        DescriptorType cpNode = adaptationSet.addNewContentProtection();
+        if (schemeIdUri != null) {
+            cpNode.setSchemeIdUri(schemeIdUri);
+        }
+        if (value != null) {
+            cpNode.setValue(value);
+        }
+
+        return cpNode.getDomNode();
     }
 }
