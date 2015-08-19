@@ -357,7 +357,7 @@ public class DashFileSetSequence {
 
     private void addTrickModeTracks(MPDDocument mpdDocument) throws IOException {
         List<RepresentationBuilder> trickModeRepresentations = new ArrayList<RepresentationBuilder>();
-        for (File trickModeFile : trickModeFiles) {
+        for (File trickModeFile : safe(trickModeFiles)) {
             if (trickModeFile.getName().endsWith(".mp4") ||
                     trickModeFile.getName().endsWith(".mov") ||
                     trickModeFile.getName().endsWith(".ismv") ||
