@@ -20,20 +20,13 @@ import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
 import com.googlecode.mp4parser.FileDataSourceImpl;
 import com.googlecode.mp4parser.authoring.Edit;
 import com.googlecode.mp4parser.authoring.Movie;
-import com.googlecode.mp4parser.authoring.Sample;
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.WrappingTrack;
 import com.googlecode.mp4parser.authoring.builder.Fragmenter;
 import com.googlecode.mp4parser.authoring.builder.StaticFragmentIntersectionFinderImpl;
 import com.googlecode.mp4parser.authoring.builder.SyncSampleIntersectFinderImpl;
 import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
-import com.googlecode.mp4parser.authoring.tracks.AACTrackImpl;
-import com.googlecode.mp4parser.authoring.tracks.AC3TrackImpl;
-import com.googlecode.mp4parser.authoring.tracks.Avc1ToAvc3TrackImpl;
-import com.googlecode.mp4parser.authoring.tracks.CencEncryptedTrack;
-import com.googlecode.mp4parser.authoring.tracks.CencEncryptingTrackImpl;
-import com.googlecode.mp4parser.authoring.tracks.DTSTrackImpl;
-import com.googlecode.mp4parser.authoring.tracks.EC3TrackImpl;
+import com.googlecode.mp4parser.authoring.tracks.*;
 import com.googlecode.mp4parser.authoring.tracks.h264.H264TrackImpl;
 import com.googlecode.mp4parser.authoring.tracks.ttml.TtmlTrackImpl;
 import com.googlecode.mp4parser.authoring.tracks.webvtt.WebVttTrack;
@@ -44,15 +37,9 @@ import com.googlecode.mp4parser.util.Path;
 import com.googlecode.mp4parser.util.UUIDConverter;
 import com.mp4parser.iso23001.part7.ProtectionSystemSpecificHeaderBox;
 import mpegCenc2013.DefaultKIDAttribute;
-import mpegDashSchemaMpd2011.AdaptationSetType;
-import mpegDashSchemaMpd2011.BaseURLType;
-import mpegDashSchemaMpd2011.DescriptorType;
-import mpegDashSchemaMpd2011.MPDDocument;
-import mpegDashSchemaMpd2011.PeriodType;
-import mpegDashSchemaMpd2011.RepresentationType;
+import mpegDashSchemaMpd2011.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.xmlbeans.XmlOptions;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -71,9 +58,7 @@ import java.security.SecureRandom;
 import java.util.*;
 import java.util.logging.Logger;
 
-import static com.castlabs.dash.helpers.DashHelper.getEarliestTrackPresentationTime;
-import static com.castlabs.dash.helpers.DashHelper.getTextTrackLocale;
-import static com.castlabs.dash.helpers.DashHelper.time2Frames;
+import static com.castlabs.dash.helpers.DashHelper.*;
 import static com.castlabs.dash.helpers.ManifestHelper.getApproxTrackSize;
 import static com.castlabs.dash.helpers.ManifestHelper.getXmlOptions;
 
@@ -489,13 +474,19 @@ public class DashFileSetSequence {
                 t(trackBitrate), t(representationIds), true, adaptationSet2Role).getManifest();
     }
 
+    public <E> Collection<E> safe(Collection<E> c){
+        if (c==null) {
+            return Collections.emptySet();
+        } else {
+            return c;
+        }
+    }
+
     public void addTextTracks(MPDDocument mpdDocument, List<File> textTracks, String role) throws IOException {
-        if (textTracks != null) {
-            for (File textTrack : textTracks) {
+            for (File textTrack : safe(textTracks)) {
                 addRawTextTrack(mpdDocument, textTrack, role);
                 addMuxedTextTrack(mpdDocument, textTrack, role);
             }
-        }
     }
 
     private void addMuxedTextTrack(MPDDocument mpdDocument, File textTrackFile, String role) throws IOException {
@@ -1128,8 +1119,8 @@ public class DashFileSetSequence {
         contentProtection.setValue("cenc");
 
         List<ProtectionSystemSpecificHeaderBox> psshs = psshBoxes.get(keyId);
-        if (psshs != null) {
-            for (ProtectionSystemSpecificHeaderBox pssh : psshs) {
+
+            for (ProtectionSystemSpecificHeaderBox pssh : safe(psshs)) {
 
                 if (Arrays.equals(ProtectionSystemSpecificHeaderBox.PLAYREADY_SYSTEM_ID, pssh.getSystemId())) {
 
@@ -1160,11 +1151,11 @@ public class DashFileSetSequence {
                     widevineCPN.appendChild(wvPssh);
                 }
             }
-        }
+
 
     }
 
-    private Node createContentProctionNode(AdaptationSetType adaptationSet, String schemeIdUri, String value) {
+    protected Node createContentProctionNode(AdaptationSetType adaptationSet, String schemeIdUri, String value) {
         DescriptorType cpNode = adaptationSet.addNewContentProtection();
         if (schemeIdUri != null) {
             cpNode.setSchemeIdUri(schemeIdUri);
