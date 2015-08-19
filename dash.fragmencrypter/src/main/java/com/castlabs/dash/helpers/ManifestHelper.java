@@ -9,6 +9,7 @@ package com.castlabs.dash.helpers;
 import com.coremedia.iso.boxes.Box;
 import com.coremedia.iso.boxes.Container;
 import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
+import com.googlecode.mp4parser.authoring.Sample;
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.boxes.threegpp26244.SegmentIndexBox;
 import com.googlecode.mp4parser.util.Path;
@@ -16,8 +17,11 @@ import mpegDashSchemaMpd2011.AdaptationSetType;
 import mpegDashSchemaMpd2011.DescriptorType;
 import mpegDashSchemaMpd2011.RepresentationType;
 import org.apache.commons.lang.math.Fraction;
+import org.apache.xmlbeans.XmlOptions;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -134,5 +138,30 @@ public class ManifestHelper {
         rv = replace(TIME_PATTERN.matcher(rv), rv, time);
         rv = replace(BANDWIDTH_PATTERN.matcher(rv), rv, bandwidth);
         return rv;
+    }
+
+    public static XmlOptions getXmlOptions() {
+        XmlOptions xmlOptions = new XmlOptions();
+        //xmlOptions.setUseDefaultNamespace();
+        HashMap<String, String> ns = new HashMap<String, String>();
+        //ns.put("urn:mpeg:DASH:schema:MPD:2011", "");
+        ns.put("urn:mpeg:cenc:2013", "cenc");
+        ns.put("urn:mpeg:drmtdoday:cenc:2014", "drmtoday");
+        ns.put("urn:microsoft:playready", "mspr");
+        xmlOptions.setSaveSuggestedPrefixes(ns);
+        xmlOptions.setSaveAggressiveNamespaces();
+        xmlOptions.setUseDefaultNamespace();
+        xmlOptions.setSavePrettyPrint();
+        return xmlOptions;
+    }
+
+    public static long getApproxTrackSize(Track track) {
+        long size = 0;
+        List<Sample> samples = track.getSamples();
+        for (int i = 0; i < Math.min(samples.size(), 10000); i++) {
+            size += samples.get(i).getSize();
+        }
+        size = (size / Math.min(track.getSamples().size(), 10000)) * track.getSamples().size();
+        return size;
     }
 }

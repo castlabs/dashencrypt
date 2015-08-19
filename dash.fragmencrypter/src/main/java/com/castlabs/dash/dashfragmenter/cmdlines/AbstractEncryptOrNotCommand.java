@@ -94,19 +94,6 @@ public abstract class AbstractEncryptOrNotCommand implements Command {
     protected File encKeySecretKeyFileAudio = null;
 
 
-    public static XmlOptions getXmlOptions() {
-        XmlOptions xmlOptions = new XmlOptions();
-        //xmlOptions.setUseDefaultNamespace();
-        HashMap<String, String> ns = new HashMap<String, String>();
-        //ns.put("urn:mpeg:DASH:schema:MPD:2011", "");
-        ns.put("urn:mpeg:cenc:2013", "cenc");
-        xmlOptions.setSaveSuggestedPrefixes(ns);
-        xmlOptions.setSaveAggressiveNamespaces();
-        xmlOptions.setUseDefaultNamespace();
-        xmlOptions.setSavePrettyPrint();
-        return xmlOptions;
-    }
-
 
     public void postProcessCmdLineArgs(CmdLineParser cmdLineParser) throws CmdLineException {
 

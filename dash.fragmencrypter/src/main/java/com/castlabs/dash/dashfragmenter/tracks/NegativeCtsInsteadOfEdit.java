@@ -65,25 +65,7 @@ public class NegativeCtsInsteadOfEdit extends WrappingTrack {
     public static boolean benefitsFromChange(Track track) {
 
         List<Edit> edits = track.getEdits();
-        double decodingStartInMovie = 0;
-
-        boolean acceptEdit = true;
-        boolean acceptDwell = true;
-        for (Edit edit : edits) {
-            if (edit.getMediaTime() == -1 && !acceptDwell) {
-                throw new RuntimeException("Cannot accept edit list for processing (1)");
-            }
-            if (edit.getMediaTime() >= 0 && !acceptEdit) {
-                throw new RuntimeException("Cannot accept edit list for processing (2)");
-            }
-            if (edit.getMediaTime() == -1) {
-                decodingStartInMovie += edit.getSegmentDuration();
-            } else /* if edit.getMediaTime() >= 0 */ {
-                decodingStartInMovie -= (double) edit.getMediaTime() / edit.getTimeScale();
-                acceptEdit = false;
-                acceptDwell = false;
-            }
-        }
+        double decodingStartInMovie = DashHelper.getEarliestTrackPresentationTime(edits);
 
         if (decodingStartInMovie != 0) {
             double presentationStartInTrack = 0;

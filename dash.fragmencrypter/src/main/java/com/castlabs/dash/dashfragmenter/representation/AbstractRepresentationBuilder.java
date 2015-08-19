@@ -42,6 +42,7 @@ import java.util.*;
 
 import static com.castlabs.dash.helpers.BoxHelper.boxToBytes;
 import static com.castlabs.dash.helpers.ManifestHelper.convertFramerate;
+import static com.castlabs.dash.helpers.ManifestHelper.getApproxTrackSize;
 import static com.castlabs.dash.helpers.Timing.getDuration;
 import static com.castlabs.dash.helpers.Timing.getPtss;
 import static com.castlabs.dash.helpers.Timing.getTimeMappingEditTime;
@@ -823,7 +824,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
 
 
         } else if (theTrack.getHandler().equals("subt")) {
-            representation.setMimeType("audio/mp4");
+            representation.setMimeType("application/mp4");
             representation.setCodecs(getCodec());
 
             representation.setStartWithSAP(1);
@@ -848,7 +849,6 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
 
     public RepresentationType getOnDemandRepresentation() {
         RepresentationType representation = getBaseRepresentation();
-
 
         SegmentBaseType segBaseType = representation.addNewSegmentBase();
 

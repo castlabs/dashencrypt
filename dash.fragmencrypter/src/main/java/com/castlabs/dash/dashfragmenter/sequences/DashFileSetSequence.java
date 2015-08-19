@@ -5,6 +5,7 @@ import com.castlabs.dash.dashfragmenter.formats.csf.DashBuilder;
 import com.castlabs.dash.dashfragmenter.formats.csf.SegmentBaseSingleSidxManifestWriterImpl;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegmenttemplate.ExplodedSegmentListManifestWriterImpl;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegmenttemplate.SingleSidxExplode;
+import com.castlabs.dash.dashfragmenter.representation.ManifestOptimizer;
 import com.castlabs.dash.dashfragmenter.representation.RepresentationBuilder;
 import com.castlabs.dash.dashfragmenter.representation.SyncSampleAssistedRepresentationBuilder;
 import com.castlabs.dash.dashfragmenter.tracks.NegativeCtsInsteadOfEdit;
@@ -73,6 +74,8 @@ import java.util.logging.Logger;
 import static com.castlabs.dash.helpers.DashHelper.getEarliestTrackPresentationTime;
 import static com.castlabs.dash.helpers.DashHelper.getTextTrackLocale;
 import static com.castlabs.dash.helpers.DashHelper.time2Frames;
+import static com.castlabs.dash.helpers.ManifestHelper.getApproxTrackSize;
+import static com.castlabs.dash.helpers.ManifestHelper.getXmlOptions;
 
 
 /**
@@ -96,7 +99,6 @@ public class DashFileSetSequence {
     protected boolean explode = false;
     protected String mediaPattern = "$RepresentationID$/media-$Time$.mp4";
     protected String initPattern = "$RepresentationID$/init.mp4";
-    protected boolean generateStypSdix = true;
 
     protected String mainLang = "eng";
     protected boolean avc1ToAvc3 = false;
@@ -116,16 +118,6 @@ public class DashFileSetSequence {
     private List<File> trickModeFiles;
 
 
-    /**
-     * Sets the PSSH boxes as map from keyId to a map of protection system uuid and preotection system specific content:
-     * <pre>
-     *     videoKey ->
-     *                 Widevine UUID  ->  Widevine PSSH content
-     *                 PlayReady UUID ->
-     * </pre>
-     *
-     * @param psshBoxes
-     */
     public void setPsshBoxes(Map<UUID, List<ProtectionSystemSpecificHeaderBox>> psshBoxes) {
         this.psshBoxes = psshBoxes;
     }
@@ -163,18 +155,6 @@ public class DashFileSetSequence {
      */
     public void setDummyIvs(boolean dummyIvs) {
         this.dummyIvs = dummyIvs;
-    }
-
-    /**
-     * Sets whether styp and sidx should be generated when 'exploding' single file into one file per segement.
-     * <p/>
-     * This option has no effect when <code>explode==false</code>
-     *
-     * @param generateStypSdix yes/no
-     * @see #setExplode(boolean)
-     */
-    public void setGenerateStypSdix(boolean generateStypSdix) {
-        this.generateStypSdix = generateStypSdix;
     }
 
     /**
@@ -385,6 +365,7 @@ public class DashFileSetSequence {
         addTextTracks(mpdDocument, subtitles, "subtitle");
         addTextTracks(mpdDocument, closedCaptions, "caption");
         addTrickModeTracks(mpdDocument);
+        ManifestOptimizer.optimize(mpdDocument);
         return mpdDocument;
     }
 
@@ -395,7 +376,6 @@ public class DashFileSetSequence {
             if (trickModeFile.getName().endsWith(".mp4") ||
                     trickModeFile.getName().endsWith(".mov") ||
                     trickModeFile.getName().endsWith(".ismv") ||
-                    trickModeFile.getName().endsWith(".m4a") ||
                     trickModeFile.getName().endsWith(".m4v")) {
                 Movie movie = MovieCreator.build(new FileDataSourceImpl(trickModeFile));
                 for (Track track : movie.getTracks()) {
@@ -421,24 +401,28 @@ public class DashFileSetSequence {
         }
 
         if (!trickModeRepresentations.isEmpty()) {
+            l.info("Creating Trick Mode AdaptationSet");
             AdaptationSetType adaptationSet = mpdDocument.getMPD().getPeriodArray(0).addNewAdaptationSet();
+            DescriptorType essentialProperty = adaptationSet.addNewEssentialProperty();
+            essentialProperty.setSchemeIdUri("http://dashif.org/guide-lines/trickmode");
+            essentialProperty.setValue("1"); // an AdaptationSet built with ExplodedSegmentListManifestWriter or SegmentBaseSingleSidxManifestWriterImpl always has id "1" if it's a video.
+
             ArrayList<RepresentationType> representations = new ArrayList<RepresentationType>();
             for (RepresentationBuilder representationBuilder : trickModeRepresentations) {
+                l.fine("Creating Trick Mode Representation for " + representationBuilder.getSource());
                 double seconds = (double)representationBuilder.getTrack().getDuration() / representationBuilder.getTrack().getTrackMetaData().getTimescale();
                 // todo find actual main video FPS - will happen when
                 long maxPlayoutRate = Math.round((double)25 / ((double)representationBuilder.getTrack().getSamples().size() / seconds));
-                RepresentationType representation = writeRepresentation(representationBuilder);
+                RepresentationType representation = writeDataAndCreateRepresentation(representationBuilder);
                 representation.setMaxPlayoutRate(maxPlayoutRate);
-                DescriptorType essentialProperty = representation.addNewEssentialProperty();
-                essentialProperty.setSchemeIdUri("http://dashif.org/guide-lines/trickmode");
-                essentialProperty.setValue("1"); // an AdaptationSet built with ExplodedSegmentListManifestWriter or SegmentBaseSingleSidxManifestWriterImpl always has id "1" if it's a video.
                 representations.add(representation);
             }
             adaptationSet.setRepresentationArray(representations.toArray(new RepresentationType[representations.size()]));
+            l.info("Trick Mode AdaptationSet: Done.");
         }
     }
 
-    private RepresentationType writeRepresentation(RepresentationBuilder representationBuilder) throws IOException {
+    private RepresentationType writeDataAndCreateRepresentation(RepresentationBuilder representationBuilder) throws IOException {
         RepresentationType representation;
         String id = FilenameUtils.getBaseName(representationBuilder.getSource());
         if (explode) {
@@ -515,6 +499,7 @@ public class DashFileSetSequence {
     }
 
     private void addMuxedTextTrack(MPDDocument mpdDocument, File textTrackFile, String role) throws IOException {
+        l.info("Creating Muxed Text Track AdaptationSet for " + textTrackFile.getName());
         PeriodType period = mpdDocument.getMPD().getPeriodArray()[0];
 
         Track textTrack;
@@ -543,7 +528,7 @@ public class DashFileSetSequence {
         }
         RepresentationBuilder representationBuilder =
                 new SyncSampleAssistedRepresentationBuilder(textTrack, textTrackFile.getName(), 10, Collections.<ProtectionSystemSpecificHeaderBox>emptyList());
-        RepresentationType representation = writeRepresentation(representationBuilder);
+        RepresentationType representation = writeDataAndCreateRepresentation(representationBuilder);
         AdaptationSetType adaptationSet = period.addNewAdaptationSet();
         Locale locale = getTextTrackLocale(textTrackFile);
         adaptationSet.setLang(locale.getLanguage() + ("".equals(locale.getScript()) ? "" : "-" + locale.getScript()));
@@ -553,11 +538,12 @@ public class DashFileSetSequence {
         descriptor.setSchemeIdUri("urn:mpeg:dash:role");
         descriptor.setValue(role);
 
-
+        l.info("Muxed Text Track AdaptationSet: Done.");
     }
 
 
     public void addRawTextTrack(MPDDocument mpdDocument, File textTrack, String role) throws IOException {
+        l.info("Creating Raw Text Track AdaptationSet for " + textTrack.getName());
         PeriodType period = mpdDocument.getMPD().getPeriodArray()[0];
         AdaptationSetType adaptationSet = period.addNewAdaptationSet();
         if (textTrack.getName().endsWith(".xml")) {
@@ -580,20 +566,9 @@ public class DashFileSetSequence {
         BaseURLType baseURL = representation.addNewBaseURL();
         baseURL.setStringValue(textTrack.getName());
         FileUtils.copyFileToDirectory(textTrack, outputDirectory);
+        l.info("Raw Text Track AdaptationSet: Done.");
     }
 
-    protected XmlOptions getXmlOptions() {
-        XmlOptions xmlOptions = new XmlOptions();
-        //xmlOptions.setUseDefaultNamespace();
-        HashMap<String, String> ns = new HashMap<String, String>();
-        //ns.put("urn:mpeg:DASH:schema:MPD:2011", "");
-        ns.put("urn:mpeg:cenc:2013", "cenc");
-        xmlOptions.setSaveSuggestedPrefixes(ns);
-        xmlOptions.setSaveAggressiveNamespaces();
-        xmlOptions.setUseDefaultNamespace();
-        xmlOptions.setSavePrettyPrint();
-        return xmlOptions;
-    }
 
     public void writeManifest(MPDDocument mpdDocument) throws IOException {
         File manifest1 = new File(outputDirectory, "Manifest.mpd");
@@ -622,7 +597,7 @@ public class DashFileSetSequence {
         Map<TrackProxy, List<File>> trackToSegments = new HashMap<TrackProxy, List<File>>();
         for (TrackProxy t : trackFilename.keySet()) {
             SingleSidxExplode singleSidxExplode = new SingleSidxExplode(l);
-            singleSidxExplode.setGenerateStypSdix(generateStypSdix);
+            singleSidxExplode.setGenerateStypSdix(false);
             List<File> segments = singleSidxExplode.doIt(
                     dashedFiles.get(t), trackFilename.get(t),
                     trackBitrate.get(t), outputDirectory, initPattern, mediaPattern);
@@ -721,13 +696,7 @@ public class DashFileSetSequence {
         HashMap<TrackProxy, Long> sizes = new HashMap<TrackProxy, Long>();
         for (List<TrackProxy> tracks : trackFamilies.values()) {
             for (TrackProxy track : tracks) {
-                long size = 0;
-                List<Sample> samples = track.getSamples();
-                for (int i = 0; i < Math.min(samples.size(), 10000); i++) {
-                    size += samples.get(i).getSize();
-                }
-                size = (size / Math.min(track.getSamples().size(), 10000)) * track.getSamples().size();
-                sizes.put(track, size);
+                sizes.put(track, getApproxTrackSize(track.getTarget()));
             }
         }
         return sizes;
@@ -747,8 +716,10 @@ public class DashFileSetSequence {
 
                 double duration = (double) track.getDuration() / track.getTrackMetaData().getTimescale();
                 long size = trackSize.get(track);
+                long bitrate = (long) ((size * 8 / duration / 100)) * 100;
 
-                bitrates.put(track, (long) ((size * 8 / duration / 100)) * 100);
+
+                bitrates.put(track, bitrate);
             }
 
         }
