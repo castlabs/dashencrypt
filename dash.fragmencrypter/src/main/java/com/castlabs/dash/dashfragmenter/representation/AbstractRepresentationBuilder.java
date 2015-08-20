@@ -106,7 +106,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         trex.setDefaultSampleDuration(0);
         trex.setDefaultSampleSize(0);
         SampleFlags sf = new SampleFlags();
-        if ("soun".equals(track.getHandler()) || "subt".equals(track.getHandler())) {
+        if ("soun".equals(track.getHandler()) || "subt".equals(track.getHandler()) || "text".equals(track.getHandler())) {
             // as far as I know there is no audio encoding
             // where the sample are not self contained.
             // same seems to be true for subtitle tracks
@@ -138,7 +138,18 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         // We need to take edit list box into account in trackheader duration
         // but as long as I don't support edit list boxes it is sufficient to
         // just translate media duration to movie timescale
-        tkhd.setDuration(0);//no duration in moov for fragmented movies
+        if (track.getEdits().isEmpty()) {
+            tkhd.setDuration(track.getDuration());
+        } else {
+            long dur = 0;
+            for (Edit edit : track.getEdits()) {
+                dur += edit.getMediaTime() != -1 ?
+                        edit.getSegmentDuration() * track.getTrackMetaData().getTimescale() : 0;
+            }
+            tkhd.setDuration(dur);
+        }
+
+
         tkhd.setHeight(track.getTrackMetaData().getHeight());
         tkhd.setWidth(track.getTrackMetaData().getWidth());
         tkhd.setLayer(track.getTrackMetaData().getLayer());
