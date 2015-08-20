@@ -232,6 +232,15 @@ public class DashFileSetSequence {
         for (File inputFile : inputFiles) {
             totalSize += inputFile.length();
         }
+        for (File inputFile : safe(closedCaptions)) {
+            totalSize += inputFile.length();
+        }
+        for (File inputFile : safe(subtitles)) {
+            totalSize += inputFile.length();
+        }
+        for (File inputFile : safe(trickModeFiles)) {
+            totalSize += inputFile.length();
+        }
 
         Map<TrackProxy, String> track2File = createTracks();
 
@@ -805,6 +814,7 @@ public class DashFileSetSequence {
                 if (inputFile.getName().endsWith(".mp4") ||
                         inputFile.getName().endsWith(".mov") ||
                         inputFile.getName().endsWith(".ismv") ||
+                        inputFile.getName().endsWith(".isma") ||
                         inputFile.getName().endsWith(".m4a") ||
                         inputFile.getName().endsWith(".m4v")) {
                     Movie movie = MovieCreator.build(new FileDataSourceImpl(inputFile));
