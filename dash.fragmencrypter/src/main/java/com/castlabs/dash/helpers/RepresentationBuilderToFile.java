@@ -20,18 +20,26 @@ import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Logger;
 
 import static com.castlabs.dash.helpers.ManifestHelper.templateReplace;
 import static com.castlabs.dash.helpers.Timing.getDuration;
 
 public class RepresentationBuilderToFile {
+    private static Logger LOG = Logger.getLogger(RepresentationBuilderToFile.class.getName());
+
     public static void writeOnDemand(RepresentationBuilder representationBuilder, RepresentationType representation, File outputDir) throws IOException {
         assert representation.getBaseURLArray().length == 1;
         assert representation.getBaseURLArray()[0].getStringValue() != null && !"".equals(representation.getBaseURLArray()[0].getStringValue());
-        WritableByteChannel wbc = Channels.newChannel(new FileOutputStream(representation.getBaseURLArray()[0].getStringValue()));
+        File f = new File(outputDir, representation.getBaseURLArray()[0].getStringValue());
+        LOG.info("Writing " + f.getAbsolutePath());
+        WritableByteChannel wbc = Channels.newChannel(new FileOutputStream(f));
+        LOG.fine("Writing init segment");
         representationBuilder.getInitSegment().writeContainer(wbc);
+        LOG.fine("Writing index segment");
         representationBuilder.getIndexSegment().writeContainer(wbc);
 
+        LOG.fine("Writing segments");
         for (Container fragment : representationBuilder) {
             fragment.writeContainer(wbc);
         }
@@ -41,16 +49,17 @@ public class RepresentationBuilderToFile {
 
     public static void writeLive(RepresentationBuilder representationBuilder, RepresentationType representation, File outputDirectory) throws IOException {
         String initPattern = representation.getSegmentTemplate().getInitialization2();
-        initPattern = templateReplace(initPattern,representation.getId(), 0, representation.getBandwidth(), 0);
+        initPattern = templateReplace(initPattern, representation.getId(), 0, representation.getBandwidth(), 0);
         File initFile = new File(outputDirectory, initPattern);
         FileUtils.forceMkdir(initFile.getParentFile());
+        LOG.info("Writing init file " + initFile.getAbsolutePath());
         WritableByteChannel wbc = Channels.newChannel(new FileOutputStream(initFile));
         representationBuilder.getInitSegment().writeContainer(wbc);
         wbc.close();
         long time = 0;
         long number = representation.getSegmentTemplate().getStartNumber();
         Iterator<Container> segments = representationBuilder.iterator();
-
+        LOG.info("Writing segment files " + representation.getSegmentTemplate().getMedia().replace("$RepresentationID$", representation.getId()));
         for (SegmentTimelineType.S s : representation.getSegmentTemplate().getSegmentTimeline().getSArray()) {
             if (s.isSetT()) {
                 time = s.getT().longValue();
@@ -71,7 +80,7 @@ public class RepresentationBuilderToFile {
 
             if (s.isSetR()) {
                 long r = s.getR().longValue();
-                while (r>0) {
+                while (r > 0) {
                     String segmentFilenameRepeater =
                             templateReplace(
                                     representation.getSegmentTemplate().getMedia(),
