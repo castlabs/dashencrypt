@@ -47,7 +47,7 @@ public final class DashHelper {
         if (esds != null) {
             final DecoderConfigDescriptor decoderConfigDescriptor = esds.getEsDescriptor().getDecoderConfigDescriptor();
             final AudioSpecificConfig audioSpecificConfig = decoderConfigDescriptor.getAudioSpecificInfo();
-            if (audioSpecificConfig.getExtensionAudioObjectType() > 0) {
+            if (audioSpecificConfig.getExtensionAudioObjectType() > 0 && audioSpecificConfig.sbrPresentFlag) {
                 return audioSpecificConfig.getExtensionSamplingFrequency();
             } else {
                 return audioSpecificConfig.getSamplingFrequency();
