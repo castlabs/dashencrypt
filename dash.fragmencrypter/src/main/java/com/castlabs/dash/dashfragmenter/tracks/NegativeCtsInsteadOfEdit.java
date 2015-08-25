@@ -1,5 +1,6 @@
 package com.castlabs.dash.dashfragmenter.tracks;
 
+import com.castlabs.dash.helpers.BoxHelper;
 import com.castlabs.dash.helpers.DashHelper;
 import com.coremedia.iso.boxes.CompositionTimeToSample;
 import com.googlecode.mp4parser.authoring.Edit;
@@ -41,13 +42,7 @@ public class NegativeCtsInsteadOfEdit extends WrappingTrack {
             double earliestTrackPresentationTime = DashHelper.getEarliestTrackPresentationTime(orgEdits);
 
             double adjustedStartTime = earliestTrackPresentationTime + (double)ptss[0] / original.getTrackMetaData().getTimescale();
-            edits = new ArrayList<Edit>();
-            if (adjustedStartTime < 0) {
-                edits.add(new Edit((long) (-adjustedStartTime * original.getTrackMetaData().getTimescale()), original.getTrackMetaData().getTimescale(), 1.0, (double) original.getDuration() / original.getTrackMetaData().getTimescale()));
-            } else if (adjustedStartTime > 0) {
-                edits.add(new Edit(-1, original.getTrackMetaData().getTimescale(), 1.0, adjustedStartTime));
-                edits.add(new Edit(0, original.getTrackMetaData().getTimescale(), 1.0, (double) original.getDuration() / original.getTrackMetaData().getTimescale()));
-            }
+            edits = BoxHelper.getEdits(original, adjustedStartTime);
         }
     }
 

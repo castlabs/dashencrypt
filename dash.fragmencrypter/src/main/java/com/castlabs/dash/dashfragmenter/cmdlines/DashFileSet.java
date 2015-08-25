@@ -55,7 +55,6 @@ public class DashFileSet extends AbstractCommand {
     public int run() throws IOException, ExitCodeException {
         DashFileSetSequence dashFileSetSequence = new DashFileSetSequence();
         dashFileSetSequence.setExplode(explode);
-        dashFileSetSequence.setLogger(setupLogger());
         dashFileSetSequence.setOutputDirectory(outputDirectory);
         dashFileSetSequence.setInputFiles(inputFiles);
         dashFileSetSequence.setSubtitles(subtitles);

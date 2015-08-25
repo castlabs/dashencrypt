@@ -14,11 +14,16 @@ import org.apache.commons.io.IOUtils;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.SubCommand;
 import org.kohsuke.args4j.spi.SubCommandHandler;
 import org.kohsuke.args4j.spi.SubCommands;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 
 
 public class Main {
@@ -41,12 +46,17 @@ public class Main {
     })
     Command command;
 
+    @Option(name = "-v", usage = "Verbose output when enabled")
+    boolean verbose;
+
+
     public static void main(String[] args) throws Exception {
         System.out.println(TOOL);
         Main m = new Main();
         CmdLineParser parser = new CmdLineParser(m);
         try {
             parser.parseArgument(args);
+            m.setupLogger();
             m.command.postProcessCmdLineArgs(new CmdLineParser(m.command));
             m.command.run();
         } catch (IOException e) {
@@ -72,5 +82,26 @@ public class Main {
         }
         TOOL = tool;
     }
+
+    public Logger setupLogger() {
+        Logger logger = Logger.getLogger("dash");
+        InputStream stream;
+        if (verbose) {
+            stream = com.castlabs.dash.dashfragmenter.AbstractCommand.class.getResourceAsStream("/log-verbose.properties");
+        } else {
+            stream = com.castlabs.dash.dashfragmenter.AbstractCommand.class.getResourceAsStream("/log.properties");
+        }
+        try {
+            LogManager.getLogManager().readConfiguration(stream);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        logger.setLevel(Level.FINE);
+        logger.addHandler(new java.util.logging.ConsoleHandler());
+        logger.setUseParentHandlers(false);
+
+        return logger;
+    }
+
 
 }

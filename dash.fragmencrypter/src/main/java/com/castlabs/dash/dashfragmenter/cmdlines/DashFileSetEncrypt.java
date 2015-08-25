@@ -26,37 +26,8 @@ import java.util.List;
 import java.util.UUID;
 
 
-public class DashFileSetEncrypt extends AbstractCommand {
+public class DashFileSetEncrypt extends AbstractEncryptOrNotCommand {
 
-    @Option(name = "--uuid:a",
-            aliases = "-u:a",
-            usage = "UUID (KeyID) for audio streams",
-            depends = {"--secretKey", "--uuid"}
-    )
-    protected String encKidAudio = null;
-
-    @Option(name = "--secretKey:a",
-            aliases = "-k:a",
-            usage = "Secret Key (CEK) for audio streams",
-            depends = {"--uuid:a"}
-
-    )
-    protected String encKeySecretKeyAudio = null;
-
-
-    @Option(name = "--uuid",
-            aliases = {"-u", "-u:v", "-uuid:v"},
-            usage = "UUID (KeyID) for video streams (will also be used for audio streams if no separate audio key is given)"
-    )
-    protected String encKid = null;
-
-    @Option(name = "--secretKey",
-            aliases = {"-k", "-k:v", "-secretKey:v"},
-            usage = "Secret Key (CEK) for video streams (will also be used for audio streams if no separate audio key is given",
-            depends = {"--uuid"}
-
-    )
-    protected String encKeySecretKey = null;
 
     @Option(name = "--sparse",
             aliases = "-s",
@@ -114,7 +85,6 @@ public class DashFileSetEncrypt extends AbstractCommand {
         d.setExplode(explode);
         d.setSparse(sparse);
         d.setClearlead(clearLead);
-        d.setLogger(setupLogger());
         d.setOutputDirectory(outputDirectory);
         d.setInputFiles(inputFiles);
         d.setEncryptionAlgo("cenc");
@@ -124,43 +94,8 @@ public class DashFileSetEncrypt extends AbstractCommand {
         d.setSubtitles(subtitles);
         d.setClosedCaptions(closedCaptions);
 
-        SecretKey audioKey;
-        SecretKey videoKey;
-        UUID audioKeyId;
-        UUID videoKeyId;
 
 
-        if (this.encKeySecretKey == null) {
-            byte[] k = new byte[16];
-            SecureRandom random = new SecureRandom();
-            random.nextBytes(k);
-            audioKey = videoKey = (new SecretKeySpec(k, "AES"));
-
-            if (encKid == null) {
-                audioKeyId = videoKeyId = (UUID.randomUUID());
-            } else {
-                audioKeyId = videoKeyId = (UUID.fromString(this.encKid));
-            }
-            System.out.println(audioKeyId.toString() + ":" + Hex.encodeHex(audioKey.getEncoded()));
-            System.out.println(videoKeyId.toString() + ":" + Hex.encodeHex(videoKey.getEncoded()));
-        } else {
-            try {
-                videoKeyId = UUID.fromString(this.encKid);
-            } catch (IllegalArgumentException e) {
-                throw new ExitCodeException(e.getMessage(), 7983489);
-            }
-            if (encKidAudio != null) {
-                audioKeyId = UUID.fromString(this.encKidAudio);
-            } else {
-                audioKeyId = videoKeyId;
-            }
-            videoKey = new SecretKeySpec(Hex.decodeHex(this.encKeySecretKey), "AES");
-            if (encKeySecretKeyAudio != null) {
-                audioKey = new SecretKeySpec(Hex.decodeHex(this.encKeySecretKeyAudio), "AES");
-            } else {
-                audioKey = videoKey;
-            }
-        }
         d.setAudioKeyid(audioKeyId);
         d.setVideoKeyid(videoKeyId);
         d.setAudioKey(audioKey);
