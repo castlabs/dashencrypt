@@ -8,7 +8,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-
+/**
+ * Pushes common attributes and elements down to the parent element. 
+ */
 public class ManifestOptimizer {
     public static void optimize(MPDDocument mpdDocument) {
         for (PeriodType periodType : mpdDocument.getMPD().getPeriodArray()) {
@@ -51,9 +53,9 @@ public class ManifestOptimizer {
     }
 
     public static void optimizeContentProtection(RepresentationBaseType parent, RepresentationBaseType[] children) {
-        mpegDashSchemaMpd2011.DescriptorType[] contentProtection = null;
+        mpegDashSchemaMpd2011.DescriptorType[] contentProtection = new mpegDashSchemaMpd2011.DescriptorType[0];
         for (RepresentationBaseType representationType : children) {
-            if (contentProtection == null) {
+            if (contentProtection.length == 0) {
                 List<DescriptorType> cpa = new ArrayList<DescriptorType>();
                 for (DescriptorType descriptorType : representationType.getContentProtectionArray()) {
                     cpa.add((DescriptorType) descriptorType.copy());
@@ -73,7 +75,7 @@ public class ManifestOptimizer {
                 }
             }
         }
-        if (contentProtection != null) {
+        if (contentProtection.length != 0) {
             for (RepresentationBaseType representationType : children) {
                 representationType.setContentProtectionArray(new DescriptorType[0]);
             }
