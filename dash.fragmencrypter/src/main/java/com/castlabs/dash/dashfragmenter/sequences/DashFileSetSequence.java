@@ -101,7 +101,6 @@ public class DashFileSetSequence {
     protected int minVideoSegmentDuration = 4;
 
     protected List<File> subtitles;
-
     protected List<File> closedCaptions;
     protected List<File> trickModeFiles;
 
@@ -110,7 +109,7 @@ public class DashFileSetSequence {
 
     public DashFileSetSequence() {
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-        dbf.setNamespaceAware(true);
+        //dbf.setNamespaceAware(true);
         try {
             documentBuilder = dbf.newDocumentBuilder();
         } catch (ParserConfigurationException e) {
@@ -368,8 +367,14 @@ public class DashFileSetSequence {
         } else {
             mpdDocument = getManifestSegmentList(trackFamilies, trackBitrate, representationIds, dashedFiles, trackToFile, adaptationSet2Role);
         }
-        addTextTracks(mpdDocument, subtitles, "subtitle");
-        addTextTracks(mpdDocument, closedCaptions, "caption");
+        DescriptorType subtitleRole = DescriptorType.Factory.newInstance();
+        subtitleRole.setSchemeIdUri("urn:mpeg:dash:role");
+        subtitleRole.setValue("subtitle");
+        DescriptorType captionRole = DescriptorType.Factory.newInstance();
+        captionRole.setSchemeIdUri("urn:mpeg:dash:role");
+        captionRole.setValue("caption");
+        addTextTracks(mpdDocument, subtitles, new DescriptorType[]{subtitleRole}, new DescriptorType[0]);
+        addTextTracks(mpdDocument, closedCaptions, new DescriptorType[]{captionRole}, new DescriptorType[0]);
         addTrickModeTracks(mpdDocument);
         ManifestOptimizer.optimize(mpdDocument);
         return mpdDocument;
@@ -503,14 +508,15 @@ public class DashFileSetSequence {
         }
     }
 
-    public void addTextTracks(MPDDocument mpdDocument, List<File> textTracks, String role) throws IOException {
+    public void addTextTracks(MPDDocument mpdDocument, List<File> textTracks, DescriptorType[] roles, DescriptorType[] essentialProperties) throws IOException {
         for (File textTrack : safe(textTracks)) {
-            addRawTextTrack(mpdDocument, textTrack, role);
-            addMuxedTextTrack(mpdDocument, textTrack, role);
+
+            addRawTextTrack(mpdDocument, textTrack, roles, essentialProperties);
+            addMuxedTextTrack(mpdDocument, textTrack, roles, essentialProperties);
         }
     }
 
-    private void addMuxedTextTrack(MPDDocument mpdDocument, File textTrackFile, String role) throws IOException {
+    private void addMuxedTextTrack(MPDDocument mpdDocument, File textTrackFile, DescriptorType[] roles, DescriptorType[] essentialProperties) throws IOException {
         LOG.info("Creating Muxed Text Track AdaptationSet for " + textTrackFile.getName());
         PeriodType period = mpdDocument.getMPD().getPeriodArray()[0];
 
@@ -542,18 +548,20 @@ public class DashFileSetSequence {
         adaptationSet.setLang(locale.getLanguage() + ("".equals(locale.getScript()) ? "" : "-" + locale.getScript()));
         adaptationSet.setMimeType("application/mp4");
         adaptationSet.setRepresentationArray(new RepresentationType[]{representation});
-        DescriptorType descriptor = adaptationSet.addNewRole();
-        descriptor.setSchemeIdUri("urn:mpeg:dash:role");
-        descriptor.setValue(role);
+        adaptationSet.setRoleArray(roles);
+        adaptationSet.setEssentialPropertyArray(essentialProperties);
 
         LOG.info("Muxed Text Track AdaptationSet: Done.");
     }
 
 
-    public void addRawTextTrack(MPDDocument mpdDocument, File textTrack, String role) throws IOException {
+    public void addRawTextTrack(MPDDocument mpdDocument, File textTrack, DescriptorType[] roles, DescriptorType[] essentialProperties) throws IOException {
+
         LOG.info("Creating Raw Text Track AdaptationSet for " + textTrack.getName());
         PeriodType period = mpdDocument.getMPD().getPeriodArray()[0];
         AdaptationSetType adaptationSet = period.addNewAdaptationSet();
+        File tracksOutputDir = new File(outputDirectory, FilenameUtils.getBaseName(textTrack.getName()));
+        tracksOutputDir.mkdirs();
         if (textTrack.getName().endsWith(".xml") || textTrack.getName().endsWith(".dfxp") || textTrack.getName().endsWith(".ttml")) {
             if (textTrack.getName().endsWith(".dfxp")) {
                 adaptationSet.setMimeType("application/ttaf+xml");
@@ -562,27 +570,28 @@ public class DashFileSetSequence {
             }
 
             try {
-                TtmlHelpers.deepCopyDocument(documentBuilder.parse(textTrack), outputDirectory);
+                TtmlHelpers.deepCopyDocument(documentBuilder.parse(textTrack), new File(tracksOutputDir, textTrack.getName()));
             } catch (SAXException e) {
                 throw new IOException(e);
             }
 
         } else if (textTrack.getName().endsWith(".vtt")) {
             adaptationSet.setMimeType("text/vtt");
-            FileUtils.copyFileToDirectory(textTrack, outputDirectory);
+
+            FileUtils.copyFileToDirectory(textTrack, tracksOutputDir);
         } else {
             throw new RuntimeException("Not sure what kind of textTrack " + textTrack.getName() + " is.");
         }
+
         Locale locale = getTextTrackLocale(textTrack);
         adaptationSet.setLang(locale.getLanguage() + ("".equals(locale.getScript()) ? "" : "-" + locale.getScript()));
-        DescriptorType descriptor = adaptationSet.addNewRole();
-        descriptor.setSchemeIdUri("urn:mpeg:dash:role");
-        descriptor.setValue(role);
+        adaptationSet.setRoleArray(roles);
+        adaptationSet.setEssentialPropertyArray(essentialProperties);
         RepresentationType representation = adaptationSet.addNewRepresentation();
         representation.setId(FilenameUtils.getBaseName(textTrack.getName()));
         representation.setBandwidth(128); // pointless - just invent a small number
         BaseURLType baseURL = representation.addNewBaseURL();
-        baseURL.setStringValue(textTrack.getName());
+        baseURL.setStringValue(FilenameUtils.getBaseName(textTrack.getName()) + "/" + textTrack.getName());
 
         LOG.info("Raw Text Track AdaptationSet: Done.");
     }
