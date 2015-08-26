@@ -29,6 +29,7 @@ import com.googlecode.mp4parser.authoring.builder.SyncSampleIntersectFinderImpl;
 import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import com.googlecode.mp4parser.authoring.tracks.*;
 import com.googlecode.mp4parser.authoring.tracks.h264.H264TrackImpl;
+import com.googlecode.mp4parser.authoring.tracks.ttml.TtmlHelpers;
 import com.googlecode.mp4parser.authoring.tracks.ttml.TtmlTrackImpl;
 import com.googlecode.mp4parser.authoring.tracks.webvtt.WebVttTrack;
 import com.googlecode.mp4parser.boxes.mp4.ESDescriptorBox;
@@ -102,8 +103,21 @@ public class DashFileSetSequence {
     protected List<File> subtitles;
 
     protected List<File> closedCaptions;
-    private List<File> trickModeFiles;
+    protected List<File> trickModeFiles;
 
+
+    DocumentBuilder documentBuilder;
+
+    public DashFileSetSequence() {
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        dbf.setNamespaceAware(true);
+        try {
+            documentBuilder = dbf.newDocumentBuilder();
+        } catch (ParserConfigurationException e) {
+            throw new RuntimeException("e");
+        }
+
+    }
 
     public void setPsshBoxes(Map<UUID, List<ProtectionSystemSpecificHeaderBox>> psshBoxes) {
         this.psshBoxes = psshBoxes;
@@ -116,6 +130,7 @@ public class DashFileSetSequence {
     public void setClosedCaptions(List<File> closedCaptions) {
         this.closedCaptions = closedCaptions;
     }
+
 
     /**
      * Sets the minimum audio segment duration.
@@ -401,9 +416,9 @@ public class DashFileSetSequence {
             ArrayList<RepresentationType> representations = new ArrayList<RepresentationType>();
             for (RepresentationBuilder representationBuilder : trickModeRepresentations) {
                 LOG.fine("Creating Trick Mode Representation for " + representationBuilder.getSource());
-                double seconds = (double)representationBuilder.getTrack().getDuration() / representationBuilder.getTrack().getTrackMetaData().getTimescale();
+                double seconds = (double) representationBuilder.getTrack().getDuration() / representationBuilder.getTrack().getTrackMetaData().getTimescale();
                 // todo find actual main video FPS - will happen when
-                long maxPlayoutRate = Math.round((double)25 / ((double)representationBuilder.getTrack().getSamples().size() / seconds));
+                long maxPlayoutRate = Math.round((double) 25 / ((double) representationBuilder.getTrack().getSamples().size() / seconds));
                 RepresentationType representation = writeDataAndCreateRepresentation(representationBuilder);
                 representation.setMaxPlayoutRate(maxPlayoutRate);
                 representations.add(representation);
@@ -480,8 +495,8 @@ public class DashFileSetSequence {
                 t(trackBitrate), t(representationIds), true, adaptationSet2Role).getManifest();
     }
 
-    public <E> Collection<E> safe(Collection<E> c){
-        if (c==null) {
+    public <E> Collection<E> safe(Collection<E> c) {
+        if (c == null) {
             return Collections.emptySet();
         } else {
             return c;
@@ -489,10 +504,10 @@ public class DashFileSetSequence {
     }
 
     public void addTextTracks(MPDDocument mpdDocument, List<File> textTracks, String role) throws IOException {
-            for (File textTrack : safe(textTracks)) {
-                addRawTextTrack(mpdDocument, textTrack, role);
-                addMuxedTextTrack(mpdDocument, textTrack, role);
-            }
+        for (File textTrack : safe(textTracks)) {
+            addRawTextTrack(mpdDocument, textTrack, role);
+            addMuxedTextTrack(mpdDocument, textTrack, role);
+        }
     }
 
     private void addMuxedTextTrack(MPDDocument mpdDocument, File textTrackFile, String role) throws IOException {
@@ -500,17 +515,13 @@ public class DashFileSetSequence {
         PeriodType period = mpdDocument.getMPD().getPeriodArray()[0];
 
         Track textTrack;
-        if (textTrackFile.getName().endsWith(".xml") || textTrackFile.getName().endsWith(".dfxp")) {
-            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-            dbf.setNamespaceAware(true);
+        if (textTrackFile.getName().endsWith(".xml") || textTrackFile.getName().endsWith(".dfxp") || textTrackFile.getName().endsWith(".ttml")) {
             try {
-                DocumentBuilder db = dbf.newDocumentBuilder();
                 textTrack = new TtmlTrackImpl(textTrackFile.getName(),
-                        Collections.singletonList(db.parse(textTrackFile)));
-
-            } catch (ParserConfigurationException e) {
-                throw new IOException(e);
+                        Collections.singletonList(documentBuilder.parse(textTrackFile)));
             } catch (SAXException e) {
+                throw new IOException(e);
+            } catch (ParserConfigurationException e) {
                 throw new IOException(e);
             } catch (XPathExpressionException e) {
                 throw new IOException(e);
@@ -543,12 +554,22 @@ public class DashFileSetSequence {
         LOG.info("Creating Raw Text Track AdaptationSet for " + textTrack.getName());
         PeriodType period = mpdDocument.getMPD().getPeriodArray()[0];
         AdaptationSetType adaptationSet = period.addNewAdaptationSet();
-        if (textTrack.getName().endsWith(".xml")) {
-            adaptationSet.setMimeType("application/ttml+xml");
-        } else if (textTrack.getName().endsWith(".dfxp")) {
-            adaptationSet.setMimeType("application/ttaf+xml");
+        if (textTrack.getName().endsWith(".xml") || textTrack.getName().endsWith(".dfxp") || textTrack.getName().endsWith(".ttml")) {
+            if (textTrack.getName().endsWith(".dfxp")) {
+                adaptationSet.setMimeType("application/ttaf+xml");
+            } else {
+                adaptationSet.setMimeType("application/ttml+xml");
+            }
+
+            try {
+                TtmlHelpers.deepCopyDocument(documentBuilder.parse(textTrack), outputDirectory);
+            } catch (SAXException e) {
+                throw new IOException(e);
+            }
+
         } else if (textTrack.getName().endsWith(".vtt")) {
             adaptationSet.setMimeType("text/vtt");
+            FileUtils.copyFileToDirectory(textTrack, outputDirectory);
         } else {
             throw new RuntimeException("Not sure what kind of textTrack " + textTrack.getName() + " is.");
         }
@@ -562,7 +583,7 @@ public class DashFileSetSequence {
         representation.setBandwidth(128); // pointless - just invent a small number
         BaseURLType baseURL = representation.addNewBaseURL();
         baseURL.setStringValue(textTrack.getName());
-        FileUtils.copyFileToDirectory(textTrack, outputDirectory);
+
         LOG.info("Raw Text Track AdaptationSet: Done.");
     }
 
@@ -1121,37 +1142,37 @@ public class DashFileSetSequence {
 
         List<ProtectionSystemSpecificHeaderBox> psshs = psshBoxes.get(keyId);
 
-            for (ProtectionSystemSpecificHeaderBox pssh : safe(psshs)) {
+        for (ProtectionSystemSpecificHeaderBox pssh : safe(psshs)) {
 
-                if (Arrays.equals(ProtectionSystemSpecificHeaderBox.PLAYREADY_SYSTEM_ID, pssh.getSystemId())) {
+            if (Arrays.equals(ProtectionSystemSpecificHeaderBox.PLAYREADY_SYSTEM_ID, pssh.getSystemId())) {
 
-                    Node playReadyCPN = createContentProctionNode(adaptationSet, "urn:uuid:" + UUIDConverter.convert(pssh.getSystemId()).toString(), "MSPR 2.0");
-                    Document d = playReadyCPN.getOwnerDocument();
-                    Element pro = d.createElementNS("urn:microsoft:playready", "pro");
-                    Element prPssh = d.createElementNS("urn:mpeg:cenc:2013", "pssh");
+                Node playReadyCPN = createContentProctionNode(adaptationSet, "urn:uuid:" + UUIDConverter.convert(pssh.getSystemId()).toString(), "MSPR 2.0");
+                Document d = playReadyCPN.getOwnerDocument();
+                Element pro = d.createElementNS("urn:microsoft:playready", "pro");
+                Element prPssh = d.createElementNS("urn:mpeg:cenc:2013", "pssh");
 
-                    pro.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(pssh.getContent())));
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    try {
-                        pssh.getBox(Channels.newChannel(baos));
-                    } catch (IOException e) {
-                        throw new RuntimeException(e); // unexpected
-                    }
-                    prPssh.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(baos.toByteArray())));
-
-                    playReadyCPN.appendChild(pro);
-                    playReadyCPN.appendChild(prPssh);
+                pro.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(pssh.getContent())));
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                try {
+                    pssh.getBox(Channels.newChannel(baos));
+                } catch (IOException e) {
+                    throw new RuntimeException(e); // unexpected
                 }
-                if (Arrays.equals(ProtectionSystemSpecificHeaderBox.WIDEVINE, pssh.getSystemId())) {
-                    // Widevvine
-                    Node widevineCPN = createContentProctionNode(adaptationSet, "urn:uuid:" + UUIDConverter.convert(pssh.getSystemId()).toString(), null);
-                    Document d = widevineCPN.getOwnerDocument();
-                    Element wvPssh = d.createElementNS("urn:mpeg:cenc:2013", "pssh");
-                    wvPssh.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(pssh.getContent())));
+                prPssh.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(baos.toByteArray())));
 
-                    widevineCPN.appendChild(wvPssh);
-                }
+                playReadyCPN.appendChild(pro);
+                playReadyCPN.appendChild(prPssh);
             }
+            if (Arrays.equals(ProtectionSystemSpecificHeaderBox.WIDEVINE, pssh.getSystemId())) {
+                // Widevvine
+                Node widevineCPN = createContentProctionNode(adaptationSet, "urn:uuid:" + UUIDConverter.convert(pssh.getSystemId()).toString(), null);
+                Document d = widevineCPN.getOwnerDocument();
+                Element wvPssh = d.createElementNS("urn:mpeg:cenc:2013", "pssh");
+                wvPssh.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(pssh.getContent())));
+
+                widevineCPN.appendChild(wvPssh);
+            }
+        }
 
 
     }
