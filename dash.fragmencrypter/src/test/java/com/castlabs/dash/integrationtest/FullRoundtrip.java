@@ -1,6 +1,7 @@
 package com.castlabs.dash.integrationtest;
 
 import com.castlabs.dash.dashfragmenter.Main;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.custommonkey.xmlunit.XMLAssert;
 import org.custommonkey.xmlunit.XMLUnit;
@@ -59,6 +60,7 @@ public class FullRoundtrip {
 
         XMLUnit.setIgnoreWhitespace(true);
         XMLAssert.assertXMLEqual(new InputSource(getClass().getResourceAsStream("testOnDemandPlain.mpd")), new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))));
+        FileUtils.deleteDirectory(outputDir);
     }
 
     @Test
@@ -81,6 +83,7 @@ public class FullRoundtrip {
 
         XMLUnit.setIgnoreWhitespace(true);
         XMLAssert.assertXMLEqual(new InputSource(getClass().getResourceAsStream("testLivePlain.mpd")), new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))));
+        FileUtils.deleteDirectory(outputDir);
     }
     @Test
     public void testLiveEncrypted() throws Exception {
@@ -105,6 +108,7 @@ public class FullRoundtrip {
 
         XMLUnit.setIgnoreWhitespace(true);
         XMLAssert.assertXMLEqual(new InputSource(getClass().getResourceAsStream("testLiveEncrypted.mpd")), new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))));
+        FileUtils.deleteDirectory(outputDir);
     }
 
     @Test
@@ -129,5 +133,32 @@ public class FullRoundtrip {
 
         XMLUnit.setIgnoreWhitespace(true);
         XMLAssert.assertXMLEqual(new InputSource(getClass().getResourceAsStream("testOnDemandEncrypted.mpd")), new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))));
+        FileUtils.deleteDirectory(outputDir);
     }
+
+    @Test
+    public void testOnDemandSubtiltlesAndCaptions() throws Exception {
+        File outputDir = File.createTempFile("FullRoundtrip", "testOnDemandSubtiltlesAndCaptions");
+        outputDir.delete();
+        outputDir.mkdir();
+
+        Main.main(new String[]{
+                "dash",
+                "-o", outputDir.getAbsolutePath(),
+                "-st", new File(tos, "Tears_Of_Steel_nld.vtt").getAbsolutePath(),
+                "-st", new File(tos, "Tears_Of_Steel_per.vtt").getAbsolutePath(),
+                "-st", new File(tos, "Tears_Of_Steel_rus.vtt").getAbsolutePath(),
+                "-cc", new File(tos, "Tears_Of_Steel_nld.vtt").getAbsolutePath(),
+                "-cc", new File(tos, "Tears_Of_Steel_per.vtt").getAbsolutePath(),
+                "-cc", new File(tos, "Tears_Of_Steel_rus.vtt").getAbsolutePath(),
+                new File(tos, "Tears_Of_Steel_600000.mp4").getAbsolutePath(),
+
+        });
+
+        XMLUnit.setIgnoreWhitespace(true);
+        XMLAssert.assertXMLEqual(new InputSource(getClass().getResourceAsStream("testOnDemandSubtiltlesAndCaptions.mpd")), new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))));
+        FileUtils.deleteDirectory(outputDir);
+    }
+
+
 }
