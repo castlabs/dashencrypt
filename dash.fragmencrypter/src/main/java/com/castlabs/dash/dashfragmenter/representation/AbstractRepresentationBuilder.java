@@ -846,7 +846,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
             audio_channel_conf.setValue(cc.value);
 
 
-        } else if (theTrack.getHandler().equals("subt")) {
+        } else if (theTrack.getHandler().equals("subt") || theTrack.getHandler().equals("text")) {
             representation.setMimeType("application/mp4");
             representation.setCodecs(getCodec());
 

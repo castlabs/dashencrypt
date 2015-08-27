@@ -61,6 +61,7 @@ import java.util.*;
 import java.util.logging.Logger;
 
 import static com.castlabs.dash.helpers.DashHelper.*;
+import static com.castlabs.dash.helpers.FileHelpers.isMp4;
 import static com.castlabs.dash.helpers.ManifestHelper.getApproxTrackSize;
 import static com.castlabs.dash.helpers.ManifestHelper.getXmlOptions;
 
@@ -113,7 +114,7 @@ public class DashFileSetSequence {
         try {
             documentBuilder = dbf.newDocumentBuilder();
         } catch (ParserConfigurationException e) {
-            throw new RuntimeException("e");
+            throw new RuntimeException(e);
         }
 
     }
@@ -367,15 +368,19 @@ public class DashFileSetSequence {
         } else {
             mpdDocument = getManifestSegmentList(trackFamilies, trackBitrate, representationIds, dashedFiles, trackToFile, adaptationSet2Role);
         }
+
         DescriptorType subtitleRole = DescriptorType.Factory.newInstance();
         subtitleRole.setSchemeIdUri("urn:mpeg:dash:role");
         subtitleRole.setValue("subtitle");
+        addTextTracks(mpdDocument, subtitles, new DescriptorType[]{subtitleRole}, new DescriptorType[0]);
+
         DescriptorType captionRole = DescriptorType.Factory.newInstance();
         captionRole.setSchemeIdUri("urn:mpeg:dash:role");
         captionRole.setValue("caption");
-        addTextTracks(mpdDocument, subtitles, new DescriptorType[]{subtitleRole}, new DescriptorType[0]);
         addTextTracks(mpdDocument, closedCaptions, new DescriptorType[]{captionRole}, new DescriptorType[0]);
+
         addTrickModeTracks(mpdDocument);
+
         ManifestOptimizer.optimize(mpdDocument);
         return mpdDocument;
     }
@@ -384,10 +389,7 @@ public class DashFileSetSequence {
     private void addTrickModeTracks(MPDDocument mpdDocument) throws IOException {
         List<RepresentationBuilder> trickModeRepresentations = new ArrayList<RepresentationBuilder>();
         for (File trickModeFile : safe(trickModeFiles)) {
-            if (trickModeFile.getName().endsWith(".mp4") ||
-                    trickModeFile.getName().endsWith(".mov") ||
-                    trickModeFile.getName().endsWith(".ismv") ||
-                    trickModeFile.getName().endsWith(".m4v")) {
+            if (isMp4(trickModeFile)) {
                 Movie movie = MovieCreator.build(new FileDataSourceImpl(trickModeFile));
                 for (Track track : movie.getTracks()) {
                     if ("vide".equals(track.getHandler())) {
@@ -469,7 +471,12 @@ public class DashFileSetSequence {
     }
 
     public <T> Map<T, List<Track>> tt(Map<T, List<TrackProxy>> mapIn) {
-        Map<T, List<Track>> mapOut = new HashMap<T, List<Track>>();
+        Map<T, List<Track>> mapOut;
+        if (mapIn instanceof  LinkedHashMap) {
+            mapOut = new LinkedHashMap<T, List<Track>>();
+        } else {
+            mapOut = new HashMap<T, List<Track>>();
+        }
 
         for (Map.Entry<T, List<TrackProxy>> tListEntry : mapIn.entrySet()) {
             mapOut.put(tListEntry.getKey(), t(tListEntry.getValue()));
@@ -814,7 +821,7 @@ public class DashFileSetSequence {
                     Fragmenter videoIntersectionFinder = new SyncSampleIntersectFinderImpl(movie, null, minVideoSegmentDuration);
                     fragmentStartSamples.put(track, videoIntersectionFinder.sampleNumbers(track.getTarget()));
                     //fragmentStartSamples.put(track, checkMaxFragmentDuration(track, videoIntersectionFinder.sampleNumbers(track)));
-                } else if (track.getHandler().startsWith("soun") || track.getHandler().startsWith("subt")) {
+                } else if (track.getHandler().startsWith("soun")) {
                     Fragmenter soundIntersectionFinder = new SoundIntersectionFinderImpl(tracks, minAudioSegmentDuration);
                     fragmentStartSamples.put(track, soundIntersectionFinder.sampleNumbers(track.getTarget()));
                 } else {
@@ -838,12 +845,7 @@ public class DashFileSetSequence {
         Map<TrackProxy, String> track2File = new LinkedHashMap<TrackProxy, String>();
         for (File inputFile : inputFiles) {
             if (inputFile.isFile()) {
-                if (inputFile.getName().endsWith(".mp4") ||
-                        inputFile.getName().endsWith(".mov") ||
-                        inputFile.getName().endsWith(".ismv") ||
-                        inputFile.getName().endsWith(".isma") ||
-                        inputFile.getName().endsWith(".m4a") ||
-                        inputFile.getName().endsWith(".m4v")) {
+                if (isMp4(inputFile)) {
                     Movie movie = MovieCreator.build(new FileDataSourceImpl(inputFile));
                     for (Track track : movie.getTracks()) {
                         String codec = DashHelper.getFormat(track);
@@ -1079,7 +1081,7 @@ public class DashFileSetSequence {
 
 
     public Map<String, List<TrackProxy>> findAdaptationSets(Set<TrackProxy> allTracks) throws IOException, ExitCodeException {
-        HashMap<String, List<TrackProxy>> trackFamilies = new HashMap<String, List<TrackProxy>>();
+        HashMap<String, List<TrackProxy>> trackFamilies = new LinkedHashMap<String, List<TrackProxy>>();
         for (TrackProxy track : allTracks) {
             String family;
 
