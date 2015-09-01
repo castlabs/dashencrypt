@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MPD profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static" minBufferTime="PT9S" mediaPresentationDuration="PT30S" xmlns="urn:mpeg:dash:schema:mpd:2011">
+  <ProgramInformation moreInformationURL="www.castLabs.com"/>
+  <Period id="0" start="PT0S" duration="PT30S">
+    <AdaptationSet id="1" segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" mimeType="video/mp4" maxFrameRate="24000/1000" maxWidth="500" maxHeight="208" par="125:52" codecs="avc1.640015" frameRate="24000/1000" sar="1:1">
+      <Role schemeIdUri="urn:mpeg:dash:role:2011" value="main"/>
+      <Representation width="500" height="208" id="ffmpeg-generated.ismv.mp4" bandwidth="183700">
+        <BaseURL>ffmpeg-generated.ismv.mp4</BaseURL>
+        <SegmentBase timescale="10000000" indexRangeExact="true" indexRange="710-801">
+          <Initialization range="0-709"/>
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+  </Period>
+</MPD>
