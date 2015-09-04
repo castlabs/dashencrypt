@@ -62,6 +62,7 @@ import java.util.logging.Logger;
 
 import static com.castlabs.dash.helpers.DashHelper.*;
 import static com.castlabs.dash.helpers.FileHelpers.isMp4;
+import static com.castlabs.dash.helpers.LanguageHelper.getFilesLanguage;
 import static com.castlabs.dash.helpers.ManifestHelper.getApproxTrackSize;
 import static com.castlabs.dash.helpers.ManifestHelper.getXmlOptions;
 
@@ -861,6 +862,7 @@ public class DashFileSetSequence {
                     }
                 } else if (inputFile.getName().endsWith(".aac")) {
                     Track track = new AACTrackImpl(new FileDataSourceImpl(inputFile));
+                    track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
                     track2File.put(new TrackProxy(track), inputFile.getName());
                     LOG.fine("Created AAC Track from " + inputFile.getName());
                 } else if (inputFile.getName().endsWith(".h264")) {
@@ -869,14 +871,17 @@ public class DashFileSetSequence {
                     LOG.fine("Created H264 Track from " + inputFile.getName());
                 } else if (inputFile.getName().endsWith(".ac3")) {
                     Track track = new AC3TrackImpl(new FileDataSourceImpl(inputFile));
+                    track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
                     track2File.put(new TrackProxy(track), inputFile.getName());
                     LOG.fine("Created AC3 Track from " + inputFile.getName());
                 } else if (inputFile.getName().endsWith(".ec3")) {
                     Track track = new EC3TrackImpl(new FileDataSourceImpl(inputFile));
+                    track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
                     track2File.put(new TrackProxy(track), inputFile.getName());
                     LOG.fine("Created EC3 Track from " + inputFile.getName());
                 } else if (inputFile.getName().endsWith(".dtshd")) {
                     Track track = new DTSTrackImpl(new FileDataSourceImpl(inputFile));
+                    track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
                     track2File.put(new TrackProxy(track), inputFile.getName());
                     LOG.fine("Created DTS HD Track from " + inputFile.getName());
                 } else {

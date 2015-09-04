@@ -30,9 +30,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import static com.castlabs.dash.helpers.LanguageHelper.getFilesLanguage;
+
 
 public class MuxMp4 implements Command {
-    @Argument(required = true, multiValued = true, handler = FileOptionHandler.class, usage = "Bitstream input files", metaVar = "vid1.avc1, aud1.dtshd ...")
+    @Argument(required = true, multiValued = true, handler = FileOptionHandler.class, usage = "Bitstream input files. In case that an audio input format cannot convey the input's language the filename is expected to be [basename]-[lang].[ext]", metaVar = "vid1.h264, aud1.dtshd ...")
     protected List<File> inputFiles;
 
     @Option(name = "--outputfile", aliases = "-o",
@@ -73,7 +75,7 @@ public class MuxMp4 implements Command {
         System.out.print("Writing t ");
         WritableByteChannel wbc = new FileOutputStream(outputFile).getChannel();
         try {
-           isoFile.writeContainer(wbc);
+            isoFile.writeContainer(wbc);
 
         } finally {
             wbc.close();
@@ -110,18 +112,22 @@ public class MuxMp4 implements Command {
         for (File inputFile : inputFiles) {
             if (inputFile.getName().endsWith(".aac")) {
                 Track track = new AACTrackImpl(new FileDataSourceImpl(inputFile));
+                track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
                 tracks.add(track);
             } else if (inputFile.getName().endsWith(".ac3")) {
                 Track track = new AC3TrackImpl(new FileDataSourceImpl(inputFile));
+                track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
                 tracks.add(track);
             } else if (inputFile.getName().endsWith(".h264")) {
                 Track track = new H264TrackImpl(new FileDataSourceImpl(inputFile));
                 tracks.add(track);
             } else if (inputFile.getName().endsWith(".ec3")) {
                 Track track = new EC3TrackImpl(new FileDataSourceImpl(inputFile));
+                track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
                 tracks.add(track);
             } else if (inputFile.getName().endsWith(".dtshd")) {
                 Track track = new DTSTrackImpl(new FileDataSourceImpl(inputFile));
+                track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
                 tracks.add(track);
             } else {
                 System.err.println("Cannot identify type of " + inputFile + ". Extensions aac, ac3, ec3 or dtshd are known.");
