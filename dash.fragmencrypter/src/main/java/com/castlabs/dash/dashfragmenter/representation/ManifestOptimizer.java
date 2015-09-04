@@ -23,7 +23,10 @@ public class ManifestOptimizer {
     public static void optimize(AdaptationSetType adaptationSetType) {
         optimizeContentProtection(adaptationSetType, adaptationSetType.getRepresentationArray());
         optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "mimeType");
-        optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "codecs");
+        // This is commented out as customer P0132's chromecast player doesn't look for the codecs attribute on AdaptationSet level
+        // The deal is to update the player before 2016. If you see this here in 2016 you can remove the comment and optimize
+        // the codecs attribute as well.
+        // optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "codecs");
         optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "profiles");
         optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "frameRate");
         optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "sar");
