@@ -72,6 +72,7 @@ public class DashFileSetEncrypt extends AbstractEncryptOrNotCommand {
 
 
     public void postProcessCmdLineArgs(CmdLineParser cmdLineParser) throws CmdLineException {
+        super.postProcessCmdLineArgs(cmdLineParser);
         for (File inputFile : inputFiles) {
             if (inputFile.getName().endsWith(".xml") || inputFile.getName().endsWith(".vtt") || inputFile.getName().endsWith(".dfxp")) {
                 throw new CmdLineException(cmdLineParser, new AbstractEncryptOrNotCommand.Message("Subtitle files must either be supplied via command line option --subtitles or --closed-captions"));
