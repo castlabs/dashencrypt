@@ -29,7 +29,7 @@ public class DashFileSet extends AbstractCommand {
             usage = "output directory - if no output directory is given the " +
                     "current working directory is used.",
             metaVar = "PATH")
-    protected File outputDirectory = new File("");
+    protected File outputDirectory = new File(System.getProperty("user.dir"));
 
     @Option(name = "--subtitles", aliases = "-st", usage = ".xml, .dfxp and .vtt are supported")
     protected List<File> subtitles;

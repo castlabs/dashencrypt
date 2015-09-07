@@ -40,7 +40,7 @@ public class MuxMp4 implements Command {
     @Option(name = "--outputfile", aliases = "-o",
             usage = "output file - if no output file is given output.mp4 is used",
             metaVar = "PATH")
-    protected File outputFile = new File("output.mp4");
+    protected File outputFile = new File(System.getProperty("user.dir") + File.separator + "output.mp4");
 
 
     public int run() throws IOException {

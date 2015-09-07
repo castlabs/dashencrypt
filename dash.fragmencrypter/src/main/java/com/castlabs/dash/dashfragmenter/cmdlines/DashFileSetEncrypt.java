@@ -52,7 +52,7 @@ public class DashFileSetEncrypt extends AbstractEncryptOrNotCommand {
             usage = "output directory - if no output directory is given the " +
                     "current working directory is used.",
             metaVar = "PATH")
-    protected File outputDirectory = new File("");
+    protected File outputDirectory = new File(System.getProperty("user.dir"));
 
 
     @Option(name = "--explode", aliases = "-x", usage = "If this option is set each segement will be written in a single file")
