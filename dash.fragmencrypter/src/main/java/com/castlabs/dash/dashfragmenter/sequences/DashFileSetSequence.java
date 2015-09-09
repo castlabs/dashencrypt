@@ -473,7 +473,7 @@ public class DashFileSetSequence {
 
     public <T> Map<T, List<Track>> tt(Map<T, List<TrackProxy>> mapIn) {
         Map<T, List<Track>> mapOut;
-        if (mapIn instanceof  LinkedHashMap) {
+        if (mapIn instanceof LinkedHashMap) {
             mapOut = new LinkedHashMap<T, List<Track>>();
         } else {
             mapOut = new HashMap<T, List<Track>>();
@@ -569,7 +569,9 @@ public class DashFileSetSequence {
         PeriodType period = mpdDocument.getMPD().getPeriodArray()[0];
         AdaptationSetType adaptationSet = period.addNewAdaptationSet();
         File tracksOutputDir = new File(outputDirectory, FilenameUtils.getBaseName(textTrack.getName()));
-        tracksOutputDir.mkdirs();
+        if (!(tracksOutputDir.getAbsoluteFile().exists() ^ tracksOutputDir.getAbsoluteFile().mkdirs())) {
+            LOG.severe("Track's output directory does not exist and cannot be created (" + tracksOutputDir.getAbsolutePath() + ")");
+        }
         if (textTrack.getName().endsWith(".xml") || textTrack.getName().endsWith(".dfxp") || textTrack.getName().endsWith(".ttml")) {
             if (textTrack.getName().endsWith(".dfxp")) {
                 adaptationSet.setMimeType("application/ttaf+xml");
@@ -1038,7 +1040,6 @@ public class DashFileSetSequence {
      * In DASH Some tracks might have an earliest presentation timestamp < 0
      *
      * @param track2File map from track object to originating file
-     * @return a copy of the input map with zero-aligned tracks
      */
     public void alignEditsToZero(Map<TrackProxy, String> track2File) {
 
@@ -1159,34 +1160,25 @@ public class DashFileSetSequence {
         List<ProtectionSystemSpecificHeaderBox> psshs = psshBoxes.get(keyId);
 
         for (ProtectionSystemSpecificHeaderBox pssh : safe(psshs)) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            try {
+                pssh.getBox(Channels.newChannel(baos));
+            } catch (IOException e) {
+                throw new RuntimeException(e); // unexpected
+            }
+            byte[] completePssh = baos.toByteArray();
+
+            Node cpn = createContentProctionNode(adaptationSet, "urn:uuid:" + UUIDConverter.convert(pssh.getSystemId()).toString(), null);
+            Document d = cpn.getOwnerDocument();
+            Element psshElement = d.createElementNS("urn:mpeg:cenc:2013", "pssh");
+            psshElement.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(completePssh)));
+            cpn.appendChild(psshElement);
 
             if (Arrays.equals(ProtectionSystemSpecificHeaderBox.PLAYREADY_SYSTEM_ID, pssh.getSystemId())) {
-
-                Node playReadyCPN = createContentProctionNode(adaptationSet, "urn:uuid:" + UUIDConverter.convert(pssh.getSystemId()).toString(), "MSPR 2.0");
-                Document d = playReadyCPN.getOwnerDocument();
+                cpn.setNodeValue("MSPR 2.0");
                 Element pro = d.createElementNS("urn:microsoft:playready", "pro");
-                Element prPssh = d.createElementNS("urn:mpeg:cenc:2013", "pssh");
-
                 pro.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(pssh.getContent())));
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                try {
-                    pssh.getBox(Channels.newChannel(baos));
-                } catch (IOException e) {
-                    throw new RuntimeException(e); // unexpected
-                }
-                prPssh.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(baos.toByteArray())));
-
-                playReadyCPN.appendChild(pro);
-                playReadyCPN.appendChild(prPssh);
-            }
-            if (Arrays.equals(ProtectionSystemSpecificHeaderBox.WIDEVINE, pssh.getSystemId())) {
-                // Widevvine
-                Node widevineCPN = createContentProctionNode(adaptationSet, "urn:uuid:" + UUIDConverter.convert(pssh.getSystemId()).toString(), null);
-                Document d = widevineCPN.getOwnerDocument();
-                Element wvPssh = d.createElementNS("urn:mpeg:cenc:2013", "pssh");
-                wvPssh.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(pssh.getContent())));
-
-                widevineCPN.appendChild(wvPssh);
+                cpn.appendChild(pro);
             }
         }
 
