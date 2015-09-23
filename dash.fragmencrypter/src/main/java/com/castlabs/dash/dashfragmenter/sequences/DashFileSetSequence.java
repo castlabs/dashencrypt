@@ -1,6 +1,5 @@
 package com.castlabs.dash.dashfragmenter.sequences;
 
-import com.castlabs.dash.dashfragmenter.ExitCodeException;
 import com.castlabs.dash.dashfragmenter.formats.csf.DashBuilder;
 import com.castlabs.dash.dashfragmenter.formats.csf.SegmentBaseSingleSidxManifestWriterImpl;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegmenttemplate.ExplodedSegmentListManifestWriterImpl;
@@ -32,8 +31,6 @@ import com.googlecode.mp4parser.authoring.tracks.h264.H264TrackImpl;
 import com.googlecode.mp4parser.authoring.tracks.ttml.TtmlHelpers;
 import com.googlecode.mp4parser.authoring.tracks.ttml.TtmlTrackImpl;
 import com.googlecode.mp4parser.authoring.tracks.webvtt.WebVttTrack;
-import com.googlecode.mp4parser.boxes.mp4.ESDescriptorBox;
-import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.AudioSpecificConfig;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.CencSampleEncryptionInformationGroupEntry;
 import com.googlecode.mp4parser.util.Path;
 import com.googlecode.mp4parser.util.UUIDConverter;
@@ -58,6 +55,7 @@ import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static com.castlabs.dash.helpers.DashHelper.*;
@@ -233,73 +231,81 @@ public class DashFileSetSequence {
         this.clearlead = clearlead;
     }
 
-    public int run() throws IOException, ExitCodeException {
+    public int run() {
+        try {
+            if (!(outputDirectory.getAbsoluteFile().exists() ^ outputDirectory.getAbsoluteFile().mkdirs())) {
+                LOG.severe("Output directory does not exist and cannot be created.");
+                return 9745;
+            }
 
-        if (!(outputDirectory.getAbsoluteFile().exists() ^ outputDirectory.getAbsoluteFile().mkdirs())) {
-            LOG.severe("Output directory does not exist and cannot be created.");
+            long start = System.currentTimeMillis();
+
+            long totalSize = 0;
+            for (File inputFile : inputFiles) {
+                totalSize += inputFile.length();
+            }
+            for (File inputFile : safe(closedCaptions)) {
+                totalSize += inputFile.length();
+            }
+            for (File inputFile : safe(subtitles)) {
+                totalSize += inputFile.length();
+            }
+            for (File inputFile : safe(trickModeFiles)) {
+                totalSize += inputFile.length();
+            }
+
+            Map<TrackProxy, String> track2File = createTracks();
+
+            checkUnhandledFile();
+
+            alignEditsToZero(track2File);
+            fixAppleOddity(track2File);
+            useNegativeCtsToPreventEdits(track2File);
+
+            Map<TrackProxy, UUID> track2KeyId = assignKeyIds(track2File);
+            Map<UUID, SecretKey> keyId2Key = createKeyMap(track2KeyId);
+
+            encryptTracks(track2File, track2KeyId, keyId2Key);
+
+            // sort by language and codec
+            Map<String, List<TrackProxy>> adaptationSets = findAdaptationSets(track2File.keySet());
+
+            Map<String, String> adaptationSet2Role = setAdaptionSetRoles(adaptationSets);
+
+            // Track sizes are expensive to calculate -> save them for later
+            Map<TrackProxy, Long> trackSizes = calculateTrackSizes(adaptationSets);
+
+            // sort within the track families by size to get stable output
+            sortTrackFamilies(adaptationSets, trackSizes);
+
+            // calculate the fragment start samples once & save them for later
+            Map<TrackProxy, long[]> track2SegmentStartSamples = findFragmentStartSamples(adaptationSets);
+
+            // calculate bitrates
+            Map<TrackProxy, Long> trackBitrate = calculateBitrate(adaptationSets, trackSizes);
+
+            // generate filenames for later reference
+            Map<TrackProxy, String> trackFilename = generateFilenames(track2File);
+
+            // export the dashed single track MP4s
+            Map<TrackProxy, Container> track2CsfStructure = createSingleTrackDashedMp4s(track2SegmentStartSamples, trackFilename);
+
+            Map<TrackProxy, List<File>> trackToFileRepresentation = writeFiles(trackFilename, track2CsfStructure, trackBitrate);
+
+            MPDDocument manifest = createManifest(
+                    adaptationSets, trackBitrate, trackFilename, track2CsfStructure, trackToFileRepresentation, adaptationSet2Role);
+
+            writeManifest(manifest);
+
+            LOG.info(String.format("Finished fragmenting of %dMB in %.1fs", totalSize / 1024 / 1024, (double) (System.currentTimeMillis() - start) / 1000));
+            return 0;
+        } catch (ExitCodeException e) {
+            LOG.severe(e.getMessage());
+            return 9014;
+        } catch (IOException e) {
+            LOG.log(Level.SEVERE, e.getMessage(), e);
+            return 9015;
         }
-
-        long start = System.currentTimeMillis();
-
-        long totalSize = 0;
-        for (File inputFile : inputFiles) {
-            totalSize += inputFile.length();
-        }
-        for (File inputFile : safe(closedCaptions)) {
-            totalSize += inputFile.length();
-        }
-        for (File inputFile : safe(subtitles)) {
-            totalSize += inputFile.length();
-        }
-        for (File inputFile : safe(trickModeFiles)) {
-            totalSize += inputFile.length();
-        }
-
-        Map<TrackProxy, String> track2File = createTracks();
-
-        checkUnhandledFile();
-
-        alignEditsToZero(track2File);
-        fixAppleOddity(track2File);
-        useNegativeCtsToPreventEdits(track2File);
-
-        Map<TrackProxy, UUID> track2KeyId = assignKeyIds(track2File);
-        Map<UUID, SecretKey> keyId2Key = createKeyMap(track2KeyId);
-
-        encryptTracks(track2File, track2KeyId, keyId2Key);
-
-        // sort by language and codec
-        Map<String, List<TrackProxy>> adaptationSets = findAdaptationSets(track2File.keySet());
-
-        Map<String, String> adaptationSet2Role = setAdaptionSetRoles(adaptationSets);
-
-        // Track sizes are expensive to calculate -> save them for later
-        Map<TrackProxy, Long> trackSizes = calculateTrackSizes(adaptationSets);
-
-        // sort within the track families by size to get stable output
-        sortTrackFamilies(adaptationSets, trackSizes);
-
-        // calculate the fragment start samples once & save them for later
-        Map<TrackProxy, long[]> track2SegmentStartSamples = findFragmentStartSamples(adaptationSets);
-
-        // calculate bitrates
-        Map<TrackProxy, Long> trackBitrate = calculateBitrate(adaptationSets, trackSizes);
-
-        // generate filenames for later reference
-        Map<TrackProxy, String> trackFilename = generateFilenames(track2File);
-
-        // export the dashed single track MP4s
-        Map<TrackProxy, Container> track2CsfStructure = createSingleTrackDashedMp4s(track2SegmentStartSamples, trackFilename);
-
-        Map<TrackProxy, List<File>> trackToFileRepresentation = writeFiles(trackFilename, track2CsfStructure, trackBitrate);
-
-        MPDDocument manifest = createManifest(
-                adaptationSets, trackBitrate, trackFilename, track2CsfStructure, trackToFileRepresentation, adaptationSet2Role);
-
-        writeManifest(manifest);
-
-        LOG.info(String.format("Finished fragmenting of %dMB in %.1fs", totalSize / 1024 / 1024, (double) (System.currentTimeMillis() - start) / 1000));
-        return 0;
     }
 
     protected Map<String, String> setAdaptionSetRoles(Map<String, List<TrackProxy>> adaptationSets) {
@@ -620,7 +626,7 @@ public class DashFileSetSequence {
             LOG.severe("Cannot identify type of " + inputFile);
         }
         if (inputFiles.size() > 0) {
-            throw new ExitCodeException("Only extensions mp4, ismv, mov, m4v, aac, ac3, ec3, dtshd and xml/vtt are known.", 1);
+            throw new ExitCodeException("Only extensions mp4, ismv, mov, m4v, aac, ac3, ec3, dtshd are known.", 1);
         }
     }
 
@@ -1190,5 +1196,21 @@ public class DashFileSetSequence {
         }
 
         return cpNode.getDomNode();
+    }
+
+    /**
+     * Exception to force exit from tool in functions - kind of goto.
+     */
+    protected static class ExitCodeException extends Exception {
+        int exitCode;
+
+        public ExitCodeException(String message, int exitCode) {
+            super(message);
+            this.exitCode = exitCode;
+        }
+
+        public int getExitCode() {
+            return exitCode;
+        }
     }
 }

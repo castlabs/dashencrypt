@@ -7,7 +7,6 @@
 package com.castlabs.dash.dashfragmenter.cmdlines;
 
 import com.castlabs.dash.dashfragmenter.AbstractCommand;
-import com.castlabs.dash.dashfragmenter.ExitCodeException;
 import com.castlabs.dash.dashfragmenter.sequences.DashFileSetSequence;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
@@ -15,8 +14,8 @@ import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.FileOptionHandler;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.util.List;
 
 
 public class DashFileSet extends AbstractCommand {
@@ -52,7 +51,7 @@ public class DashFileSet extends AbstractCommand {
         }
     }
 
-    public int run() throws IOException, ExitCodeException {
+    public int run()  {
         DashFileSetSequence dashFileSetSequence = new DashFileSetSequence();
         dashFileSetSequence.setExplode(explode);
         dashFileSetSequence.setOutputDirectory(outputDirectory);

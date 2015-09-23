@@ -6,24 +6,15 @@
 
 package com.castlabs.dash.dashfragmenter.cmdlines;
 
-import com.castlabs.dash.dashfragmenter.AbstractCommand;
-import com.castlabs.dash.dashfragmenter.ExitCodeException;
 import com.castlabs.dash.dashfragmenter.sequences.DashFileSetSequence;
-import com.coremedia.iso.Hex;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.FileOptionHandler;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
-import java.io.IOException;
-import java.security.SecureRandom;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.UUID;
 
 
 public class DashFileSetEncrypt extends AbstractEncryptOrNotCommand {
@@ -81,7 +72,7 @@ public class DashFileSetEncrypt extends AbstractEncryptOrNotCommand {
 
     }
 
-    public int run() throws IOException, ExitCodeException {
+    public int run()  {
         DashFileSetSequence d = new DashFileSetSequence();
         d.setExplode(explode);
         d.setSparse(sparse);

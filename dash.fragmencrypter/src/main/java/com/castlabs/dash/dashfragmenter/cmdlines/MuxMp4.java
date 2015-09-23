@@ -29,11 +29,14 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static com.castlabs.dash.helpers.LanguageHelper.getFilesLanguage;
 
 
 public class MuxMp4 implements Command {
+    private static Logger LOG = Logger.getLogger(MuxMp4.class.getName());
     @Argument(required = true, multiValued = true, handler = FileOptionHandler.class, usage = "Bitstream input files. In case that an audio input format cannot convey the input's language the filename is expected to be [basename]-[lang].[ext]", metaVar = "vid1.h264, aud1.dtshd ...")
     protected List<File> inputFiles;
 
@@ -43,15 +46,21 @@ public class MuxMp4 implements Command {
     protected File outputFile = new File(System.getProperty("user.dir") + File.separator + "output.mp4");
 
 
-    public int run() throws IOException {
+    public int run() {
 
         long start = System.currentTimeMillis();
 
-        List<Track> tracks = createTracks();
+        List<Track> tracks = null;
+        try {
+            tracks = createTracks();
 
 
-        // export the dashed single track MP4s
-        writeMp4(tracks);
+            // export the dashed single track MP4s
+            writeMp4(tracks);
+        } catch (IOException e) {
+            LOG.log(Level.SEVERE, e.getMessage(), e);
+            return 8279;
+        }
 
         //System.out.println("Finished writeOnDemand in " + (System.currentTimeMillis() - start) + "ms");
         return 0;

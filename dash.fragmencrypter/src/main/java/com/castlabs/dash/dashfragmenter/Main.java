@@ -59,15 +59,9 @@ public class Main {
             m.setupLogger();
             m.command.postProcessCmdLineArgs(new CmdLineParser(m.command));
             m.command.run();
-        } catch (IOException e) {
-            System.err.println(e.getMessage());
-            System.exit(1022);
         } catch (CmdLineException e) {
             System.err.println(e.getMessage());
             System.exit(1023);
-        } catch (ExitCodeException e) {
-            System.err.println(e.getMessage());
-            System.exit(e.getExitCode());
         }
 
     }
