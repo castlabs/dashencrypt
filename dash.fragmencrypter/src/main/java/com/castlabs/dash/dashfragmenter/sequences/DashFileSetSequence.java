@@ -298,6 +298,9 @@ public class DashFileSetSequence {
             writeManifest(manifest);
 
             LOG.info(String.format("Finished fragmenting of %dMB in %.1fs", totalSize / 1024 / 1024, (double) (System.currentTimeMillis() - start) / 1000));
+            for (TrackProxy trackProxy : trackToFileRepresentation.keySet()) {
+                trackProxy.close();
+            }
             return 0;
         } catch (ExitCodeException e) {
             LOG.severe(e.getMessage());
@@ -685,9 +688,9 @@ public class DashFileSetSequence {
         return track2Files;
     }
 
-    public DashBuilder getFileBuilder(Fragmenter fragmentIntersectionFinder, Movie m) {
+    public DashBuilder getFileBuilder(Fragmenter fragmenter, Movie m) {
         DashBuilder dashBuilder = new DashBuilder();
-        dashBuilder.setIntersectionFinder(fragmentIntersectionFinder);
+        dashBuilder.setFragmenter(fragmenter);
         return dashBuilder;
     }
 
