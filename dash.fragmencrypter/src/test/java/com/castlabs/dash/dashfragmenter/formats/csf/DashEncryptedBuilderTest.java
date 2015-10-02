@@ -9,6 +9,7 @@ import com.googlecode.mp4parser.FileDataSourceImpl;
 import com.googlecode.mp4parser.authoring.Movie;
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.builder.SyncSampleIntersectFinderImpl;
+import com.googlecode.mp4parser.authoring.builder.TimeBasedFragmenter;
 import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import com.googlecode.mp4parser.authoring.tracks.CencEncryptingTrackImpl;
 import com.googlecode.mp4parser.util.UUIDConverter;
@@ -39,7 +40,7 @@ public class DashEncryptedBuilderTest {
         SecretKey key = new SecretKeySpec(new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}, "AES");
         CencEncryptingTrackImpl cencEncryptingTrack = new CencEncryptingTrackImpl(t, keyId, key,true);
         m2.addTrack(cencEncryptingTrack);
-        dashEncryptedBuilder.setIntersectionFinder(new SyncSampleIntersectFinderImpl(m2, null, -1));
+        dashEncryptedBuilder.setFragmenter(new TimeBasedFragmenter(-1));
 
         Container i1 = dashEncryptedBuilder.build(m2);
 

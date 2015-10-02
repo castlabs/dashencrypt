@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MPD profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static" minBufferTime="PT5S" mediaPresentationDuration="PT12M14S" xmlns="urn:mpeg:dash:schema:mpd:2011">
+  <ProgramInformation moreInformationURL="www.castLabs.com"/>
+  <Period id="0" start="PT0S" duration="PT12M14S">
+    <AdaptationSet id="1" segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" mimeType="video/mp4" maxFrameRate="24000/1000" maxWidth="500" maxHeight="208" par="125:52" codecs="avc1.640015" frameRate="24000/1000" sar="1:1">
+      <Role schemeIdUri="urn:mpeg:dash:role:2011" value="main"/>
+      <Representation width="500" height="208" id="Tears_Of_Steel_600000.mp4" bandwidth="549100">
+        <BaseURL>Tears_Of_Steel_600000.mp4</BaseURL>
+        <SegmentBase timescale="12288" indexRangeExact="true" indexRange="709-1592">
+          <Initialization range="0-708"/>
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet mimeType="text/vtt" lang="nld">
+      <Role schemeIdUri="urn:mpeg:dash:role" value="subtitle"/>
+      <Representation id="Tears_Of_Steel_nld" bandwidth="128">
+        <BaseURL>Tears_Of_Steel_nld/Tears_Of_Steel_nld.vtt</BaseURL>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet lang="nld" mimeType="application/mp4" codecs="" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
+      <Role schemeIdUri="urn:mpeg:dash:role" value="subtitle"/>
+      <Representation startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_nld">
+        <BaseURL>Tears_Of_Steel_nld.mp4</BaseURL>
+        <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-795">
+          <Initialization range="0-582"/>
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet mimeType="text/vtt" lang="per">
+      <Role schemeIdUri="urn:mpeg:dash:role" value="subtitle"/>
+      <Representation id="Tears_Of_Steel_per" bandwidth="128">
+        <BaseURL>Tears_Of_Steel_per/Tears_Of_Steel_per.vtt</BaseURL>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet lang="per" mimeType="application/mp4" codecs="" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
+      <Role schemeIdUri="urn:mpeg:dash:role" value="subtitle"/>
+      <Representation startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_per">
+        <BaseURL>Tears_Of_Steel_per.mp4</BaseURL>
+        <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-795">
+          <Initialization range="0-582"/>
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet mimeType="text/vtt" lang="rus">
+      <Role schemeIdUri="urn:mpeg:dash:role" value="subtitle"/>
+      <Representation id="Tears_Of_Steel_rus" bandwidth="128">
+        <BaseURL>Tears_Of_Steel_rus/Tears_Of_Steel_rus.vtt</BaseURL>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet lang="rus" mimeType="application/mp4" codecs="" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
+      <Role schemeIdUri="urn:mpeg:dash:role" value="subtitle"/>
+      <Representation startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_rus">
+        <BaseURL>Tears_Of_Steel_rus.mp4</BaseURL>
+        <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-795">
+          <Initialization range="0-582"/>
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet mimeType="text/vtt" lang="nld">
+      <Role schemeIdUri="urn:mpeg:dash:role" value="caption"/>
+      <Representation id="Tears_Of_Steel_nld" bandwidth="128">
+        <BaseURL>Tears_Of_Steel_nld/Tears_Of_Steel_nld.vtt</BaseURL>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet lang="nld" mimeType="application/mp4" codecs="" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
+      <Role schemeIdUri="urn:mpeg:dash:role" value="caption"/>
+      <Representation startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_nld">
+        <BaseURL>Tears_Of_Steel_nld.mp4</BaseURL>
+        <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-795">
+          <Initialization range="0-582"/>
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet mimeType="text/vtt" lang="per">
+      <Role schemeIdUri="urn:mpeg:dash:role" value="caption"/>
+      <Representation id="Tears_Of_Steel_per" bandwidth="128">
+        <BaseURL>Tears_Of_Steel_per/Tears_Of_Steel_per.vtt</BaseURL>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet lang="per" mimeType="application/mp4" codecs="" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
+      <Role schemeIdUri="urn:mpeg:dash:role" value="caption"/>
+      <Representation startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_per">
+        <BaseURL>Tears_Of_Steel_per.mp4</BaseURL>
+        <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-795">
+          <Initialization range="0-582"/>
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet mimeType="text/vtt" lang="rus">
+      <Role schemeIdUri="urn:mpeg:dash:role" value="caption"/>
+      <Representation id="Tears_Of_Steel_rus" bandwidth="128">
+        <BaseURL>Tears_Of_Steel_rus/Tears_Of_Steel_rus.vtt</BaseURL>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet lang="rus" mimeType="application/mp4" codecs="" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
+      <Role schemeIdUri="urn:mpeg:dash:role" value="caption"/>
+      <Representation startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_rus">
+        <BaseURL>Tears_Of_Steel_rus.mp4</BaseURL>
+        <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-795">
+          <Initialization range="0-582"/>
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+  </Period>
+</MPD>

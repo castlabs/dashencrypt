@@ -6,24 +6,15 @@
 
 package com.castlabs.dash.dashfragmenter.cmdlines;
 
-import com.castlabs.dash.dashfragmenter.AbstractCommand;
-import com.castlabs.dash.dashfragmenter.ExitCodeException;
 import com.castlabs.dash.dashfragmenter.sequences.DashFileSetSequence;
-import com.coremedia.iso.Hex;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.FileOptionHandler;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
-import java.io.IOException;
-import java.security.SecureRandom;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.UUID;
 
 
 public class DashFileSetEncrypt extends AbstractEncryptOrNotCommand {
@@ -45,14 +36,14 @@ public class DashFileSetEncrypt extends AbstractEncryptOrNotCommand {
     protected int clearLead = 0;
 
 
-    @Argument(required = true, multiValued = true, handler = FileOptionHandler.class, usage = "MP4 and bitstream input files", metaVar = "vid1.mp4, vid2.mp4, aud1.mp4, aud2.ec3 ...")
+    @Argument(required = true, multiValued = true, handler = FileOptionHandler.class, usage = "MP4 and bitstream input files. In case that an audio input format cannot convey the input's language the filename is expected to be [basename]-[lang].[ext.]", metaVar = "vid1.mp4, vid2.mp4, aud1.mp4, aud2-eng.ec3, aud3-fra.aac ...")
     protected List<File> inputFiles;
 
     @Option(name = "--outputdir", aliases = "-o",
             usage = "output directory - if no output directory is given the " +
                     "current working directory is used.",
             metaVar = "PATH")
-    protected File outputDirectory = new File("");
+    protected File outputDirectory = new File(System.getProperty("user.dir"));
 
 
     @Option(name = "--explode", aliases = "-x", usage = "If this option is set each segement will be written in a single file")
@@ -72,6 +63,7 @@ public class DashFileSetEncrypt extends AbstractEncryptOrNotCommand {
 
 
     public void postProcessCmdLineArgs(CmdLineParser cmdLineParser) throws CmdLineException {
+        super.postProcessCmdLineArgs(cmdLineParser);
         for (File inputFile : inputFiles) {
             if (inputFile.getName().endsWith(".xml") || inputFile.getName().endsWith(".vtt") || inputFile.getName().endsWith(".dfxp")) {
                 throw new CmdLineException(cmdLineParser, new AbstractEncryptOrNotCommand.Message("Subtitle files must either be supplied via command line option --subtitles or --closed-captions"));
@@ -80,7 +72,7 @@ public class DashFileSetEncrypt extends AbstractEncryptOrNotCommand {
 
     }
 
-    public int run() throws IOException, ExitCodeException {
+    public int run()  {
         DashFileSetSequence d = new DashFileSetSequence();
         d.setExplode(explode);
         d.setSparse(sparse);

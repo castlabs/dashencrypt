@@ -567,6 +567,8 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         createTfdt(startSample, track, traf);
         createTrun(startSample, endSample, track, traf);
 
+        createSubs(startSample, endSample, track, traf);
+
         if (track instanceof CencEncryptedTrack) {
             createSaiz(startSample, endSample, (CencEncryptedTrack) track, traf);
             createSenc(startSample, endSample, (CencEncryptedTrack) track, traf);
@@ -613,6 +615,16 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
             traf.addBox(sbgp);
         }
 
+
+    }
+
+    protected void createSubs(long startSample, long endSample, Track track, TrackFragmentBox traf) {
+        SubSampleInformationBox subs = track.getSubsampleInformationBox();
+        if (subs != null) {
+            SubSampleInformationBox fragmentSubs = new SubSampleInformationBox();
+            fragmentSubs.setEntries(subs.getEntries().subList(l2i(startSample - 1), l2i(endSample - 1)));
+            traf.addBox(fragmentSubs);
+        }
 
     }
 
@@ -834,7 +846,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
             audio_channel_conf.setValue(cc.value);
 
 
-        } else if (theTrack.getHandler().equals("subt")) {
+        } else if (theTrack.getHandler().equals("subt") || theTrack.getHandler().equals("text")) {
             representation.setMimeType("application/mp4");
             representation.setCodecs(getCodec());
 

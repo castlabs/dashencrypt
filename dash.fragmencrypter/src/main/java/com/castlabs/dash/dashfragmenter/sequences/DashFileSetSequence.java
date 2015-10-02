@@ -1,6 +1,5 @@
 package com.castlabs.dash.dashfragmenter.sequences;
 
-import com.castlabs.dash.dashfragmenter.ExitCodeException;
 import com.castlabs.dash.dashfragmenter.formats.csf.DashBuilder;
 import com.castlabs.dash.dashfragmenter.formats.csf.SegmentBaseSingleSidxManifestWriterImpl;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegmenttemplate.ExplodedSegmentListManifestWriterImpl;
@@ -29,10 +28,9 @@ import com.googlecode.mp4parser.authoring.builder.SyncSampleIntersectFinderImpl;
 import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import com.googlecode.mp4parser.authoring.tracks.*;
 import com.googlecode.mp4parser.authoring.tracks.h264.H264TrackImpl;
+import com.googlecode.mp4parser.authoring.tracks.ttml.TtmlHelpers;
 import com.googlecode.mp4parser.authoring.tracks.ttml.TtmlTrackImpl;
 import com.googlecode.mp4parser.authoring.tracks.webvtt.WebVttTrack;
-import com.googlecode.mp4parser.boxes.mp4.ESDescriptorBox;
-import com.googlecode.mp4parser.boxes.mp4.objectdescriptors.AudioSpecificConfig;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.CencSampleEncryptionInformationGroupEntry;
 import com.googlecode.mp4parser.util.Path;
 import com.googlecode.mp4parser.util.UUIDConverter;
@@ -57,9 +55,12 @@ import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static com.castlabs.dash.helpers.DashHelper.*;
+import static com.castlabs.dash.helpers.FileHelpers.isMp4;
+import static com.castlabs.dash.helpers.LanguageHelper.getFilesLanguage;
 import static com.castlabs.dash.helpers.ManifestHelper.getApproxTrackSize;
 import static com.castlabs.dash.helpers.ManifestHelper.getXmlOptions;
 
@@ -100,10 +101,22 @@ public class DashFileSetSequence {
     protected int minVideoSegmentDuration = 4;
 
     protected List<File> subtitles;
-
     protected List<File> closedCaptions;
-    private List<File> trickModeFiles;
+    protected List<File> trickModeFiles;
 
+
+    DocumentBuilder documentBuilder;
+
+    public DashFileSetSequence() {
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        //dbf.setNamespaceAware(true);
+        try {
+            documentBuilder = dbf.newDocumentBuilder();
+        } catch (ParserConfigurationException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
 
     public void setPsshBoxes(Map<UUID, List<ProtectionSystemSpecificHeaderBox>> psshBoxes) {
         this.psshBoxes = psshBoxes;
@@ -116,6 +129,7 @@ public class DashFileSetSequence {
     public void setClosedCaptions(List<File> closedCaptions) {
         this.closedCaptions = closedCaptions;
     }
+
 
     /**
      * Sets the minimum audio segment duration.
@@ -217,73 +231,84 @@ public class DashFileSetSequence {
         this.clearlead = clearlead;
     }
 
-    public int run() throws IOException, ExitCodeException {
+    public int run() {
+        try {
+            if (!(outputDirectory.getAbsoluteFile().exists() ^ outputDirectory.getAbsoluteFile().mkdirs())) {
+                LOG.severe("Output directory does not exist and cannot be created.");
+                return 9745;
+            }
 
-        if (!(outputDirectory.getAbsoluteFile().exists() ^ outputDirectory.getAbsoluteFile().mkdirs())) {
-            LOG.severe("Output directory does not exist and cannot be created.");
+            long start = System.currentTimeMillis();
+
+            long totalSize = 0;
+            for (File inputFile : inputFiles) {
+                totalSize += inputFile.length();
+            }
+            for (File inputFile : safe(closedCaptions)) {
+                totalSize += inputFile.length();
+            }
+            for (File inputFile : safe(subtitles)) {
+                totalSize += inputFile.length();
+            }
+            for (File inputFile : safe(trickModeFiles)) {
+                totalSize += inputFile.length();
+            }
+
+            Map<TrackProxy, String> track2File = createTracks();
+
+            checkUnhandledFile();
+
+            alignEditsToZero(track2File);
+            fixAppleOddity(track2File);
+            useNegativeCtsToPreventEdits(track2File);
+
+            Map<TrackProxy, UUID> track2KeyId = assignKeyIds(track2File);
+            Map<UUID, SecretKey> keyId2Key = createKeyMap(track2KeyId);
+
+            encryptTracks(track2File, track2KeyId, keyId2Key);
+
+            // sort by language and codec
+            Map<String, List<TrackProxy>> adaptationSets = findAdaptationSets(track2File.keySet());
+
+            Map<String, String> adaptationSet2Role = setAdaptionSetRoles(adaptationSets);
+
+            // Track sizes are expensive to calculate -> save them for later
+            Map<TrackProxy, Long> trackSizes = calculateTrackSizes(adaptationSets);
+
+            // sort within the track families by size to get stable output
+            sortTrackFamilies(adaptationSets, trackSizes);
+
+            // calculate the fragment start samples once & save them for later
+            Map<TrackProxy, long[]> track2SegmentStartSamples = findFragmentStartSamples(adaptationSets);
+
+            // calculate bitrates
+            Map<TrackProxy, Long> trackBitrate = calculateBitrate(adaptationSets, trackSizes);
+
+            // generate filenames for later reference
+            Map<TrackProxy, String> trackFilename = generateFilenames(track2File);
+
+            // export the dashed single track MP4s
+            Map<TrackProxy, Container> track2CsfStructure = createSingleTrackDashedMp4s(track2SegmentStartSamples, trackFilename);
+
+            Map<TrackProxy, List<File>> trackToFileRepresentation = writeFiles(trackFilename, track2CsfStructure, trackBitrate);
+
+            MPDDocument manifest = createManifest(
+                    adaptationSets, trackBitrate, trackFilename, track2CsfStructure, trackToFileRepresentation, adaptationSet2Role);
+
+            writeManifest(manifest);
+
+            LOG.info(String.format("Finished fragmenting of %dMB in %.1fs", totalSize / 1024 / 1024, (double) (System.currentTimeMillis() - start) / 1000));
+            for (TrackProxy trackProxy : trackToFileRepresentation.keySet()) {
+                trackProxy.close();
+            }
+            return 0;
+        } catch (ExitCodeException e) {
+            LOG.severe(e.getMessage());
+            return 9014;
+        } catch (IOException e) {
+            LOG.log(Level.SEVERE, e.getMessage(), e);
+            return 9015;
         }
-
-        long start = System.currentTimeMillis();
-
-        long totalSize = 0;
-        for (File inputFile : inputFiles) {
-            totalSize += inputFile.length();
-        }
-        for (File inputFile : safe(closedCaptions)) {
-            totalSize += inputFile.length();
-        }
-        for (File inputFile : safe(subtitles)) {
-            totalSize += inputFile.length();
-        }
-        for (File inputFile : safe(trickModeFiles)) {
-            totalSize += inputFile.length();
-        }
-
-        Map<TrackProxy, String> track2File = createTracks();
-
-        checkUnhandledFile();
-
-        alignEditsToZero(track2File);
-        fixAppleOddity(track2File);
-        useNegativeCtsToPreventEdits(track2File);
-
-        Map<TrackProxy, UUID> track2KeyId = assignKeyIds(track2File);
-        Map<UUID, SecretKey> keyId2Key = createKeyMap(track2KeyId);
-
-        encryptTracks(track2File, track2KeyId, keyId2Key);
-
-        // sort by language and codec
-        Map<String, List<TrackProxy>> adaptationSets = findAdaptationSets(track2File.keySet());
-
-        Map<String, String> adaptationSet2Role = setAdaptionSetRoles(adaptationSets);
-
-        // Track sizes are expensive to calculate -> save them for later
-        Map<TrackProxy, Long> trackSizes = calculateTrackSizes(adaptationSets);
-
-        // sort within the track families by size to get stable output
-        sortTrackFamilies(adaptationSets, trackSizes);
-
-        // calculate the fragment start samples once & save them for later
-        Map<TrackProxy, long[]> track2SegmentStartSamples = findFragmentStartSamples(adaptationSets);
-
-        // calculate bitrates
-        Map<TrackProxy, Long> trackBitrate = calculateBitrate(adaptationSets, trackSizes);
-
-        // generate filenames for later reference
-        Map<TrackProxy, String> trackFilename = generateFilenames(track2File);
-
-        // export the dashed single track MP4s
-        Map<TrackProxy, Container> track2CsfStructure = createSingleTrackDashedMp4s(track2SegmentStartSamples, trackFilename);
-
-        Map<TrackProxy, List<File>> trackToFileRepresentation = writeFiles(trackFilename, track2CsfStructure, trackBitrate);
-
-        MPDDocument manifest = createManifest(
-                adaptationSets, trackBitrate, trackFilename, track2CsfStructure, trackToFileRepresentation, adaptationSet2Role);
-
-        writeManifest(manifest);
-
-        LOG.info(String.format("Finished fragmenting of %dMB in %.1fs", totalSize / 1024 / 1024, (double) (System.currentTimeMillis() - start) / 1000));
-        return 0;
     }
 
     protected Map<String, String> setAdaptionSetRoles(Map<String, List<TrackProxy>> adaptationSets) {
@@ -353,9 +378,19 @@ public class DashFileSetSequence {
         } else {
             mpdDocument = getManifestSegmentList(trackFamilies, trackBitrate, representationIds, dashedFiles, trackToFile, adaptationSet2Role);
         }
-        addTextTracks(mpdDocument, subtitles, "subtitle");
-        addTextTracks(mpdDocument, closedCaptions, "caption");
+
+        DescriptorType subtitleRole = DescriptorType.Factory.newInstance();
+        subtitleRole.setSchemeIdUri("urn:mpeg:dash:role");
+        subtitleRole.setValue("subtitle");
+        addTextTracks(mpdDocument, subtitles, new DescriptorType[]{subtitleRole}, new DescriptorType[0]);
+
+        DescriptorType captionRole = DescriptorType.Factory.newInstance();
+        captionRole.setSchemeIdUri("urn:mpeg:dash:role");
+        captionRole.setValue("caption");
+        addTextTracks(mpdDocument, closedCaptions, new DescriptorType[]{captionRole}, new DescriptorType[0]);
+
         addTrickModeTracks(mpdDocument);
+
         ManifestOptimizer.optimize(mpdDocument);
         return mpdDocument;
     }
@@ -364,10 +399,7 @@ public class DashFileSetSequence {
     private void addTrickModeTracks(MPDDocument mpdDocument) throws IOException {
         List<RepresentationBuilder> trickModeRepresentations = new ArrayList<RepresentationBuilder>();
         for (File trickModeFile : safe(trickModeFiles)) {
-            if (trickModeFile.getName().endsWith(".mp4") ||
-                    trickModeFile.getName().endsWith(".mov") ||
-                    trickModeFile.getName().endsWith(".ismv") ||
-                    trickModeFile.getName().endsWith(".m4v")) {
+            if (isMp4(trickModeFile)) {
                 Movie movie = MovieCreator.build(new FileDataSourceImpl(trickModeFile));
                 for (Track track : movie.getTracks()) {
                     if ("vide".equals(track.getHandler())) {
@@ -401,9 +433,9 @@ public class DashFileSetSequence {
             ArrayList<RepresentationType> representations = new ArrayList<RepresentationType>();
             for (RepresentationBuilder representationBuilder : trickModeRepresentations) {
                 LOG.fine("Creating Trick Mode Representation for " + representationBuilder.getSource());
-                double seconds = (double)representationBuilder.getTrack().getDuration() / representationBuilder.getTrack().getTrackMetaData().getTimescale();
+                double seconds = (double) representationBuilder.getTrack().getDuration() / representationBuilder.getTrack().getTrackMetaData().getTimescale();
                 // todo find actual main video FPS - will happen when
-                long maxPlayoutRate = Math.round((double)25 / ((double)representationBuilder.getTrack().getSamples().size() / seconds));
+                long maxPlayoutRate = Math.round((double) 25 / ((double) representationBuilder.getTrack().getSamples().size() / seconds));
                 RepresentationType representation = writeDataAndCreateRepresentation(representationBuilder);
                 representation.setMaxPlayoutRate(maxPlayoutRate);
                 representations.add(representation);
@@ -449,7 +481,12 @@ public class DashFileSetSequence {
     }
 
     public <T> Map<T, List<Track>> tt(Map<T, List<TrackProxy>> mapIn) {
-        Map<T, List<Track>> mapOut = new HashMap<T, List<Track>>();
+        Map<T, List<Track>> mapOut;
+        if (mapIn instanceof LinkedHashMap) {
+            mapOut = new LinkedHashMap<T, List<Track>>();
+        } else {
+            mapOut = new HashMap<T, List<Track>>();
+        }
 
         for (Map.Entry<T, List<TrackProxy>> tListEntry : mapIn.entrySet()) {
             mapOut.put(tListEntry.getKey(), t(tListEntry.getValue()));
@@ -480,37 +517,34 @@ public class DashFileSetSequence {
                 t(trackBitrate), t(representationIds), true, adaptationSet2Role).getManifest();
     }
 
-    public <E> Collection<E> safe(Collection<E> c){
-        if (c==null) {
+    public <E> Collection<E> safe(Collection<E> c) {
+        if (c == null) {
             return Collections.emptySet();
         } else {
             return c;
         }
     }
 
-    public void addTextTracks(MPDDocument mpdDocument, List<File> textTracks, String role) throws IOException {
-            for (File textTrack : safe(textTracks)) {
-                addRawTextTrack(mpdDocument, textTrack, role);
-                addMuxedTextTrack(mpdDocument, textTrack, role);
-            }
+    public void addTextTracks(MPDDocument mpdDocument, List<File> textTracks, DescriptorType[] roles, DescriptorType[] essentialProperties) throws IOException {
+        for (File textTrack : safe(textTracks)) {
+
+            addRawTextTrack(mpdDocument, textTrack, roles, essentialProperties);
+            addMuxedTextTrack(mpdDocument, textTrack, roles, essentialProperties);
+        }
     }
 
-    private void addMuxedTextTrack(MPDDocument mpdDocument, File textTrackFile, String role) throws IOException {
+    private void addMuxedTextTrack(MPDDocument mpdDocument, File textTrackFile, DescriptorType[] roles, DescriptorType[] essentialProperties) throws IOException {
         LOG.info("Creating Muxed Text Track AdaptationSet for " + textTrackFile.getName());
         PeriodType period = mpdDocument.getMPD().getPeriodArray()[0];
 
         Track textTrack;
-        if (textTrackFile.getName().endsWith(".xml") || textTrackFile.getName().endsWith(".dfxp")) {
-            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-            dbf.setNamespaceAware(true);
+        if (textTrackFile.getName().endsWith(".xml") || textTrackFile.getName().endsWith(".dfxp") || textTrackFile.getName().endsWith(".ttml")) {
             try {
-                DocumentBuilder db = dbf.newDocumentBuilder();
                 textTrack = new TtmlTrackImpl(textTrackFile.getName(),
-                        Collections.singletonList(db.parse(textTrackFile)));
-
-            } catch (ParserConfigurationException e) {
-                throw new IOException(e);
+                        Collections.singletonList(documentBuilder.parse(textTrackFile)));
             } catch (SAXException e) {
+                throw new IOException(e);
+            } catch (ParserConfigurationException e) {
                 throw new IOException(e);
             } catch (XPathExpressionException e) {
                 throw new IOException(e);
@@ -531,38 +565,53 @@ public class DashFileSetSequence {
         adaptationSet.setLang(locale.getLanguage() + ("".equals(locale.getScript()) ? "" : "-" + locale.getScript()));
         adaptationSet.setMimeType("application/mp4");
         adaptationSet.setRepresentationArray(new RepresentationType[]{representation});
-        DescriptorType descriptor = adaptationSet.addNewRole();
-        descriptor.setSchemeIdUri("urn:mpeg:dash:role");
-        descriptor.setValue(role);
+        adaptationSet.setRoleArray(roles);
+        adaptationSet.setEssentialPropertyArray(essentialProperties);
 
         LOG.info("Muxed Text Track AdaptationSet: Done.");
     }
 
 
-    public void addRawTextTrack(MPDDocument mpdDocument, File textTrack, String role) throws IOException {
+    public void addRawTextTrack(MPDDocument mpdDocument, File textTrack, DescriptorType[] roles, DescriptorType[] essentialProperties) throws IOException {
+
         LOG.info("Creating Raw Text Track AdaptationSet for " + textTrack.getName());
         PeriodType period = mpdDocument.getMPD().getPeriodArray()[0];
         AdaptationSetType adaptationSet = period.addNewAdaptationSet();
-        if (textTrack.getName().endsWith(".xml")) {
-            adaptationSet.setMimeType("application/ttml+xml");
-        } else if (textTrack.getName().endsWith(".dfxp")) {
-            adaptationSet.setMimeType("application/ttaf+xml");
+        File tracksOutputDir = new File(outputDirectory, FilenameUtils.getBaseName(textTrack.getName()));
+        if (!(tracksOutputDir.getAbsoluteFile().exists() ^ tracksOutputDir.getAbsoluteFile().mkdirs())) {
+            LOG.severe("Track's output directory does not exist and cannot be created (" + tracksOutputDir.getAbsolutePath() + ")");
+        }
+        if (textTrack.getName().endsWith(".xml") || textTrack.getName().endsWith(".dfxp") || textTrack.getName().endsWith(".ttml")) {
+            if (textTrack.getName().endsWith(".dfxp")) {
+                adaptationSet.setMimeType("application/ttaf+xml");
+            } else {
+                adaptationSet.setMimeType("application/ttml+xml");
+            }
+
+            try {
+                TtmlHelpers.deepCopyDocument(documentBuilder.parse(textTrack), new File(tracksOutputDir, textTrack.getName()));
+            } catch (SAXException e) {
+                throw new IOException(e);
+            }
+
         } else if (textTrack.getName().endsWith(".vtt")) {
             adaptationSet.setMimeType("text/vtt");
+
+            FileUtils.copyFileToDirectory(textTrack, tracksOutputDir);
         } else {
             throw new RuntimeException("Not sure what kind of textTrack " + textTrack.getName() + " is.");
         }
+
         Locale locale = getTextTrackLocale(textTrack);
         adaptationSet.setLang(locale.getLanguage() + ("".equals(locale.getScript()) ? "" : "-" + locale.getScript()));
-        DescriptorType descriptor = adaptationSet.addNewRole();
-        descriptor.setSchemeIdUri("urn:mpeg:dash:role");
-        descriptor.setValue(role);
+        adaptationSet.setRoleArray(roles);
+        adaptationSet.setEssentialPropertyArray(essentialProperties);
         RepresentationType representation = adaptationSet.addNewRepresentation();
         representation.setId(FilenameUtils.getBaseName(textTrack.getName()));
         representation.setBandwidth(128); // pointless - just invent a small number
         BaseURLType baseURL = representation.addNewBaseURL();
-        baseURL.setStringValue(textTrack.getName());
-        FileUtils.copyFileToDirectory(textTrack, outputDirectory);
+        baseURL.setStringValue(FilenameUtils.getBaseName(textTrack.getName()) + "/" + textTrack.getName());
+
         LOG.info("Raw Text Track AdaptationSet: Done.");
     }
 
@@ -580,7 +629,7 @@ public class DashFileSetSequence {
             LOG.severe("Cannot identify type of " + inputFile);
         }
         if (inputFiles.size() > 0) {
-            throw new ExitCodeException("Only extensions mp4, ismv, mov, m4v, aac, ac3, ec3, dtshd and xml/vtt are known.", 1);
+            throw new ExitCodeException("Only extensions mp4, ismv, mov, m4v, aac, ac3, ec3, dtshd are known.", 1);
         }
     }
 
@@ -639,9 +688,9 @@ public class DashFileSetSequence {
         return track2Files;
     }
 
-    public DashBuilder getFileBuilder(Fragmenter fragmentIntersectionFinder, Movie m) {
+    public DashBuilder getFileBuilder(Fragmenter fragmenter, Movie m) {
         DashBuilder dashBuilder = new DashBuilder();
-        dashBuilder.setIntersectionFinder(fragmentIntersectionFinder);
+        dashBuilder.setFragmenter(fragmenter);
         return dashBuilder;
     }
 
@@ -784,7 +833,7 @@ public class DashFileSetSequence {
                     Fragmenter videoIntersectionFinder = new SyncSampleIntersectFinderImpl(movie, null, minVideoSegmentDuration);
                     fragmentStartSamples.put(track, videoIntersectionFinder.sampleNumbers(track.getTarget()));
                     //fragmentStartSamples.put(track, checkMaxFragmentDuration(track, videoIntersectionFinder.sampleNumbers(track)));
-                } else if (track.getHandler().startsWith("soun") || track.getHandler().startsWith("subt")) {
+                } else if (track.getHandler().startsWith("soun")) {
                     Fragmenter soundIntersectionFinder = new SoundIntersectionFinderImpl(tracks, minAudioSegmentDuration);
                     fragmentStartSamples.put(track, soundIntersectionFinder.sampleNumbers(track.getTarget()));
                 } else {
@@ -808,12 +857,7 @@ public class DashFileSetSequence {
         Map<TrackProxy, String> track2File = new LinkedHashMap<TrackProxy, String>();
         for (File inputFile : inputFiles) {
             if (inputFile.isFile()) {
-                if (inputFile.getName().endsWith(".mp4") ||
-                        inputFile.getName().endsWith(".mov") ||
-                        inputFile.getName().endsWith(".ismv") ||
-                        inputFile.getName().endsWith(".isma") ||
-                        inputFile.getName().endsWith(".m4a") ||
-                        inputFile.getName().endsWith(".m4v")) {
+                if (isMp4(inputFile)) {
                     Movie movie = MovieCreator.build(new FileDataSourceImpl(inputFile));
                     for (Track track : movie.getTracks()) {
                         String codec = DashHelper.getFormat(track);
@@ -829,6 +873,7 @@ public class DashFileSetSequence {
                     }
                 } else if (inputFile.getName().endsWith(".aac")) {
                     Track track = new AACTrackImpl(new FileDataSourceImpl(inputFile));
+                    track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
                     track2File.put(new TrackProxy(track), inputFile.getName());
                     LOG.fine("Created AAC Track from " + inputFile.getName());
                 } else if (inputFile.getName().endsWith(".h264")) {
@@ -837,14 +882,17 @@ public class DashFileSetSequence {
                     LOG.fine("Created H264 Track from " + inputFile.getName());
                 } else if (inputFile.getName().endsWith(".ac3")) {
                     Track track = new AC3TrackImpl(new FileDataSourceImpl(inputFile));
+                    track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
                     track2File.put(new TrackProxy(track), inputFile.getName());
                     LOG.fine("Created AC3 Track from " + inputFile.getName());
                 } else if (inputFile.getName().endsWith(".ec3")) {
                     Track track = new EC3TrackImpl(new FileDataSourceImpl(inputFile));
+                    track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
                     track2File.put(new TrackProxy(track), inputFile.getName());
                     LOG.fine("Created EC3 Track from " + inputFile.getName());
                 } else if (inputFile.getName().endsWith(".dtshd")) {
                     Track track = new DTSTrackImpl(new FileDataSourceImpl(inputFile));
+                    track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
                     track2File.put(new TrackProxy(track), inputFile.getName());
                     LOG.fine("Created DTS HD Track from " + inputFile.getName());
                 } else {
@@ -1001,7 +1049,6 @@ public class DashFileSetSequence {
      * In DASH Some tracks might have an earliest presentation timestamp < 0
      *
      * @param track2File map from track object to originating file
-     * @return a copy of the input map with zero-aligned tracks
      */
     public void alignEditsToZero(Map<TrackProxy, String> track2File) {
 
@@ -1049,21 +1096,16 @@ public class DashFileSetSequence {
 
 
     public Map<String, List<TrackProxy>> findAdaptationSets(Set<TrackProxy> allTracks) throws IOException, ExitCodeException {
-        HashMap<String, List<TrackProxy>> trackFamilies = new HashMap<String, List<TrackProxy>>();
+        HashMap<String, List<TrackProxy>> trackFamilies = new LinkedHashMap<String, List<TrackProxy>>();
         for (TrackProxy track : allTracks) {
             String family;
 
-            if ("mp4a".equals(DashHelper.getFormat(track.getTarget()))) {
-                // we need to look at actual channel configuration
-                ESDescriptorBox esds = track.getSampleDescriptionBox().getSampleEntry().getBoxes(ESDescriptorBox.class).get(0);
-                AudioSpecificConfig audioSpecificConfig = esds.getEsDescriptor().getDecoderConfigDescriptor().getAudioSpecificInfo();
-                family = DashHelper.getRfc6381Codec(track.getSampleDescriptionBox().getSampleEntry()) + "-" + track.getTrackMetaData().getLanguage() + "-" + audioSpecificConfig.getChannelConfiguration();
-            } else if (track.getTarget().getHandler().equals("soun")) {
+            if (track.getTarget().getHandler().equals("soun")) {
                 int channels = ((AudioSampleEntry) track.getSampleDescriptionBox().getSampleEntry()).getChannelCount();
                 family = DashHelper.getRfc6381Codec(track.getSampleDescriptionBox().getSampleEntry()) +
                         "-" + track.getTrackMetaData().getLanguage() + "-" + channels + "ch";
             } else {
-                family = DashHelper.getFormat(track.getTarget()) + "-" + track.getTrackMetaData().getLanguage();
+                family = DashHelper.getFormat(track.getTarget());
             }
 
             List<TrackProxy> tracks = trackFamilies.get(family);
@@ -1121,37 +1163,28 @@ public class DashFileSetSequence {
 
         List<ProtectionSystemSpecificHeaderBox> psshs = psshBoxes.get(keyId);
 
-            for (ProtectionSystemSpecificHeaderBox pssh : safe(psshs)) {
-
-                if (Arrays.equals(ProtectionSystemSpecificHeaderBox.PLAYREADY_SYSTEM_ID, pssh.getSystemId())) {
-
-                    Node playReadyCPN = createContentProctionNode(adaptationSet, "urn:uuid:" + UUIDConverter.convert(pssh.getSystemId()).toString(), "MSPR 2.0");
-                    Document d = playReadyCPN.getOwnerDocument();
-                    Element pro = d.createElementNS("urn:microsoft:playready", "pro");
-                    Element prPssh = d.createElementNS("urn:mpeg:cenc:2013", "pssh");
-
-                    pro.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(pssh.getContent())));
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    try {
-                        pssh.getBox(Channels.newChannel(baos));
-                    } catch (IOException e) {
-                        throw new RuntimeException(e); // unexpected
-                    }
-                    prPssh.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(baos.toByteArray())));
-
-                    playReadyCPN.appendChild(pro);
-                    playReadyCPN.appendChild(prPssh);
-                }
-                if (Arrays.equals(ProtectionSystemSpecificHeaderBox.WIDEVINE, pssh.getSystemId())) {
-                    // Widevvine
-                    Node widevineCPN = createContentProctionNode(adaptationSet, "urn:uuid:" + UUIDConverter.convert(pssh.getSystemId()).toString(), null);
-                    Document d = widevineCPN.getOwnerDocument();
-                    Element wvPssh = d.createElementNS("urn:mpeg:cenc:2013", "pssh");
-                    wvPssh.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(pssh.getContent())));
-
-                    widevineCPN.appendChild(wvPssh);
-                }
+        for (ProtectionSystemSpecificHeaderBox pssh : safe(psshs)) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            try {
+                pssh.getBox(Channels.newChannel(baos));
+            } catch (IOException e) {
+                throw new RuntimeException(e); // unexpected
             }
+            byte[] completePssh = baos.toByteArray();
+
+            Node cpn = createContentProctionNode(adaptationSet, "urn:uuid:" + UUIDConverter.convert(pssh.getSystemId()).toString(), null);
+            Document d = cpn.getOwnerDocument();
+            Element psshElement = d.createElementNS("urn:mpeg:cenc:2013", "pssh");
+            psshElement.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(completePssh)));
+            cpn.appendChild(psshElement);
+
+            if (Arrays.equals(ProtectionSystemSpecificHeaderBox.PLAYREADY_SYSTEM_ID, pssh.getSystemId())) {
+                cpn.setNodeValue("MSPR 2.0");
+                Element pro = d.createElementNS("urn:microsoft:playready", "pro");
+                pro.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(pssh.getContent())));
+                cpn.appendChild(pro);
+            }
+        }
 
 
     }
@@ -1166,5 +1199,21 @@ public class DashFileSetSequence {
         }
 
         return cpNode.getDomNode();
+    }
+
+    /**
+     * Exception to force exit from tool in functions - kind of goto.
+     */
+    protected static class ExitCodeException extends Exception {
+        int exitCode;
+
+        public ExitCodeException(String message, int exitCode) {
+            super(message);
+            this.exitCode = exitCode;
+        }
+
+        public int getExitCode() {
+            return exitCode;
+        }
     }
 }

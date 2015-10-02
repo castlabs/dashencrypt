@@ -479,7 +479,7 @@ public final class DashHelper {
             } else {
                 throw new IOException("Cannot determine language of " + textTrack + " please use the pattern filename-[language-tag].vtt");
             }
-        } else if (ext.equals("xml") || ext.equals("dfxp")) {
+        } else if (ext.equals("xml") || ext.equals("dfxp") || ext.equals("ttml")) {
             DocumentBuilderFactory builderFactory =
                     DocumentBuilderFactory.newInstance();
             try {

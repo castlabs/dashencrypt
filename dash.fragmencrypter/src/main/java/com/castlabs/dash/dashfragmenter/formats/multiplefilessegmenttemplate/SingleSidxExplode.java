@@ -8,6 +8,7 @@ import com.coremedia.iso.boxes.fragment.SegmentTypeBox;
 import com.googlecode.mp4parser.boxes.threegpp26244.SegmentIndexBox;
 import com.googlecode.mp4parser.util.Path;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -71,8 +72,8 @@ public class SingleSidxExplode {
             File segmentFile = new File(outputDir, filename);
             FileUtils.forceMkdir(segmentFile.getParentFile());
             segments.add(segmentFile);
-
-            FileChannel fc = new FileOutputStream(segmentFile).getChannel();
+            FileOutputStream fos = new FileOutputStream(segmentFile);
+            FileChannel fc = fos.getChannel();
             SegmentIndexBox.Entry entry = sidx.getEntries().get(i);
 
             if (generateStypSdix) {
@@ -94,6 +95,8 @@ public class SingleSidxExplode {
             fc.write(in.getByteBuffer(start, entry.getReferencedSize()));
             earliestPresentationTime += entry.getSubsegmentDuration();
             start += entry.getReferencedSize();
+            IOUtils.closeQuietly(fc);
+            IOUtils.closeQuietly(fos);
         }
         return segments;
     }
