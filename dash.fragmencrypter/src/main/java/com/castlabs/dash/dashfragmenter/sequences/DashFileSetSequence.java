@@ -304,7 +304,7 @@ public class DashFileSetSequence {
             return 0;
         } catch (ExitCodeException e) {
             LOG.severe(e.getMessage());
-            return 9014;
+            return e.getExitCode();
         } catch (IOException e) {
             LOG.log(Level.SEVERE, e.getMessage(), e);
             return 9015;
