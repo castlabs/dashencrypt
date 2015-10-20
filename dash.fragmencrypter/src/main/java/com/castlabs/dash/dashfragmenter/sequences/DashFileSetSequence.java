@@ -908,6 +908,9 @@ public class DashFileSetSequence {
                 }
             }
         }
+        if (track2File.isEmpty()) {
+            throw new ExitCodeException("No tracks found for creating DASH stream.", 9283);
+        }
         return track2File;
     }
 
