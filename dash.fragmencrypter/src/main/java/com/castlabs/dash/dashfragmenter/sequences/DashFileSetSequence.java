@@ -17,7 +17,7 @@ import com.coremedia.iso.boxes.CompositionTimeToSample;
 import com.coremedia.iso.boxes.Container;
 import com.coremedia.iso.boxes.SampleDescriptionBox;
 import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
-import com.googlecode.mp4parser.FileDataSourceImpl;
+import com.googlecode.mp4parser.FileDataSourceViaHeapImpl;
 import com.googlecode.mp4parser.authoring.Edit;
 import com.googlecode.mp4parser.authoring.Movie;
 import com.googlecode.mp4parser.authoring.Track;
@@ -400,7 +400,7 @@ public class DashFileSetSequence {
         List<RepresentationBuilder> trickModeRepresentations = new ArrayList<RepresentationBuilder>();
         for (File trickModeFile : safe(trickModeFiles)) {
             if (isMp4(trickModeFile)) {
-                Movie movie = MovieCreator.build(new FileDataSourceImpl(trickModeFile));
+                Movie movie = MovieCreator.build(new FileDataSourceViaHeapImpl(trickModeFile));
                 for (Track track : movie.getTracks()) {
                     if ("vide".equals(track.getHandler())) {
                         if (videoKeyid != null) {
@@ -413,7 +413,7 @@ public class DashFileSetSequence {
                     }
                 }
             } else if (trickModeFile.getName().endsWith(".h264") || trickModeFile.getName().endsWith(".264")) {
-                Track track = new H264TrackImpl(new FileDataSourceImpl(trickModeFile));
+                Track track = new H264TrackImpl(new FileDataSourceViaHeapImpl(trickModeFile));
                 if (videoKeyid != null) {
                     track = new CencEncryptingTrackImpl(track, videoKeyid, videoKey, false);
                 }
@@ -858,7 +858,7 @@ public class DashFileSetSequence {
         for (File inputFile : inputFiles) {
             if (inputFile.isFile()) {
                 if (isMp4(inputFile)) {
-                    Movie movie = MovieCreator.build(new FileDataSourceImpl(inputFile));
+                    Movie movie = MovieCreator.build(new FileDataSourceViaHeapImpl(inputFile));
                     for (Track track : movie.getTracks()) {
                         String codec = DashHelper.getFormat(track);
                         if (!supportedTypes.contains(codec)) {
@@ -872,26 +872,26 @@ public class DashFileSetSequence {
                         track2File.put(new TrackProxy(track), inputFile.getName());
                     }
                 } else if (inputFile.getName().endsWith(".aac")) {
-                    Track track = new AACTrackImpl(new FileDataSourceImpl(inputFile));
+                    Track track = new AACTrackImpl(new FileDataSourceViaHeapImpl(inputFile));
                     track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
                     track2File.put(new TrackProxy(track), inputFile.getName());
                     LOG.fine("Created AAC Track from " + inputFile.getName());
                 } else if (inputFile.getName().endsWith(".h264")) {
-                    Track track = new H264TrackImpl(new FileDataSourceImpl(inputFile));
+                    Track track = new H264TrackImpl(new FileDataSourceViaHeapImpl(inputFile));
                     track2File.put(new TrackProxy(track), inputFile.getName());
                     LOG.fine("Created H264 Track from " + inputFile.getName());
                 } else if (inputFile.getName().endsWith(".ac3")) {
-                    Track track = new AC3TrackImpl(new FileDataSourceImpl(inputFile));
+                    Track track = new AC3TrackImpl(new FileDataSourceViaHeapImpl(inputFile));
                     track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
                     track2File.put(new TrackProxy(track), inputFile.getName());
                     LOG.fine("Created AC3 Track from " + inputFile.getName());
                 } else if (inputFile.getName().endsWith(".ec3")) {
-                    Track track = new EC3TrackImpl(new FileDataSourceImpl(inputFile));
+                    Track track = new EC3TrackImpl(new FileDataSourceViaHeapImpl(inputFile));
                     track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
                     track2File.put(new TrackProxy(track), inputFile.getName());
                     LOG.fine("Created EC3 Track from " + inputFile.getName());
                 } else if (inputFile.getName().endsWith(".dtshd")) {
-                    Track track = new DTSTrackImpl(new FileDataSourceImpl(inputFile));
+                    Track track = new DTSTrackImpl(new FileDataSourceViaHeapImpl(inputFile));
                     track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
                     track2File.put(new TrackProxy(track), inputFile.getName());
                     LOG.fine("Created DTS HD Track from " + inputFile.getName());
