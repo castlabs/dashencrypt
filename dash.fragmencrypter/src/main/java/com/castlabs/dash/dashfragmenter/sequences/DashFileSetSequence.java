@@ -445,13 +445,13 @@ public class DashFileSetSequence {
         }
     }
 
-    private RepresentationType writeDataAndCreateRepresentation(RepresentationBuilder representationBuilder) throws IOException {
+    RepresentationType writeDataAndCreateRepresentation(RepresentationBuilder representationBuilder) throws IOException {
         RepresentationType representation;
         String id = FilenameUtils.getBaseName(representationBuilder.getSource());
         if (explode) {
             representation = representationBuilder.getLiveRepresentation();
-            representation.getSegmentTemplate().setInitialization2(initPattern);
-            representation.getSegmentTemplate().setMedia(mediaPattern);
+            representation.getSegmentTemplate().setInitialization2(initPattern.replace("%lang%", representationBuilder.getTrack().getTrackMetaData().getLanguage()));
+            representation.getSegmentTemplate().setMedia(mediaPattern.replace("%lang%", representationBuilder.getTrack().getTrackMetaData().getLanguage()));
             representation.setId(id);
             RepresentationBuilderToFile.writeLive(representationBuilder, representation, outputDirectory);
         } else {
