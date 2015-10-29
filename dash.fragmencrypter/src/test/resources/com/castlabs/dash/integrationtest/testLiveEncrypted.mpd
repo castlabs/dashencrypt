@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<MPD profiles="urn:mpeg:dash:profile:isoff-live:2011" type="static" minBufferTime="PT5S" mediaPresentationDuration="PT12M14S" xmlns="urn:mpeg:dash:schema:mpd:2011" xmlns:cenc="urn:mpeg:cenc:2013">
+<MPD profiles="urn:mpeg:dash:profile:isoff-live:2011" type="static" minBufferTime="PT6S" mediaPresentationDuration="PT12M14S" xmlns="urn:mpeg:dash:schema:mpd:2011" xmlns:cenc="urn:mpeg:cenc:2013">
   <ProgramInformation moreInformationURL="www.castLabs.com"/>
   <Period id="0" start="PT0S" duration="PT12M14S">
     <AdaptationSet id="1" segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" mimeType="video/mp4" maxFrameRate="24000/1000" maxWidth="1152" maxHeight="480" par="12:5" frameRate="24000/1000" sar="1:1">
@@ -85,7 +85,8 @@
       <Representation codecs="avc1.64001e" width="768" height="320" bandwidth="924400" id="Tears_Of_Steel_1000000"/>
       <Representation codecs="avc1.64001f" width="1152" height="480" bandwidth="1296300" id="Tears_Of_Steel_1400000"/>
     </AdaptationSet>
-    <AdaptationSet segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" lang="eng" mimeType="audio/mp4" codecs="mp4a.40.2">
+    <AdaptationSet segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" lang="eng" mimeType="audio/mp4">
+      <ContentProtection cenc:default_KID="550e8400-e29b-11d4-a716-446655440000" schemeIdUri="urn:mpeg:dash:mp4protection:2011" value="cenc"/>
       <Role schemeIdUri="urn:mpeg:dash:role:2011" value="main"/>
       <SegmentTemplate media="$RepresentationID$/media-$Time$.mp4" initialization="$RepresentationID$/init.mp4" timescale="48000">
         <SegmentTimeline>
@@ -140,11 +141,12 @@
           <S d="673792" t="34560000"/>
         </SegmentTimeline>
       </SegmentTemplate>
-      <Representation audioSamplingRate="48000" bandwidth="128200" id="Tears_Of_Steel_128000_eng">
+      <Representation codecs="mp4a.40.2" audioSamplingRate="48000" bandwidth="128200" id="Tears_Of_Steel_128000_eng">
         <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
       </Representation>
     </AdaptationSet>
-    <AdaptationSet segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" lang="ita" mimeType="audio/mp4" codecs="mp4a.40.2">
+    <AdaptationSet segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" lang="ita" mimeType="audio/mp4">
+      <ContentProtection cenc:default_KID="550e8400-e29b-11d4-a716-446655440000" schemeIdUri="urn:mpeg:dash:mp4protection:2011" value="cenc"/>
       <Role schemeIdUri="urn:mpeg:dash:role:2011" value="dub"/>
       <SegmentTemplate media="$RepresentationID$/media-$Time$.mp4" initialization="$RepresentationID$/init.mp4" timescale="48000">
         <SegmentTimeline>
@@ -199,7 +201,7 @@
           <S d="678912" t="34560000"/>
         </SegmentTimeline>
       </SegmentTemplate>
-      <Representation audioSamplingRate="48000" bandwidth="128200" id="Tears_Of_Steel_128000_ita">
+      <Representation codecs="mp4a.40.2" audioSamplingRate="48000" bandwidth="128200" id="Tears_Of_Steel_128000_ita">
         <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
       </Representation>
     </AdaptationSet>

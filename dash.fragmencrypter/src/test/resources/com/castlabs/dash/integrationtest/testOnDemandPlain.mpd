@@ -29,9 +29,9 @@
                 </SegmentBase>
             </Representation>
         </AdaptationSet>
-        <AdaptationSet segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" lang="eng" mimeType="audio/mp4" codecs="mp4a.40.2">
+        <AdaptationSet segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" lang="eng" mimeType="audio/mp4">
             <Role schemeIdUri="urn:mpeg:dash:role:2011" value="main"/>
-            <Representation audioSamplingRate="48000" id="Tears_Of_Steel_128000_eng.mp4" bandwidth="128200">
+            <Representation codecs="mp4a.40.2" audioSamplingRate="48000" id="Tears_Of_Steel_128000_eng.mp4" bandwidth="128200">
                 <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
                 <BaseURL>Tears_Of_Steel_128000_eng.mp4</BaseURL>
                 <SegmentBase timescale="48000" indexRangeExact="true" indexRange="644-1263">
@@ -39,9 +39,9 @@
                 </SegmentBase>
             </Representation>
         </AdaptationSet>
-        <AdaptationSet segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" lang="ita" mimeType="audio/mp4" codecs="mp4a.40.2">
+        <AdaptationSet segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" lang="ita" mimeType="audio/mp4">
             <Role schemeIdUri="urn:mpeg:dash:role:2011" value="dub"/>
-            <Representation audioSamplingRate="48000" id="Tears_Of_Steel_128000_ita.mp4" bandwidth="128200">
+            <Representation codecs="mp4a.40.2" audioSamplingRate="48000" id="Tears_Of_Steel_128000_ita.mp4" bandwidth="128200">
                 <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
                 <BaseURL>Tears_Of_Steel_128000_ita.mp4</BaseURL>
                 <SegmentBase timescale="48000" indexRangeExact="true" indexRange="644-1263">

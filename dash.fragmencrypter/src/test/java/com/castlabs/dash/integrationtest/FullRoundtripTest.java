@@ -17,7 +17,7 @@ import java.net.URI;
 /**
  * Created by sannies on 27.08.2015.
  */
-public class FullRoundtrip {
+public class FullRoundtripTest {
     File tos;
 
     @Before
@@ -26,7 +26,7 @@ public class FullRoundtrip {
         de.mkdir();
         tos = new File(de, "tos");
         tos.mkdir();
-        URI baseUri = new URI("http://com.mp4parser.s3.amazonaws.com/dash.encrypt-test/");
+        URI baseUri = new URI("http://castlabs-dl.s3.amazonaws.com/public/dash.encrypt/testdata/");
         String files[] = new String[]{
                 "tears_of_steel/Tears_Of_Steel_1000000.mp4", "tears_of_steel/Tears_Of_Steel_128000_eng.mp4",
                 "tears_of_steel/Tears_Of_Steel_128000_ita.mp4", "tears_of_steel/Tears_Of_Steel_1400000.mp4",
@@ -94,7 +94,7 @@ public class FullRoundtrip {
                 "-o", outputDir.getAbsolutePath(),
                 new File(tos, "ffmpeg-generated.ismv").getAbsolutePath(),
         });
-
+        System.err.println(new File(tos, "ffmpeg-generated.ismv"));
         XMLUnit.setIgnoreWhitespace(true);
         XMLAssert.assertXMLEqual(new InputSource(getClass().getResourceAsStream("testOnDemandPlainIsmvInput.mpd")), new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))));
         FileUtils.deleteDirectory(outputDir);
@@ -133,7 +133,7 @@ public class FullRoundtrip {
                 "encrypt",
                 "-x",
                 "--dummyIvs",
-                "--secretKey:v", "550e8400-e29b-11d4-a716-446655440000",
+                "--secretKey:v", "550e8400e29b11d4a716446655440000",
                 "--uuid:v", "550e8400-e29b-11d4-a716-446655440000",
                 "-o", outputDir.getAbsolutePath(),
                 new File(tos, "tears_of_steel/Tears_Of_Steel_1000000.mp4").getAbsolutePath(),
@@ -146,7 +146,7 @@ public class FullRoundtrip {
 
         XMLUnit.setIgnoreWhitespace(true);
         XMLAssert.assertXMLEqual(new InputSource(getClass().getResourceAsStream("testLiveEncrypted.mpd")), new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))));
-        FileUtils.deleteDirectory(outputDir);
+//        FileUtils.deleteDirectory(outputDir);
     }
 
     @Test
@@ -158,7 +158,7 @@ public class FullRoundtrip {
         Main.main(new String[]{
                 "encrypt",
                 "--dummyIvs",
-                "--secretKey:v", "550e8400-e29b-11d4-a716-446655440000",
+                "--secretKey:v", "550e8400e29b11d4a716446655440000",
                 "--uuid:v", "550e8400-e29b-11d4-a716-446655440000",
                 "-o", outputDir.getAbsolutePath(),
                 new File(tos, "tears_of_steel/Tears_Of_Steel_1000000.mp4").getAbsolutePath(),
