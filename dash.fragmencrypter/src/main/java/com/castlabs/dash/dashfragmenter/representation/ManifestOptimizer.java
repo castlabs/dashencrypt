@@ -1,6 +1,7 @@
 package com.castlabs.dash.dashfragmenter.representation;
 
 import mpegDashSchemaMpd2011.*;
+import org.apache.commons.lang.math.Fraction;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Node;
 
@@ -9,14 +10,65 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Pushes common attributes and elements down to the parent element. 
+ * Pushes common attributes and elements down to the parent element.
  */
 public class ManifestOptimizer {
     public static void optimize(MPDDocument mpdDocument) {
         for (PeriodType periodType : mpdDocument.getMPD().getPeriodArray()) {
             for (AdaptationSetType adaptationSetType : periodType.getAdaptationSetArray()) {
                 optimize(adaptationSetType);
+                adjustMinMax(adaptationSetType, "width");
+                adjustMinMax(adaptationSetType, "height");
+                adjustMinMax(adaptationSetType, "bandwidth");
+                adjustMinMaxFrameRate(adaptationSetType); // special handling cause the type is special (fraction)
             }
+        }
+    }
+
+    public static void adjustMinMaxFrameRate(AdaptationSetType adaptationSetType) {
+        RepresentationType representationArray[] = adaptationSetType.getRepresentationArray();
+        Fraction min = null, max = null;
+        for (RepresentationType representationType : representationArray) {
+            Node attr = representationType.getDomNode().getAttributes().getNamedItem("frameRate");
+            if (attr != null) {
+                Fraction f = Fraction.getFraction(attr.getNodeValue());
+
+                min = min == null || f.compareTo(min) < 0 ? f : min;
+                max = max == null || f.compareTo(max) > 0 ? f : max;
+            }
+        }
+        if (max != null && !min.equals(max)) { // min/max doesn't make sense when both values are the same
+            Node adaptationSet = adaptationSetType.getDomNode();
+            Node minAttr =  adaptationSet.getOwnerDocument().createAttribute("minFrameRate");
+            minAttr.setNodeValue(min.toString());
+            adaptationSet.getAttributes().setNamedItem(minAttr);
+            Node maxAttr =  adaptationSet.getOwnerDocument().createAttribute("maxFrameRate");
+            maxAttr.setNodeValue(max.toString());
+            adaptationSet.getAttributes().setNamedItem(maxAttr);
+
+        }
+    }
+
+    public static void adjustMinMax(AdaptationSetType adaptationSetType, String attrName) {
+        RepresentationType representationArray[] = adaptationSetType.getRepresentationArray();
+        long min = Integer.MAX_VALUE, max = Integer.MIN_VALUE;
+        for (RepresentationType representationType : representationArray) {
+            Node attr = representationType.getDomNode().getAttributes().getNamedItem(attrName);
+            if (attr != null) {
+                int n = Integer.parseInt(attr.getNodeValue());
+                min = Math.min(n, min);
+                max = Math.max(n, max);
+            }
+        }
+        if (min != Integer.MAX_VALUE && min != max) {
+            Node adaptationSet = adaptationSetType.getDomNode();
+            Node minAttr =  adaptationSet.getOwnerDocument().createAttribute("min" + attrName.substring(0, 1).toUpperCase() + attrName.substring(1));
+            minAttr.setNodeValue("" + min);
+            adaptationSet.getAttributes().setNamedItem(minAttr);
+            Node maxAttr =  adaptationSet.getOwnerDocument().createAttribute("max" + attrName.substring(0, 1).toUpperCase() + attrName.substring(1));
+            maxAttr.setNodeValue("" + max);
+            adaptationSet.getAttributes().setNamedItem(maxAttr);
+
         }
     }
 
@@ -28,6 +80,8 @@ public class ManifestOptimizer {
         // the codecs attribute as well.
         // optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "codecs");
         optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "profiles");
+        optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "width");
+        optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "height");
         optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "frameRate");
         optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "sar");
     }

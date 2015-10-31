@@ -2,9 +2,9 @@
 <MPD profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static" minBufferTime="PT5S" mediaPresentationDuration="PT12M14S" xmlns="urn:mpeg:dash:schema:mpd:2011">
   <ProgramInformation moreInformationURL="www.castLabs.com"/>
   <Period id="0" start="PT0S" duration="PT12M14S">
-    <AdaptationSet id="1" segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" mimeType="video/mp4" maxFrameRate="24000/1000" maxWidth="500" maxHeight="208" par="125:52" frameRate="24000/1000" sar="1:1">
+    <AdaptationSet id="1" segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" mimeType="video/mp4" par="125:52" width="500" height="208" frameRate="24000/1000" sar="1:1">
       <Role schemeIdUri="urn:mpeg:dash:role:2011" value="main"/>
-      <Representation codecs="avc1.640015" width="500" height="208" id="Tears_Of_Steel_600000.mp4" bandwidth="549100">
+      <Representation codecs="avc1.640015" id="Tears_Of_Steel_600000.mp4" bandwidth="549100">
         <BaseURL>Tears_Of_Steel_600000.mp4</BaseURL>
         <SegmentBase timescale="12288" indexRangeExact="true" indexRange="709-1592">
           <Initialization range="0-708"/>

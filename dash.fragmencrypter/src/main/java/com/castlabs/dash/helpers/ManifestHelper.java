@@ -61,8 +61,7 @@ public class ManifestHelper {
 
 
     /**
-     * Creates a representation and adjusts the AdaptionSet's attributes maxFrameRate, maxWidth, maxHeight.
-     * Also creates AudioChannelConfiguration.
+     * Creates a representation and AudioChannelConfiguration if appropriate.
      */
     public static RepresentationType createRepresentation(AdaptationSetType adaptationSet, Track track) {
         RepresentationType representation = adaptationSet.addNewRepresentation();
@@ -71,16 +70,6 @@ public class ManifestHelper {
             long videoHeight = (long) track.getTrackMetaData().getHeight();
             long videoWidth = (long) track.getTrackMetaData().getWidth();
             double framesPerSecond = (double) (track.getSamples().size() * track.getTrackMetaData().getTimescale()) / track.getDuration();
-
-            adaptationSet.setMaxFrameRate(convertFramerate(
-                    Math.max(adaptationSet.isSetMaxFrameRate() ? Fraction.getFraction(adaptationSet.getMaxFrameRate()).doubleValue() : 0,
-                            framesPerSecond)
-            ));
-
-            adaptationSet.setMaxWidth(Math.max(adaptationSet.isSetMaxWidth() ? adaptationSet.getMaxWidth() : 0,
-                    videoWidth));
-            adaptationSet.setMaxHeight(Math.max(adaptationSet.isSetMaxHeight() ? adaptationSet.getMaxHeight() : 0,
-                    videoHeight));
 
             Fraction fraction = Fraction.getFraction((int) videoWidth, (int) videoHeight).reduce();
             adaptationSet.setPar("" + fraction.getNumerator() + ":" + fraction.getDenominator());
