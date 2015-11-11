@@ -69,7 +69,9 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
         for (Map.Entry<String, List<Track>> e : adaptationSets.entrySet()) {
             String adaptationSetId = e.getKey();
             List<Track> tracks = adaptationSets.get(adaptationSetId);
-
+            if (tracks.isEmpty()) {
+                break;
+            }
             for (Track track : tracks) {
                 double durationInSeconds = (double) track.getDuration() / track.getTrackMetaData().getTimescale();
                 maxDurationInSeconds = Math.max(maxDurationInSeconds, durationInSeconds);

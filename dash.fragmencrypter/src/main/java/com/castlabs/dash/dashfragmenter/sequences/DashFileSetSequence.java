@@ -296,8 +296,6 @@ public class DashFileSetSequence {
                     adaptationSets, trackBitrate, trackFilename, track2CsfStructure, trackToFileRepresentation, adaptationSet2Role);
 
 
-
-
             LOG.info(String.format("Finished fragmenting of %dMB in %.1fs", totalSize / 1024 / 1024, (double) (System.currentTimeMillis() - start) / 1000));
             for (TrackProxy trackProxy : trackToFileRepresentation.keySet()) {
                 trackProxy.close();
@@ -312,7 +310,7 @@ public class DashFileSetSequence {
         }
     }
 
-    protected void generateManifest(Map<String, List<TrackProxy>> adaptationSets, Map<TrackProxy, Long> trackBitrate, Map<TrackProxy, String> trackFilename, Map<TrackProxy, Container> track2CsfStructure, Map<TrackProxy, List<File>> trackToFileRepresentation, Map<String, String> adaptationSet2Role) throws IOException {
+    protected void generateManifest(Map<String, List<TrackProxy>> adaptationSets, Map<TrackProxy, Long> trackBitrate, Map<TrackProxy, String> trackFilename, Map<TrackProxy, Container> track2CsfStructure, Map<TrackProxy, List<File>> trackToFileRepresentation, Map<String, String> adaptationSet2Role) throws IOException, ExitCodeException {
         MPDDocument manifest = createManifest(
                 adaptationSets, trackBitrate, trackFilename, track2CsfStructure, trackToFileRepresentation, adaptationSet2Role);
 
@@ -379,8 +377,8 @@ public class DashFileSetSequence {
 
 
     public MPDDocument createManifest(Map<String, List<TrackProxy>> trackFamilies, Map<TrackProxy, Long> trackBitrate,
-                                                   Map<TrackProxy, String> representationIds,
-                                                   Map<TrackProxy, Container> dashedFiles, Map<TrackProxy, List<File>> trackToFile, Map<String, String> adaptationSet2Role) throws IOException {
+                                      Map<TrackProxy, String> representationIds,
+                                      Map<TrackProxy, Container> dashedFiles, Map<TrackProxy, List<File>> trackToFile, Map<String, String> adaptationSet2Role) throws IOException, ExitCodeException {
         MPDDocument mpdDocument;
         if (!explode) {
             mpdDocument = getManifestSingleSidx(trackFamilies, trackBitrate, representationIds, dashedFiles, adaptationSet2Role);
@@ -625,7 +623,7 @@ public class DashFileSetSequence {
     }
 
 
-    public void writeManifest(MPDDocument mpdDocument) throws IOException {
+    public void writeManifest(MPDDocument mpdDocument) throws IOException, ExitCodeException {
         File manifest1 = new File(outputDirectory, "Manifest.mpd");
         LOG.info("Writing " + manifest1);
         mpdDocument.save(manifest1, getXmlOptions());
