@@ -837,12 +837,14 @@ public class DashFileSetSequence {
             movie.setTracks(tracks);
             for (TrackProxy track : trackProxies) {
                 if (track.getHandler().startsWith("vide")) {
-                    Fragmenter videoIntersectionFinder = new SyncSampleIntersectFinderImpl(movie, null, minVideoSegmentDuration);
-                    fragmentStartSamples.put(track, videoIntersectionFinder.sampleNumbers(track.getTarget()));
+                    Fragmenter videoIntersectionFinder = new TimeBasedFragmenter(minVideoSegmentDuration);
+                    long[] samples = videoIntersectionFinder.sampleNumbers(track.getTarget());
+                    fragmentStartSamples.put(track, samples);
                     //fragmentStartSamples.put(track, checkMaxFragmentDuration(track, videoIntersectionFinder.sampleNumbers(track)));
                 } else if (track.getHandler().startsWith("soun")) {
-                    Fragmenter soundIntersectionFinder = new SoundIntersectionFinderImpl(tracks, minAudioSegmentDuration);
-                    fragmentStartSamples.put(track, soundIntersectionFinder.sampleNumbers(track.getTarget()));
+                    Fragmenter soundIntersectionFinder = new TimeBasedFragmenter(minAudioSegmentDuration);
+                    long[] samples = soundIntersectionFinder.sampleNumbers(track.getTarget());
+                    fragmentStartSamples.put(track, samples);
                 } else {
                     throw new RuntimeException("An engineer needs to tell me if " + key + " is audio or video!");
                 }

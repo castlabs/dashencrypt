@@ -6,7 +6,7 @@
       <Role schemeIdUri="urn:mpeg:dash:role:2011" value="main"/>
       <Representation codecs="avc1.640015" id="ffmpeg-generated.ismv.mp4" bandwidth="183700">
         <BaseURL>ffmpeg-generated.ismv.mp4</BaseURL>
-        <SegmentBase timescale="10000000" indexRangeExact="true" indexRange="710-801">
+        <SegmentBase timescale="10000000" indexRangeExact="true" indexRange="710-789">
           <Initialization range="0-709"/>
         </SegmentBase>
       </Representation>
