@@ -29,7 +29,8 @@ public class FullRoundtripTest {
         URI baseUri = new URI("http://castlabs-dl.s3.amazonaws.com/public/dash.encrypt/testdata/");
         String files[] = new String[]{
                 "tears_of_steel/Tears_Of_Steel_1000000.mp4", "tears_of_steel/Tears_Of_Steel_128000_eng.mp4",
-                "tears_of_steel/Tears_Of_Steel_128000_ita.mp4", "tears_of_steel/Tears_Of_Steel_1400000.mp4",
+                "tears_of_steel/Tears_Of_Steel_128000_ita.mp4", "tears_of_steel/Tears_Of_Steel_128000_ac3_eng.mp4",
+                "tears_of_steel/Tears_Of_Steel_128000_ac3_ita.mp4", "tears_of_steel/Tears_Of_Steel_1400000.mp4",
                 "tears_of_steel/Tears_Of_Steel_600000.mp4", "tears_of_steel/Tears_Of_Steel_800000.mp4",
                 "tears_of_steel/Tears_Of_Steel_deu.vtt", "tears_of_steel/Tears_Of_Steel_deu.xml",
                 "tears_of_steel/Tears_Of_Steel_eng.vtt", "tears_of_steel/Tears_Of_Steel_eng.xml",
@@ -141,12 +142,14 @@ public class FullRoundtripTest {
                 new File(tos, "tears_of_steel/Tears_Of_Steel_800000.mp4").getAbsolutePath(),
                 new File(tos, "tears_of_steel/Tears_Of_Steel_600000.mp4").getAbsolutePath(),
                 new File(tos, "tears_of_steel/Tears_Of_Steel_128000_eng.mp4").getAbsolutePath(),
+
                 new File(tos, "tears_of_steel/Tears_Of_Steel_128000_ita.mp4").getAbsolutePath(),
+
         });
 
         XMLUnit.setIgnoreWhitespace(true);
         XMLAssert.assertXMLEqual(new InputSource(getClass().getResourceAsStream("testLiveEncrypted.mpd")), new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))));
-//        FileUtils.deleteDirectory(outputDir);
+        FileUtils.deleteDirectory(outputDir);
     }
 
     @Test
@@ -167,6 +170,8 @@ public class FullRoundtripTest {
                 new File(tos, "tears_of_steel/Tears_Of_Steel_600000.mp4").getAbsolutePath(),
                 new File(tos, "tears_of_steel/Tears_Of_Steel_128000_eng.mp4").getAbsolutePath(),
                 new File(tos, "tears_of_steel/Tears_Of_Steel_128000_ita.mp4").getAbsolutePath(),
+                new File(tos, "tears_of_steel/Tears_Of_Steel_128000_ac3_eng.mp4").getAbsolutePath(),
+                new File(tos, "tears_of_steel/Tears_Of_Steel_128000_ac3_ita.mp4").getAbsolutePath(),
         });
 
         XMLUnit.setIgnoreWhitespace(true);

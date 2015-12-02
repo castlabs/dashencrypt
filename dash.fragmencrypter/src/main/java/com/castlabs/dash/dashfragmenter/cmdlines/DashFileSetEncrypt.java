@@ -68,6 +68,9 @@ public class DashFileSetEncrypt extends AbstractEncryptOrNotCommand {
             if (inputFile.getName().endsWith(".xml") || inputFile.getName().endsWith(".vtt") || inputFile.getName().endsWith(".dfxp")) {
                 throw new CmdLineException(cmdLineParser, new AbstractEncryptOrNotCommand.Message("Subtitle files must either be supplied via command line option --subtitles or --closed-captions"));
             }
+            if (!inputFile.exists()) {
+                throw new CmdLineException(cmdLineParser, new AbstractEncryptOrNotCommand.Message("The input file " + inputFile + " does not exist"));
+            }
         }
 
     }
