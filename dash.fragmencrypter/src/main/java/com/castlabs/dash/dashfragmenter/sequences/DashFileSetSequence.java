@@ -454,7 +454,7 @@ public class DashFileSetSequence {
 
     RepresentationType writeDataAndCreateRepresentation(RepresentationBuilder representationBuilder) throws IOException {
         RepresentationType representation;
-        String id = FilenameUtils.getBaseName(representationBuilder.getSource());
+        String id = filename2UrlPath(FilenameUtils.getBaseName(representationBuilder.getSource()));
         if (explode) {
             representation = representationBuilder.getLiveRepresentation();
             representation.getSegmentTemplate().setInitialization2(initPattern.replace("%lang%", representationBuilder.getTrack().getTrackMetaData().getLanguage()));
@@ -614,7 +614,7 @@ public class DashFileSetSequence {
         adaptationSet.setRoleArray(roles);
         adaptationSet.setEssentialPropertyArray(essentialProperties);
         RepresentationType representation = adaptationSet.addNewRepresentation();
-        representation.setId(FilenameUtils.getBaseName(textTrack.getName()));
+        representation.setId(filename2UrlPath(FilenameUtils.getBaseName(textTrack.getName())));
         representation.setBandwidth(128); // pointless - just invent a small number
         BaseURLType baseURL = representation.addNewBaseURL();
         baseURL.setStringValue(FilenameUtils.getBaseName(textTrack.getName()) + "/" + textTrack.getName());

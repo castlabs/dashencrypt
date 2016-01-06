@@ -7,6 +7,7 @@ package com.castlabs.dash.dashfragmenter.formats.csf;
 
 import com.castlabs.dash.dashfragmenter.sequences.DashFileSetSequence;
 import com.castlabs.dash.helpers.AbstractManifestWriter;
+import com.castlabs.dash.helpers.DashHelper;
 import com.coremedia.iso.boxes.Container;
 import com.googlecode.mp4parser.authoring.Track;
 import mpegDashSchemaMpd2011.AdaptationSetType;
@@ -83,7 +84,8 @@ public class SegmentBaseSingleSidxManifestWriterImpl extends AbstractManifestWri
                     segBaseType.setIndexRange(calculateIndexRange(trackContainer.get(track)));
                 }
 
-                representation.setId(trackFilenames.get(track));
+
+                representation.setId(DashHelper.filename2UrlPath(trackFilenames.get(track)));
                 representation.setBandwidth(trackBitrates.get(track));
                 representation.addNewBaseURL().setStringValue(trackFilenames.get(track));
 

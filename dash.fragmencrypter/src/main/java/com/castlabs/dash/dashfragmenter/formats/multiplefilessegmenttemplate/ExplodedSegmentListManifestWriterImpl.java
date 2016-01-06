@@ -18,6 +18,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import static com.castlabs.dash.helpers.DashHelper.filename2UrlPath;
 import static com.castlabs.dash.helpers.ManifestHelper.createRepresentation;
 import static com.castlabs.dash.helpers.Timing.*;
 
@@ -126,7 +127,7 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
             for (Track track : tracks) {
                 RepresentationType representation = createRepresentation(adaptationSet, track);
                 representation.setBandwidth(trackBitrates.get(track));
-                representation.setId(trackFilenames.get(track));
+                representation.setId(filename2UrlPath(trackFilenames.get(track)));
             }
             firstSegment.close();
         }

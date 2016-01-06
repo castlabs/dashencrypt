@@ -31,6 +31,8 @@ import javax.xml.parsers.ParserConfigurationException;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -514,5 +516,15 @@ public final class DashHelper {
 
     }
 
-
+    public static String filename2UrlPath(String filename) {
+        URI uri;
+        try {
+            uri = new URI(null,
+                    null, null, -1,
+                    filename, null, null);
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+        return uri.toASCIIString();
+    }
 }

@@ -174,16 +174,19 @@ public abstract class AbstractManifestWriter {
             adaptationSet.setStartWithSAP(1);
             adaptationSet.setBitstreamSwitching(true);
         }
-        if (!"und".equals(language)) {
-            adaptationSet.setLang(Locale.forLanguageTag(language).getLanguage());
-        }
 
         if (tracks.get(0).getHandler().equals("soun")) {
             adaptationSet.setMimeType("audio/mp4");
+            if (!"und".equals(language)) {
+                adaptationSet.setLang(Locale.forLanguageTag(language).getLanguage());
+            }
         } else if (tracks.get(0).getHandler().equals("vide")) {
             adaptationSet.setMimeType("video/mp4");
         } else if (tracks.get(0).getHandler().equals("subt")) {
             adaptationSet.setMimeType("video/mp4");
+            if (!"und".equals(language)) {
+                adaptationSet.setLang(Locale.forLanguageTag(language).getLanguage());
+            }
         } else {
             throw new RuntimeException("Don't know what to do with handler type = " + tracks.get(0).getHandler());
         }

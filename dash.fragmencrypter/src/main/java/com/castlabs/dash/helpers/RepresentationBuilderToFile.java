@@ -1,29 +1,20 @@
 package com.castlabs.dash.helpers;
 
 import com.castlabs.dash.dashfragmenter.representation.RepresentationBuilder;
-import com.coremedia.iso.IsoFile;
-import com.coremedia.iso.boxes.Box;
 import com.coremedia.iso.boxes.Container;
-import com.coremedia.iso.boxes.fragment.TrackRunBox;
-import com.googlecode.mp4parser.util.Path;
 import mpegDashSchemaMpd2011.RepresentationType;
 import mpegDashSchemaMpd2011.SegmentTimelineType;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 import java.util.Iterator;
-import java.util.List;
 import java.util.logging.Logger;
 
 import static com.castlabs.dash.helpers.ManifestHelper.templateReplace;
-import static com.castlabs.dash.helpers.Timing.getDuration;
 
 public class RepresentationBuilderToFile {
     private static Logger LOG = Logger.getLogger(RepresentationBuilderToFile.class.getName());
