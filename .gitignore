@@ -4,3 +4,11 @@
 *.jar
 *.war
 *.ear
+
+# Intellij files
+.idea
+*.iml
+
+dash.fragmencrypter/target
+dash.fragmencrypter/v1-reference.mp4
+dash.xsd/target
