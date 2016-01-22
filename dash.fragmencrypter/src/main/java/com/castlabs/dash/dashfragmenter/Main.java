@@ -6,10 +6,7 @@
 
 package com.castlabs.dash.dashfragmenter;
 
-import com.castlabs.dash.dashfragmenter.cmdlines.CencEncryptAndMux;
-import com.castlabs.dash.dashfragmenter.cmdlines.DashFileSet;
-import com.castlabs.dash.dashfragmenter.cmdlines.DashFileSetEncrypt;
-import com.castlabs.dash.dashfragmenter.cmdlines.MuxMp4;
+import com.castlabs.dash.dashfragmenter.cmdlines.*;
 import org.apache.commons.io.IOUtils;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
@@ -40,7 +37,8 @@ public class Main {
             @SubCommand(name = "dash", impl = DashFileSet.class),
             @SubCommand(name = "encrypt", impl = DashFileSetEncrypt.class),
             @SubCommand(name = "mux", impl = MuxMp4.class),
-            @SubCommand(name = "cenc", impl = CencEncryptAndMux.class)
+            @SubCommand(name = "cenc", impl = CencEncryptAndMux.class),
+            @SubCommand(name = "extract", impl = Extract.class)
 
 
     })
