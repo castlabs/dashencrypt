@@ -6,7 +6,6 @@ import com.coremedia.iso.boxes.OriginalFormatBox;
 import com.coremedia.iso.boxes.SampleDescriptionBox;
 import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
 import com.coremedia.iso.boxes.sampleentry.SampleEntry;
-import com.coremedia.iso.boxes.sampleentry.VisualSampleEntry;
 import com.googlecode.mp4parser.authoring.Edit;
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.boxes.AC3SpecificBox;
@@ -92,7 +91,7 @@ public final class DashHelper {
         final List<EC3SpecificBox.Entry> ec3SpecificBoxEntries = dec3.getEntries();
         int audioChannelValue = 0;
         for (EC3SpecificBox.Entry ec3SpecificBoxEntry : ec3SpecificBoxEntries) {
-            audioChannelValue |= getDolbyAudioChannelValue(ec3SpecificBoxEntry.acmod, ec3SpecificBoxEntry.lfeon);
+            audioChannelValue |= getDolbyAudioChannelValue(ec3SpecificBoxEntry.acmod, ec3SpecificBoxEntry.lfeon, ec3SpecificBoxEntry.chan_loc);
         }
         ChannelConfiguration cc = new ChannelConfiguration();
         cc.value = Hex.encodeHex(new byte[]{(byte) ((audioChannelValue >> 8) & 0xFF), (byte) (audioChannelValue & 0xFF)});
@@ -102,13 +101,13 @@ public final class DashHelper {
 
     private static ChannelConfiguration getAC3ChannelConfig(AudioSampleEntry e, AC3SpecificBox dac3) {
         ChannelConfiguration cc = new ChannelConfiguration();
-        int audioChannelValue = getDolbyAudioChannelValue(dac3.getAcmod(), dac3.getLfeon());
+        int audioChannelValue = getDolbyAudioChannelValue(dac3.getAcmod(), dac3.getLfeon(), 0);
         cc.value = Hex.encodeHex(new byte[]{(byte) ((audioChannelValue >> 8) & 0xFF), (byte) (audioChannelValue & 0xFF)});
         cc.schemeIdUri = "urn:dolby:dash:audio_channel_configuration:2011";
         return cc;
     }
 
-    private static int getDolbyAudioChannelValue(int acmod, int lfeon) {
+    private static int getDolbyAudioChannelValue(int acmod, int lfeon, int chan_loc) {
         int audioChannelValue;
         switch (acmod) {
             case 0:
@@ -141,6 +140,23 @@ public final class DashHelper {
         if (lfeon == 1) {
             audioChannelValue += 1;
         }
+        int[] chanLoc2audioChannelConfiguration = new int[]{
+                0b0000010000000000, // 0 - Lc/Rc
+                0b0000001000000000, // 1 - Lls/Lrs
+                0b0000000100000000, // 2 - Cs
+                0b0000000010000000, // 3 - Ts
+                0b0000000001000000, // 4 - Lsd/Rsd
+                0b0000000000100000, // 5 - Lw/Rw
+                0b0000000000010000, // 6 - Lvh/Rvh
+                0b0000000000001000, // 7 - Cvh
+                0b0000000000000010, // 8 - LFE2
+        };
+        for (int i = 0; i < chanLoc2audioChannelConfiguration.length; i++) {
+            if ((chan_loc & (0b000000001 << i)) >0) {
+                audioChannelValue |= chanLoc2audioChannelConfiguration[i];
+            }
+        }
+
         return audioChannelValue;
     }
 
