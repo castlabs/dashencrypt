@@ -38,7 +38,8 @@ public class Main {
             @SubCommand(name = "encrypt", impl = DashFileSetEncrypt.class),
             @SubCommand(name = "mux", impl = MuxMp4.class),
             @SubCommand(name = "cenc", impl = CencEncryptAndMux.class),
-            @SubCommand(name = "extract", impl = Extract.class)
+            @SubCommand(name = "dumpbox", impl = DumpBox.class),
+            @SubCommand(name = "extractkid", impl = ExtractKeyId.class)
 
 
     })

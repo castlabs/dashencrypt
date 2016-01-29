@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * Created by sannies on 22.01.2016.
  */
-public class Extract implements Command {
+public class DumpBox implements Command {
 
     @Argument(required = true, multiValued = false, handler = FileOptionHandler.class, usage = "MP4 and bitstream input files. In case that an audio input format cannot convey the input's language the filename is expected to be [basename]-[lang].[ext]", metaVar = "vid1.mp4, vid2.mp4, aud1.mp4, aud2-eng.ec3, aud3-fra.aac ...")
     protected File inputFile;
