@@ -60,6 +60,10 @@ public class Main {
             m.command.run();
         } catch (CmdLineException e) {
             System.err.println(e.getMessage());
+            System.err.print("decrypt ");
+            e.getParser().printSingleLineUsage(System.err);
+            System.err.println();
+            e.getParser().printUsage(System.err);
             System.exit(1023);
         }
 

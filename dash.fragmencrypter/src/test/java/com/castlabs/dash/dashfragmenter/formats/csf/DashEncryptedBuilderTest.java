@@ -1,6 +1,5 @@
 package com.castlabs.dash.dashfragmenter.formats.csf;
 
-import com.castlabs.dash.dashfragmenter.formats.csf.DashBuilder;
 import com.castlabs.dash.dashfragmenter.mp4todash.BoxComparator;
 import com.coremedia.iso.IsoFile;
 import com.coremedia.iso.boxes.Container;
@@ -8,12 +7,10 @@ import com.googlecode.mp4parser.DataSource;
 import com.googlecode.mp4parser.FileDataSourceImpl;
 import com.googlecode.mp4parser.authoring.Movie;
 import com.googlecode.mp4parser.authoring.Track;
-import com.googlecode.mp4parser.authoring.builder.SyncSampleIntersectFinderImpl;
-import com.googlecode.mp4parser.authoring.builder.TimeBasedFragmenter;
+import com.googlecode.mp4parser.authoring.builder.DefaultFragmenterImpl;
 import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import com.googlecode.mp4parser.authoring.tracks.CencEncryptingTrackImpl;
 import com.googlecode.mp4parser.util.UUIDConverter;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import javax.crypto.SecretKey;
@@ -40,7 +37,7 @@ public class DashEncryptedBuilderTest {
         SecretKey key = new SecretKeySpec(new byte[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}, "AES");
         CencEncryptingTrackImpl cencEncryptingTrack = new CencEncryptingTrackImpl(t, keyId, key,true);
         m2.addTrack(cencEncryptingTrack);
-        dashEncryptedBuilder.setFragmenter(new TimeBasedFragmenter(-1));
+        dashEncryptedBuilder.setFragmenter(new DefaultFragmenterImpl(-1));
 
         Container i1 = dashEncryptedBuilder.build(m2);
 
