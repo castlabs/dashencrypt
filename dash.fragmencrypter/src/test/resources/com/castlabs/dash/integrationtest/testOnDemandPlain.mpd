@@ -1,53 +1,53 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <MPD profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static" minBufferTime="PT5S" mediaPresentationDuration="PT12M14S" xmlns="urn:mpeg:dash:schema:mpd:2011">
-    <ProgramInformation moreInformationURL="www.castLabs.com"/>
-    <Period id="0" start="PT0S" duration="PT12M14S">
+  <ProgramInformation moreInformationURL="www.castLabs.com"/>
+  <Period id="0" start="PT0S" duration="PT12M14S">
     <AdaptationSet id="1" segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" mimeType="video/mp4" par="12:5" frameRate="24000/1000" sar="1:1" minWidth="500" maxWidth="1152" minHeight="208" maxHeight="480" minBandwidth="549100" maxBandwidth="1296300">
-            <Role schemeIdUri="urn:mpeg:dash:role:2011" value="main"/>
-            <Representation codecs="avc1.640015" width="500" height="208" id="Tears_Of_Steel_600000.mp4" bandwidth="549100">
-                <BaseURL>Tears_Of_Steel_600000.mp4</BaseURL>
-                <SegmentBase timescale="12288" indexRangeExact="true" indexRange="709-1580">
-                    <Initialization range="0-708"/>
-                </SegmentBase>
-            </Representation>
-            <Representation codecs="avc1.640015" width="614" height="256" id="Tears_Of_Steel_800000.mp4" bandwidth="738600">
-                <BaseURL>Tears_Of_Steel_800000.mp4</BaseURL>
-                <SegmentBase timescale="12288" indexRangeExact="true" indexRange="709-1580">
-                    <Initialization range="0-708"/>
-                </SegmentBase>
-            </Representation>
-            <Representation codecs="avc1.64001e" width="768" height="320" id="Tears_Of_Steel_1000000.mp4" bandwidth="924400">
-                <BaseURL>Tears_Of_Steel_1000000.mp4</BaseURL>
-                <SegmentBase timescale="12288" indexRangeExact="true" indexRange="710-1581">
-                    <Initialization range="0-709"/>
-                </SegmentBase>
-            </Representation>
-            <Representation codecs="avc1.64001f" width="1152" height="480" id="Tears_Of_Steel_1400000.mp4" bandwidth="1296300">
-                <BaseURL>Tears_Of_Steel_1400000.mp4</BaseURL>
-                <SegmentBase timescale="12288" indexRangeExact="true" indexRange="710-1581">
-                    <Initialization range="0-709"/>
-                </SegmentBase>
-            </Representation>
-        </AdaptationSet>
-        <AdaptationSet segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" lang="eng" mimeType="audio/mp4">
-            <Role schemeIdUri="urn:mpeg:dash:role:2011" value="main"/>
-            <Representation codecs="mp4a.40.2" audioSamplingRate="48000" id="Tears_Of_Steel_128000_eng.mp4" bandwidth="128200">
-                <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
-                <BaseURL>Tears_Of_Steel_128000_eng.mp4</BaseURL>
-                <SegmentBase timescale="48000" indexRangeExact="true" indexRange="644-1251">
-                    <Initialization range="0-643"/>
-                </SegmentBase>
-            </Representation>
-        </AdaptationSet>
-        <AdaptationSet segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" lang="ita" mimeType="audio/mp4">
-            <Role schemeIdUri="urn:mpeg:dash:role:2011" value="dub"/>
-            <Representation codecs="mp4a.40.2" audioSamplingRate="48000" id="Tears_Of_Steel_128000_ita.mp4" bandwidth="128200">
-                <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
-                <BaseURL>Tears_Of_Steel_128000_ita.mp4</BaseURL>
-                <SegmentBase timescale="48000" indexRangeExact="true" indexRange="644-1251">
-                    <Initialization range="0-643"/>
-                </SegmentBase>
-            </Representation>
-        </AdaptationSet>
-    </Period>
+      <Role schemeIdUri="urn:mpeg:dash:role:2011" value="main"/>
+      <Representation codecs="avc1.640015" width="500" height="208" id="Tears_Of_Steel_600000.mp4" bandwidth="549100">
+        <BaseURL>Tears_Of_Steel_600000.mp4</BaseURL>
+        <SegmentBase timescale="12288" indexRangeExact="true" indexRange="709-1592">
+          <Initialization range="0-708"/>
+        </SegmentBase>
+      </Representation>
+      <Representation codecs="avc1.640015" width="614" height="256" id="Tears_Of_Steel_800000.mp4" bandwidth="738600">
+        <BaseURL>Tears_Of_Steel_800000.mp4</BaseURL>
+        <SegmentBase timescale="12288" indexRangeExact="true" indexRange="709-1592">
+          <Initialization range="0-708"/>
+        </SegmentBase>
+      </Representation>
+      <Representation codecs="avc1.64001e" width="768" height="320" id="Tears_Of_Steel_1000000.mp4" bandwidth="924400">
+        <BaseURL>Tears_Of_Steel_1000000.mp4</BaseURL>
+        <SegmentBase timescale="12288" indexRangeExact="true" indexRange="710-1593">
+          <Initialization range="0-709"/>
+        </SegmentBase>
+      </Representation>
+      <Representation codecs="avc1.64001f" width="1152" height="480" id="Tears_Of_Steel_1400000.mp4" bandwidth="1296300">
+        <BaseURL>Tears_Of_Steel_1400000.mp4</BaseURL>
+        <SegmentBase timescale="12288" indexRangeExact="true" indexRange="710-1593">
+          <Initialization range="0-709"/>
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" mimeType="audio/mp4" lang="eng">
+      <Role schemeIdUri="urn:mpeg:dash:role:2011" value="main"/>
+      <Representation codecs="mp4a.40.2" audioSamplingRate="48000" id="Tears_Of_Steel_128000_eng.mp4" bandwidth="128200">
+        <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
+        <BaseURL>Tears_Of_Steel_128000_eng.mp4</BaseURL>
+        <SegmentBase timescale="48000" indexRangeExact="true" indexRange="644-1251">
+          <Initialization range="0-643"/>
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" mimeType="audio/mp4" lang="ita">
+      <Role schemeIdUri="urn:mpeg:dash:role:2011" value="dub"/>
+      <Representation codecs="mp4a.40.2" audioSamplingRate="48000" id="Tears_Of_Steel_128000_ita.mp4" bandwidth="128200">
+        <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
+        <BaseURL>Tears_Of_Steel_128000_ita.mp4</BaseURL>
+        <SegmentBase timescale="48000" indexRangeExact="true" indexRange="644-1251">
+          <Initialization range="0-643"/>
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+  </Period>
 </MPD>

@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import static com.castlabs.dash.helpers.DashHelper.filename2UrlPath;
@@ -80,8 +81,14 @@ public class ExplodedSegmentListManifestWriterImpl extends AbstractManifestWrite
             AdaptationSetType adaptationSet = createAdaptationSet(periodType, tracks, adaptationSet2Role.get(adaptationSetId), "vide".equals(tracks.get(0).getHandler()) ? 1 : -1);
             Track firstTrack = tracks.get(0);
             SegmentTemplateType segmentTemplate = adaptationSet.addNewSegmentTemplate();
-            segmentTemplate.setMedia(mediaPattern.replace("%lang%", tracks.get(0).getTrackMetaData().getLanguage()));
-            segmentTemplate.setInitialization2(initPattern.replace("%lang%", tracks.get(0).getTrackMetaData().getLanguage()));
+
+            String lang = tracks.get(0).getTrackMetaData().getLanguage();
+            lang = Locale.forLanguageTag(lang).getLanguage();
+            if (!lang.isEmpty()) {
+                lang += "/";
+            }
+            segmentTemplate.setMedia(mediaPattern.replace("%lang%/", lang));
+            segmentTemplate.setInitialization2(initPattern.replace("%lang%/", lang));
             segmentTemplate.setTimescale(firstTrack.getTrackMetaData().getTimescale());
             SegmentTimelineType segmentTimeline = segmentTemplate.addNewSegmentTimeline();
             List<File> segments = trackToSegements.get(firstTrack).subList(1, trackToSegements.get(firstTrack).size());

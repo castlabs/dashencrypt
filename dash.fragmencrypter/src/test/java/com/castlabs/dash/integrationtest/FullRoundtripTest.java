@@ -54,6 +54,7 @@ public class FullRoundtripTest {
         for (String file : files) {
             File i = new File(tos, file);
             if (!i.exists()) {
+                System.err.println("Downloading " + i);
                 i.getParentFile().mkdir();
                 FileOutputStream fos = new FileOutputStream(i);
                 IOUtils.copy(baseUri.resolve(file).toURL().openStream(), fos);

@@ -564,8 +564,29 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         TrackFragmentBox traf = new TrackFragmentBox();
         parent.addBox(traf);
         createTfhd(traf);
+        TrackFragmentHeaderBox tfhd = (TrackFragmentHeaderBox) traf.getBoxes().get(traf.getBoxes().size()-1);
         createTfdt(startSample, track, traf);
         createTrun(startSample, endSample, track, traf);
+        TrackRunBox trun = (TrackRunBox) traf.getBoxes().get(traf.getBoxes().size()-1);
+        SampleFlags first = null;
+        SampleFlags second = null;
+        boolean allFllowingSame = true;
+
+        for (TrackRunBox.Entry entry : trun.getEntries()) {
+            if (first == null) {
+                first = entry.getSampleFlags();
+            } else if (second == null) {
+                second = entry.getSampleFlags();
+            } else {
+                allFllowingSame &= second.equals(entry.getSampleFlags());
+            }
+        }
+        if (allFllowingSame && second != null) {
+            trun.setSampleFlagsPresent(false);
+            trun.setFirstSampleFlags(first);
+            tfhd.setDefaultSampleFlags(second);
+        }
+
 
         createSubs(startSample, endSample, track, traf);
 
@@ -634,6 +655,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
 
         tfhd.setDefaultSampleFlags(sf);
         tfhd.setBaseDataOffset(-1);
+
         tfhd.setTrackId(theTrack.getTrackMetaData().getTrackId());
         tfhd.setDefaultBaseIsMoof(true);
         parent.addBox(tfhd);

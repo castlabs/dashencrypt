@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.logging.Logger;
 
 /**
@@ -39,7 +40,12 @@ public class SingleSidxExplode {
         List<File> segments = new ArrayList<File>();
         String initFilename = initPattern.replace("$Bandwidth$", "" + bitrate);
         initFilename = initFilename.replace("$RepresentationID$", representationId);
-        initFilename = initFilename.replace("%lang%", mdhd.getLanguage());
+        String lang = mdhd.getLanguage();
+        lang = Locale.forLanguageTag(lang).getLanguage();
+        if (!lang.isEmpty()) {
+            lang += "/";
+        }
+        initFilename = initFilename.replace("%lang%/", lang);
 
         File initFile = new File(outputDir, initFilename);
         FileUtils.forceMkdir(initFile.getParentFile());
@@ -67,7 +73,7 @@ public class SingleSidxExplode {
             filename = filename.replace("$Time$", "" + earliestPresentationTime);
             filename = filename.replace("$Number$", "" + i);
             filename = filename.replace("$RepresentationID$", representationId);
-            filename = filename.replace("%lang%", mdhd.getLanguage());
+            filename = filename.replace("%lang%/", lang);
 
             File segmentFile = new File(outputDir, filename);
             FileUtils.forceMkdir(segmentFile.getParentFile());

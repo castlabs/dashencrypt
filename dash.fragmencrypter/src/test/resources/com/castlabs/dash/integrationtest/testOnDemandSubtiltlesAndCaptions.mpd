@@ -6,7 +6,7 @@
       <Role schemeIdUri="urn:mpeg:dash:role:2011" value="main"/>
       <Representation codecs="avc1.640015" id="Tears_Of_Steel_600000.mp4" bandwidth="549100">
         <BaseURL>Tears_Of_Steel_600000.mp4</BaseURL>
-        <SegmentBase timescale="12288" indexRangeExact="true" indexRange="709-1580">
+        <SegmentBase timescale="12288" indexRangeExact="true" indexRange="709-1592">
           <Initialization range="0-708"/>
         </SegmentBase>
       </Representation>

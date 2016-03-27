@@ -22,6 +22,7 @@ import com.googlecode.mp4parser.authoring.Edit;
 import com.googlecode.mp4parser.authoring.Movie;
 import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.WrappingTrack;
+import com.googlecode.mp4parser.authoring.builder.BetterFragmenter;
 import com.googlecode.mp4parser.authoring.builder.Fragmenter;
 import com.googlecode.mp4parser.authoring.builder.StaticFragmentIntersectionFinderImpl;
 import com.googlecode.mp4parser.authoring.builder.SyncSampleIntersectFinderImpl;
@@ -457,8 +458,13 @@ public class DashFileSetSequence {
         String id = filename2UrlPath(FilenameUtils.getBaseName(representationBuilder.getSource()));
         if (explode) {
             representation = representationBuilder.getLiveRepresentation();
-            representation.getSegmentTemplate().setInitialization2(initPattern.replace("%lang%", representationBuilder.getTrack().getTrackMetaData().getLanguage()));
-            representation.getSegmentTemplate().setMedia(mediaPattern.replace("%lang%", representationBuilder.getTrack().getTrackMetaData().getLanguage()));
+            String lang = representationBuilder.getTrack().getTrackMetaData().getLanguage();
+            lang = Locale.forLanguageTag(lang).getLanguage();
+            if (!lang.isEmpty()) {
+                lang += "/";
+            }
+            representation.getSegmentTemplate().setInitialization2(initPattern.replace("%lang%/", lang));
+            representation.getSegmentTemplate().setMedia(mediaPattern.replace("%lang%/", lang));
             representation.setId(id);
             RepresentationBuilderToFile.writeLive(representationBuilder, representation, outputDirectory);
         } else {
@@ -837,12 +843,12 @@ public class DashFileSetSequence {
             movie.setTracks(tracks);
             for (TrackProxy track : trackProxies) {
                 if (track.getHandler().startsWith("vide")) {
-                    Fragmenter videoIntersectionFinder = new TimeBasedFragmenter(minVideoSegmentDuration);
+                    Fragmenter videoIntersectionFinder = new BetterFragmenter(minVideoSegmentDuration);
                     long[] samples = videoIntersectionFinder.sampleNumbers(track.getTarget());
                     fragmentStartSamples.put(track, samples);
                     //fragmentStartSamples.put(track, checkMaxFragmentDuration(track, videoIntersectionFinder.sampleNumbers(track)));
                 } else if (track.getHandler().startsWith("soun")) {
-                    Fragmenter soundIntersectionFinder = new TimeBasedFragmenter(minAudioSegmentDuration);
+                    Fragmenter soundIntersectionFinder = new BetterFragmenter(minAudioSegmentDuration);
                     long[] samples = soundIntersectionFinder.sampleNumbers(track.getTarget());
                     fragmentStartSamples.put(track, samples);
                 } else {

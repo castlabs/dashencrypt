@@ -75,7 +75,8 @@
           <S d="128000" t="8448000"/>
           <S d="128000" t="8576000"/>
           <S d="128000" t="8704000"/>
-          <S d="189440" t="8832000"/>
+          <S d="128000" t="8832000"/>
+          <S d="61440" t="8960000"/>
         </SegmentTimeline>
       </SegmentTemplate>
       <Representation codecs="avc1.640015" width="500" height="208" bandwidth="549100" id="Tears_Of_Steel_600000"/>
@@ -83,7 +84,7 @@
       <Representation codecs="avc1.64001e" width="768" height="320" bandwidth="924400" id="Tears_Of_Steel_1000000"/>
       <Representation codecs="avc1.64001f" width="1152" height="480" bandwidth="1296300" id="Tears_Of_Steel_1400000"/>
     </AdaptationSet>
-    <AdaptationSet segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" lang="eng" mimeType="audio/mp4">
+    <AdaptationSet segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" mimeType="audio/mp4" lang="eng">
       <Role schemeIdUri="urn:mpeg:dash:role:2011" value="main"/>
       <SegmentTemplate media="$RepresentationID$/media-$Time$.mp4" initialization="$RepresentationID$/init.mp4" timescale="48000">
         <SegmentTimeline>
@@ -141,7 +142,7 @@
         <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
       </Representation>
     </AdaptationSet>
-    <AdaptationSet segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" lang="ita" mimeType="audio/mp4">
+    <AdaptationSet segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" mimeType="audio/mp4" lang="ita">
       <Role schemeIdUri="urn:mpeg:dash:role:2011" value="dub"/>
       <SegmentTemplate media="$RepresentationID$/media-$Time$.mp4" initialization="$RepresentationID$/init.mp4" timescale="48000">
         <SegmentTimeline>
