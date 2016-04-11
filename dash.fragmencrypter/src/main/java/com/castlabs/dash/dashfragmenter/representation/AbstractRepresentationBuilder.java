@@ -791,8 +791,26 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         return theTrack.getSamples().subList(l2i(startSample) - 1, l2i(endSample) - 1);
     }
 
-    String getCodec() {
+    public String getCodec() {
         return DashHelper.getRfc6381Codec(theTrack.getSampleDescriptionBox().getSampleEntry());
+    }
+
+
+    public static long getBandwidth(Track track) {
+        long size = 0;
+        List<Sample> samples = track.getSamples();
+        for (int i = 0; i < Math.min(samples.size(), 10000); i++) {
+            size += samples.get(i).getSize();
+        }
+        size = (size / Math.min(track.getSamples().size(), 10000)) * track.getSamples().size();
+
+        double duration = (double) track.getDuration() / track.getTrackMetaData().getTimescale();
+        return (long) ((size * 8 / duration / 100)) * 100;
+
+    }
+
+    public long getBandwidth() {
+        return getBandwidth(theTrack);
     }
 
     public RepresentationType getLiveRepresentation() {
@@ -876,16 +894,8 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
 
         }
 
-        long size = 0;
-        List<Sample> samples = theTrack.getSamples();
-        for (int i = 0; i < Math.min(samples.size(), 10000); i++) {
-            size += samples.get(i).getSize();
-        }
-        size = (size / Math.min(theTrack.getSamples().size(), 10000)) * theTrack.getSamples().size();
 
-        double duration = (double) theTrack.getDuration() / theTrack.getTrackMetaData().getTimescale();
-
-        representation.setBandwidth((long) ((size * 8 / duration / 100)) * 100);
+        representation.setBandwidth(getBandwidth ());
 
         addContentProtection(representation);
 
