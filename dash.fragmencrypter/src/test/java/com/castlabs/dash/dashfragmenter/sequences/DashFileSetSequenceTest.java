@@ -31,4 +31,11 @@ public class DashFileSetSequenceTest {
         Assert.assertTrue(td.list().length == 1);
     }
 
+    @Test
+    public void testGetCommonIndices() {
+        long[] l1 = new long[]{1,3,6,8,10,11,13};
+        long[] l2 = new long[]{1,3,4,6,8,10,13};
+        long[] res = DashFileSetSequence.getCommonIndices(l1,l2);
+        Assert.assertArrayEquals(new long[]{1,3,6,8,10,13}, res);
+    }
 }

@@ -33,6 +33,7 @@ import com.googlecode.mp4parser.authoring.tracks.ttml.TtmlHelpers;
 import com.googlecode.mp4parser.authoring.tracks.ttml.TtmlTrackImpl;
 import com.googlecode.mp4parser.authoring.tracks.webvtt.WebVttTrack;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.CencSampleEncryptionInformationGroupEntry;
+import com.googlecode.mp4parser.util.Mp4Arrays;
 import com.googlecode.mp4parser.util.Path;
 import com.googlecode.mp4parser.util.UUIDConverter;
 import com.mp4parser.iso23001.part7.ProtectionSystemSpecificHeaderBox;
@@ -161,7 +162,7 @@ public class DashFileSetSequence {
 
     /**
      * Sets the mediaPattern for 'exploded' mode and defines under which name to store the segments.
-     * <p/>
+     * <p>
      * This option has no effect when <code>explode==false</code>
      *
      * @param mediaPattern under which name to store the segments
@@ -173,7 +174,7 @@ public class DashFileSetSequence {
 
     /**
      * Sets the initPattern for 'exploded' mode and defines under which name the init segment is stored.
-     * <p/>
+     * <p>
      * This option has no effect when <code>explode==false</code>
      *
      * @param initPattern under which name the init segment is stored
@@ -818,7 +819,7 @@ public class DashFileSetSequence {
     }
 
     public Map<TrackProxy, long[]> findFragmentStartSamples(Map<String, List<TrackProxy>> trackFamilies) {
-        Map<TrackProxy, long[]> fragmentStartSamples = new HashMap<TrackProxy, long[]>();
+        Map<TrackProxy, long[]> fragmentStartSamples = new HashMap<>();
 
         Map<String, List<TrackProxy>> trackFamiliesForSegements = new HashMap<String, List<TrackProxy>>();
 
@@ -826,7 +827,7 @@ public class DashFileSetSequence {
             String shortFamily = stringListEntry.getKey().substring(0, 4);
             List<TrackProxy> tps = trackFamiliesForSegements.get(shortFamily);
             if (tps == null) {
-                tps = new ArrayList<TrackProxy>();
+                tps = new ArrayList<>();
                 trackFamiliesForSegements.put(shortFamily, tps);
             }
             tps.addAll(stringListEntry.getValue());
@@ -834,30 +835,56 @@ public class DashFileSetSequence {
 
         for (String key : trackFamiliesForSegements.keySet()) {
             List<TrackProxy> trackProxies = trackFamiliesForSegements.get(key);
-            List<Track> tracks = new ArrayList<Track>();
-            for (TrackProxy proxy : trackProxies) {
-                tracks.add(proxy.getTarget());
-            }
 
-            Movie movie = new Movie();
-            movie.setTracks(tracks);
+            long[] samples = null;
+
             for (TrackProxy track : trackProxies) {
+                long[] nu_samples;
                 if (track.getHandler().startsWith("vide")) {
                     Fragmenter videoIntersectionFinder = new BetterFragmenter(minVideoSegmentDuration);
-                    long[] samples = videoIntersectionFinder.sampleNumbers(track.getTarget());
-                    fragmentStartSamples.put(track, samples);
+                    nu_samples = videoIntersectionFinder.sampleNumbers(track.getTarget());
                     //fragmentStartSamples.put(track, checkMaxFragmentDuration(track, videoIntersectionFinder.sampleNumbers(track)));
                 } else if (track.getHandler().startsWith("soun")) {
                     Fragmenter soundIntersectionFinder = new BetterFragmenter(minAudioSegmentDuration);
-                    long[] samples = soundIntersectionFinder.sampleNumbers(track.getTarget());
-                    fragmentStartSamples.put(track, samples);
+                    nu_samples = soundIntersectionFinder.sampleNumbers(track.getTarget());
                 } else {
                     throw new RuntimeException("An engineer needs to tell me if " + key + " is audio or video!");
                 }
+                if (samples == null) {
+                    samples = nu_samples;
+                } else {
+                    samples = getCommonIndices(samples, nu_samples);
+                }
+            }
+            for (TrackProxy track : trackProxies) {
+                fragmentStartSamples.put(track, samples);
             }
         }
         return fragmentStartSamples;
     }
+
+
+    public static long[] getCommonIndices(long[] samples1, long[] samples2) {
+        if (Arrays.equals(samples1, samples2)) {
+            return samples1;
+        } else {
+            int i1 = 0, i2 = 0;
+            long[] result = new long[0];
+            while (i1 < samples1.length && i2 < samples2.length) {
+                if (samples1[i1] == samples2[i2]) {
+                    result = Mp4Arrays.copyOfAndAppend(result, samples1[i1]);
+                    i1++;
+                    i2++;
+                } else if (samples1[i1] < samples2[i2]) {
+                    i1++;
+                } else {
+                    i2++;
+                }
+            }
+            return result;
+        }
+    }
+
 
     /**
      * Creates a Map with Track as key and originating filename as value.
