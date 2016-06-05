@@ -920,7 +920,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
             indexSize += b.getSize();
         }
 
-        segBaseType.setIndexRange(String.format("%s-%s", initSize, initSize + indexSize));
+        segBaseType.setIndexRange(String.format("%s-%s", initSize, initSize + indexSize - 1));
         initialization.setRange(String.format("0-%s", initSize - 1));
 
         return representation;
