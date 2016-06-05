@@ -21,7 +21,7 @@
       <Role schemeIdUri="urn:mpeg:dash:role" value="subtitle"/>
       <Representation codecs="" startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_nld">
         <BaseURL>Tears_Of_Steel_nld.mp4</BaseURL>
-        <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-963">
+        <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-962">
           <Initialization range="0-582"/>
         </SegmentBase>
       </Representation>
@@ -36,7 +36,7 @@
       <Role schemeIdUri="urn:mpeg:dash:role" value="subtitle"/>
       <Representation codecs="" startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_per">
         <BaseURL>Tears_Of_Steel_per.mp4</BaseURL>
-        <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-963">
+        <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-962">
           <Initialization range="0-582"/>
         </SegmentBase>
       </Representation>
@@ -51,7 +51,7 @@
       <Role schemeIdUri="urn:mpeg:dash:role" value="subtitle"/>
       <Representation codecs="" startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_rus">
         <BaseURL>Tears_Of_Steel_rus.mp4</BaseURL>
-        <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-963">
+        <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-962">
           <Initialization range="0-582"/>
         </SegmentBase>
       </Representation>
@@ -66,7 +66,7 @@
       <Role schemeIdUri="urn:mpeg:dash:role" value="caption"/>
       <Representation codecs="" startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_nld">
         <BaseURL>Tears_Of_Steel_nld.mp4</BaseURL>
-        <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-963">
+        <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-962">
           <Initialization range="0-582"/>
         </SegmentBase>
       </Representation>
@@ -81,7 +81,7 @@
       <Role schemeIdUri="urn:mpeg:dash:role" value="caption"/>
       <Representation codecs="" startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_per">
         <BaseURL>Tears_Of_Steel_per.mp4</BaseURL>
-        <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-963">
+        <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-962">
           <Initialization range="0-582"/>
         </SegmentBase>
       </Representation>
@@ -96,7 +96,7 @@
       <Role schemeIdUri="urn:mpeg:dash:role" value="caption"/>
       <Representation codecs="" startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_rus">
         <BaseURL>Tears_Of_Steel_rus.mp4</BaseURL>
-        <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-963">
+        <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-962">
           <Initialization range="0-582"/>
         </SegmentBase>
       </Representation>
