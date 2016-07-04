@@ -21,7 +21,7 @@ public class DashHelperTest extends TestCase {
 
         SampleEntry sampleEntry = Path.getPath(isoFile, "/moov[0]/trak[0]/mdia[0]/minf[0]/stbl[0]/stsd[0]/hev1[0]");
 
-        Assert.assertEquals("hev1.1.c.L93.80", DashHelper.getRfc6381Codec(sampleEntry));
+        Assert.assertEquals("hev1.1.6.L93.80", DashHelper.getRfc6381Codec(sampleEntry));
 
     }
 

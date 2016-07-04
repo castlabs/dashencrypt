@@ -395,11 +395,12 @@ public final class DashHelper {
             {
                 long val = hvcc.getGeneral_profile_compatibility_flags();
                 long i, res = 0;
-                for (i = 0; i < 32; i++) {
+                for (i = 0; i < 31; i++) {
                     res |= val & 1;
                     res <<= 1;
                     val >>= 1;
                 }
+                res |= val & 1;
                 codec += ".";
                 codec += Long.toHexString(res);
             }
