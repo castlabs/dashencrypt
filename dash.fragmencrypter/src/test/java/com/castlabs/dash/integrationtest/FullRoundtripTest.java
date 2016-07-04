@@ -126,6 +126,25 @@ public class FullRoundtripTest {
     }
 
     @Test
+    public void testLivePlainOneAudio() throws Exception {
+        File outputDir = File.createTempFile("FullRoundtrip", "testLivePlain");
+        outputDir.delete();
+        outputDir.mkdir();
+
+        Main.main(new String[]{
+                "dash",
+                "-x",
+                "-o", outputDir.getAbsolutePath(),
+                new File(tos, "tears_of_steel/Tears_Of_Steel_600000.mp4").getAbsolutePath(),
+                new File(tos, "tears_of_steel/Tears_Of_Steel_128000_eng.mp4").getAbsolutePath(),
+        });
+
+        XMLUnit.setIgnoreWhitespace(true);
+        XMLAssert.assertXMLEqual(new InputSource(getClass().getResourceAsStream("testLivePlainOneAudio.mpd")), new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))));
+        FileUtils.deleteDirectory(outputDir);
+    }
+
+    @Test
     public void testLiveEncrypted() throws Exception {
         File outputDir = File.createTempFile("FullRoundtrip", "testLiveEncrypted");
         outputDir.delete();

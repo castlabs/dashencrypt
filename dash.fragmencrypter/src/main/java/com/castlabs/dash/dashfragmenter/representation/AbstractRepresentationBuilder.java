@@ -414,7 +414,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         long[] ptss = getPtss(Path.<TrackRunBox>getPath(get(0), "/moof[0]/traf[0]/trun[0]"));
         Arrays.sort(ptss); // index 0 has now the earliest presentation time stamp!
         long timeMappingEdit = getTimeMappingEditTime(initSegment);
-        sidx.setEarliestPresentationTime(ptss[0] - timeMappingEdit);
+        sidx.setEarliestPresentationTime(ptss[0] - timeMappingEdit<0?0:ptss[0] - timeMappingEdit);
         List<SegmentIndexBox.Entry> entries = sidx.getEntries();
 
         TrackExtendsBox trex = Path.getPath(initSegment, "/moov[0]/mvex[0]/trex[0]");
