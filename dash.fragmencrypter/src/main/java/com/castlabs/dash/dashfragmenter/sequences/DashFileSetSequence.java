@@ -456,7 +456,7 @@ public class DashFileSetSequence {
 
     RepresentationType writeDataAndCreateRepresentation(RepresentationBuilder representationBuilder) throws IOException {
         RepresentationType representation;
-        String id = filename2UrlPath(FilenameUtils.getBaseName(representationBuilder.getSource()));
+        String id = filename2UrlPath((representationBuilder.getSource()));
         if (explode) {
             representation = representationBuilder.getLiveRepresentation();
             String lang = representationBuilder.getTrack().getTrackMetaData().getLanguage();
@@ -821,7 +821,7 @@ public class DashFileSetSequence {
     public Map<TrackProxy, long[]> findFragmentStartSamples(Map<String, List<TrackProxy>> trackFamilies) {
         Map<TrackProxy, long[]> fragmentStartSamples = new HashMap<>();
 
-        Map<String, List<TrackProxy>> trackFamiliesForSegments = new HashMap<String, List<TrackProxy>>();
+        Map<String, List<TrackProxy>> trackFamiliesForSegments = new HashMap<>();
 
         for (Map.Entry<String, List<TrackProxy>> stringListEntry : trackFamilies.entrySet()) {
             String shortFamily = stringListEntry.getKey().substring(0, 4);

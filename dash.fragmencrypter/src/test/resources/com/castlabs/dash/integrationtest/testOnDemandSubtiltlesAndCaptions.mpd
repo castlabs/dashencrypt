@@ -19,8 +19,8 @@
     </AdaptationSet>
     <AdaptationSet lang="nld" mimeType="application/mp4" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
       <Role schemeIdUri="urn:mpeg:dash:role" value="subtitle"/>
-      <Representation codecs="" startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_nld">
-        <BaseURL>Tears_Of_Steel_nld.mp4</BaseURL>
+      <Representation codecs="" startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_nld.vtt">
+        <BaseURL>Tears_Of_Steel_nld.vtt.mp4</BaseURL>
         <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-974">
           <Initialization range="0-582"/>
         </SegmentBase>
@@ -34,8 +34,8 @@
     </AdaptationSet>
     <AdaptationSet lang="per" mimeType="application/mp4" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
       <Role schemeIdUri="urn:mpeg:dash:role" value="subtitle"/>
-      <Representation codecs="" startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_per">
-        <BaseURL>Tears_Of_Steel_per.mp4</BaseURL>
+      <Representation codecs="" startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_per.vtt">
+        <BaseURL>Tears_Of_Steel_per.vtt.mp4</BaseURL>
         <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-974">
           <Initialization range="0-582"/>
         </SegmentBase>
@@ -49,8 +49,8 @@
     </AdaptationSet>
     <AdaptationSet lang="rus" mimeType="application/mp4" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
       <Role schemeIdUri="urn:mpeg:dash:role" value="subtitle"/>
-      <Representation codecs="" startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_rus">
-        <BaseURL>Tears_Of_Steel_rus.mp4</BaseURL>
+      <Representation codecs="" startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_rus.vtt">
+        <BaseURL>Tears_Of_Steel_rus.vtt.mp4</BaseURL>
         <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-974">
           <Initialization range="0-582"/>
         </SegmentBase>
@@ -64,8 +64,8 @@
     </AdaptationSet>
     <AdaptationSet lang="nld" mimeType="application/mp4" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
       <Role schemeIdUri="urn:mpeg:dash:role" value="caption"/>
-      <Representation codecs="" startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_nld">
-        <BaseURL>Tears_Of_Steel_nld.mp4</BaseURL>
+      <Representation codecs="" startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_nld.vtt">
+        <BaseURL>Tears_Of_Steel_nld.vtt.mp4</BaseURL>
         <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-974">
           <Initialization range="0-582"/>
         </SegmentBase>
@@ -79,8 +79,8 @@
     </AdaptationSet>
     <AdaptationSet lang="per" mimeType="application/mp4" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
       <Role schemeIdUri="urn:mpeg:dash:role" value="caption"/>
-      <Representation codecs="" startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_per">
-        <BaseURL>Tears_Of_Steel_per.mp4</BaseURL>
+      <Representation codecs="" startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_per.vtt">
+        <BaseURL>Tears_Of_Steel_per.vtt.mp4</BaseURL>
         <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-974">
           <Initialization range="0-582"/>
         </SegmentBase>
@@ -94,8 +94,8 @@
     </AdaptationSet>
     <AdaptationSet lang="rus" mimeType="application/mp4" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
       <Role schemeIdUri="urn:mpeg:dash:role" value="caption"/>
-      <Representation codecs="" startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_rus">
-        <BaseURL>Tears_Of_Steel_rus.mp4</BaseURL>
+      <Representation codecs="" startWithSAP="1" bandwidth="0" id="Tears_Of_Steel_rus.vtt">
+        <BaseURL>Tears_Of_Steel_rus.vtt.mp4</BaseURL>
         <SegmentBase timescale="1000" indexRangeExact="true" indexRange="583-974">
           <Initialization range="0-582"/>
         </SegmentBase>
