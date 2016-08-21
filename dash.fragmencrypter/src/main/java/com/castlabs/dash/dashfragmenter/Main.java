@@ -60,7 +60,6 @@ public class Main {
             m.command.run();
         } catch (CmdLineException e) {
             System.err.println(e.getMessage());
-            System.err.print("decrypt ");
             e.getParser().printSingleLineUsage(System.err);
             System.err.println();
             e.getParser().printUsage(System.err);
@@ -93,10 +92,6 @@ public class Main {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        logger.setLevel(Level.FINE);
-        logger.addHandler(new java.util.logging.ConsoleHandler());
-        logger.setUseParentHandlers(false);
-
         return logger;
     }
 

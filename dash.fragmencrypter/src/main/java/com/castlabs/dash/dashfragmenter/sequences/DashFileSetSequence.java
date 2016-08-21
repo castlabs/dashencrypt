@@ -1,5 +1,6 @@
 package com.castlabs.dash.dashfragmenter.sequences;
 
+import com.castlabs.dash.dashfragmenter.FileAndTrackSelector;
 import com.castlabs.dash.dashfragmenter.formats.csf.DashBuilder;
 import com.castlabs.dash.dashfragmenter.formats.csf.SegmentBaseSingleSidxManifestWriterImpl;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegmenttemplate.ExplodedSegmentListManifestWriterImpl;
@@ -11,21 +12,14 @@ import com.castlabs.dash.dashfragmenter.tracks.NegativeCtsInsteadOfEdit;
 import com.castlabs.dash.helpers.BoxHelper;
 import com.castlabs.dash.helpers.DashHelper;
 import com.castlabs.dash.helpers.RepresentationBuilderToFile;
-import com.castlabs.dash.helpers.SoundIntersectionFinderImpl;
-import com.coremedia.iso.boxes.Box;
-import com.coremedia.iso.boxes.CompositionTimeToSample;
-import com.coremedia.iso.boxes.Container;
-import com.coremedia.iso.boxes.SampleDescriptionBox;
+import com.coremedia.iso.IsoFile;
+import com.coremedia.iso.boxes.*;
 import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
 import com.googlecode.mp4parser.FileDataSourceViaHeapImpl;
-import com.googlecode.mp4parser.authoring.Edit;
-import com.googlecode.mp4parser.authoring.Movie;
-import com.googlecode.mp4parser.authoring.Track;
-import com.googlecode.mp4parser.authoring.WrappingTrack;
+import com.googlecode.mp4parser.authoring.*;
 import com.googlecode.mp4parser.authoring.builder.BetterFragmenter;
 import com.googlecode.mp4parser.authoring.builder.Fragmenter;
 import com.googlecode.mp4parser.authoring.builder.StaticFragmentIntersectionFinderImpl;
-import com.googlecode.mp4parser.authoring.builder.SyncSampleIntersectFinderImpl;
 import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import com.googlecode.mp4parser.authoring.tracks.*;
 import com.googlecode.mp4parser.authoring.tracks.h264.H264TrackImpl;
@@ -73,7 +67,7 @@ import static com.castlabs.dash.helpers.ManifestHelper.getXmlOptions;
 public class DashFileSetSequence {
     private static Logger LOG = Logger.getLogger(DashFileSetSequence.class.getName());
 
-    static Set<String> supportedTypes = new HashSet<String>(Arrays.asList("ac-3", "ec-3", "dtsl", "dtsh", "dtse", "avc1", "avc3", "mp4a", "h264", "hev1", "hvc1"));
+    static Set<String> supportedTypes = new HashSet<>(Arrays.asList("ac-3", "ec-3", "dtsl", "dtsh", "dtse", "avc1", "avc3", "mp4a", "h264", "hev1", "hvc1"));
     protected UUID audioKeyid;
     protected SecretKey audioKey;
     protected UUID videoKeyid;
@@ -81,8 +75,8 @@ public class DashFileSetSequence {
 
     protected Map<UUID, List<ProtectionSystemSpecificHeaderBox>> psshBoxes = new HashMap<UUID, List<ProtectionSystemSpecificHeaderBox>>();
 
-    protected List<File> inputFilesOrig;
-    protected List<File> inputFiles;
+    protected List<FileAndTrackSelector> inputFilesOrig;
+    protected List<FileAndTrackSelector> inputFiles;
     protected File outputDirectory = new File(System.getProperty("user.dir"));
     protected int sparse = 0;
     protected int clearlead = 0;
@@ -105,6 +99,8 @@ public class DashFileSetSequence {
     protected List<File> subtitles;
     protected List<File> closedCaptions;
     protected List<File> trickModeFiles;
+
+    protected Map<String,String> languageMap = new HashMap<>();
 
 
     DocumentBuilder documentBuilder;
@@ -132,6 +128,10 @@ public class DashFileSetSequence {
         this.closedCaptions = closedCaptions;
     }
 
+
+    public void setLanguageMap(Map<String, String> languageMap) {
+        this.languageMap = languageMap;
+    }
 
     /**
      * Sets the minimum audio segment duration.
@@ -213,7 +213,7 @@ public class DashFileSetSequence {
         this.videoKeyid = keyid;
     }
 
-    public void setInputFiles(List<File> inputFiles) {
+    public void setInputFiles(List<FileAndTrackSelector> inputFiles) {
         this.inputFiles = inputFiles;
     }
 
@@ -243,8 +243,8 @@ public class DashFileSetSequence {
             long start = System.currentTimeMillis();
 
             long totalSize = 0;
-            for (File inputFile : inputFiles) {
-                totalSize += inputFile.length();
+            for (FileAndTrackSelector inputFile : inputFiles) {
+                totalSize += inputFile.file.length();
             }
             for (File inputFile : safe(closedCaptions)) {
                 totalSize += inputFile.length();
@@ -639,8 +639,8 @@ public class DashFileSetSequence {
     }
 
     private void checkUnhandledFile() throws ExitCodeException {
-        for (File inputFile : inputFiles) {
-            LOG.severe("Cannot identify type of " + inputFile);
+        for (FileAndTrackSelector inputFile : inputFiles) {
+            LOG.severe("Cannot identify type of " + inputFile.file);
         }
         if (inputFiles.size() > 0) {
             throw new ExitCodeException("Only extensions mp4, ismv, mov, m4v, aac, ac3, ec3, dtshd are known.", 1);
@@ -673,8 +673,8 @@ public class DashFileSetSequence {
         for (Map.Entry<TrackProxy, Container> trackContainerEntry : dashedFiles.entrySet()) {
             File f = new File(outputDirectory, trackFilename.get(trackContainerEntry.getKey()));
             if (f.exists()) {
-                for (File file : inputFilesOrig) {
-                    if (file.getAbsolutePath().equals(f.getAbsolutePath())) {
+                for (FileAndTrackSelector file : inputFilesOrig) {
+                    if (file.file.getAbsolutePath().equals(f.getAbsolutePath())) {
                         throw new IOException("Please choose another output directory as current setting causes input files to be overwritten");
                     }
                 }
@@ -893,53 +893,73 @@ public class DashFileSetSequence {
      * @throws IOException
      */
     public Map<TrackProxy, String> createTracks() throws IOException, ExitCodeException {
-        List<File> unhandled = new ArrayList<File>();
-        inputFilesOrig = new ArrayList<File>(inputFiles);
+        List<FileAndTrackSelector> unhandled = new ArrayList<>();
+        inputFilesOrig = new ArrayList<>(inputFiles);
 
-        Map<TrackProxy, String> track2File = new LinkedHashMap<TrackProxy, String>();
-        for (File inputFile : inputFiles) {
-            if (inputFile.isFile()) {
-                if (isMp4(inputFile)) {
-                    Movie movie = MovieCreator.build(new FileDataSourceViaHeapImpl(inputFile));
-                    for (Track track : movie.getTracks()) {
+        Map<TrackProxy, String> track2File = new LinkedHashMap<>();
+        for (FileAndTrackSelector fileAndTrack : inputFiles) {
+            if (fileAndTrack.file.isFile()) {
+                if (isMp4(fileAndTrack.file)) {
+                    IsoFile isoFile = new IsoFile(new FileDataSourceViaHeapImpl(fileAndTrack.file));
+                    for (TrackBox trackBox : isoFile.getMovieBox().getBoxes(TrackBox.class)) {
+                        if (!fileAndTrack.isSelected(trackBox)) {
+                            LOG.info("Excluding " + fileAndTrack.file + " track " + trackBox.getTrackHeaderBox().getTrackId() + " as it is not selected by the track selectors.");
+                            continue;
+                        }
+                        SchemeTypeBox schm = Path.getPath(trackBox, "mdia[0]/minf[0]/stbl[0]/stsd[0]/enc.[0]/sinf[0]/schm[0]");
+                        if (schm != null && (schm.getSchemeType().equals("cenc") || schm.getSchemeType().equals("cbc1"))) {
+                            LOG.warning("Excluding " + fileAndTrack.file + " track " + trackBox.getTrackHeaderBox().getTrackId() + " as it is encrypted. Encrypted source tracks are not yet supported");
+                            continue;
+                        }
+                        Track track = new Mp4TrackImpl(fileAndTrack.file + "[" + trackBox.getTrackHeaderBox().getTrackId() + "]" , trackBox);
                         String codec = DashHelper.getFormat(track);
                         if (!supportedTypes.contains(codec)) {
-                            LOG.warning("Excluding " + inputFile + " track " + track.getTrackMetaData().getTrackId() + " as its codec " + codec + " is not yet supported");
-                            break;
+                            LOG.warning("Excluding " + fileAndTrack.file + " track " + track.getTrackMetaData().getTrackId() + " as its codec " + codec + " is not yet supported");
+                            continue;
                         }
-                        if (track instanceof CencEncryptedTrack) {
-                            LOG.warning("Excluding " + inputFile + " track " + track.getTrackMetaData().getTrackId() + " as it is encrypted. Encrypted source tracks are not yet supported");
-                            break;
-                        }
-                        track2File.put(new TrackProxy(track), inputFile.getName());
+
+
+                        track2File.put(new TrackProxy(track), fileAndTrack.file.getName());
                     }
-                } else if (inputFile.getName().endsWith(".aac")) {
-                    Track track = new AACTrackImpl(new FileDataSourceViaHeapImpl(inputFile));
-                    track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
-                    track2File.put(new TrackProxy(track), inputFile.getName());
-                    LOG.fine("Created AAC Track from " + inputFile.getName());
-                } else if (inputFile.getName().endsWith(".h264")) {
-                    Track track = new H264TrackImpl(new FileDataSourceViaHeapImpl(inputFile));
-                    track2File.put(new TrackProxy(track), inputFile.getName());
-                    LOG.fine("Created H264 Track from " + inputFile.getName());
-                } else if (inputFile.getName().endsWith(".ac3")) {
-                    Track track = new AC3TrackImpl(new FileDataSourceViaHeapImpl(inputFile));
-                    track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
-                    track2File.put(new TrackProxy(track), inputFile.getName());
-                    LOG.fine("Created AC3 Track from " + inputFile.getName());
-                } else if (inputFile.getName().endsWith(".ec3")) {
-                    Track track = new EC3TrackImpl(new FileDataSourceViaHeapImpl(inputFile));
-                    track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
-                    track2File.put(new TrackProxy(track), inputFile.getName());
-                    LOG.fine("Created EC3 Track from " + inputFile.getName());
-                } else if (inputFile.getName().endsWith(".dtshd")) {
-                    Track track = new DTSTrackImpl(new FileDataSourceViaHeapImpl(inputFile));
-                    track.getTrackMetaData().setLanguage(getFilesLanguage(inputFile).getISO3Language());
-                    track2File.put(new TrackProxy(track), inputFile.getName());
-                    LOG.fine("Created DTS HD Track from " + inputFile.getName());
+                } else if (fileAndTrack.file.getName().endsWith(".aac")) {
+                    Track track = new AACTrackImpl(new FileDataSourceViaHeapImpl(fileAndTrack.file));
+                    track.getTrackMetaData().setLanguage(getFilesLanguage(fileAndTrack.file).getISO3Language());
+                    track2File.put(new TrackProxy(track), fileAndTrack.file.getName());
+                    assertOptionEmpty(fileAndTrack);
+                    LOG.fine("Created AAC Track from " + fileAndTrack.file.getName());
+                } else if (fileAndTrack.file.getName().endsWith(".h264")) {
+                    Track track = new H264TrackImpl(new FileDataSourceViaHeapImpl(fileAndTrack.file));
+                    track2File.put(new TrackProxy(track), fileAndTrack.file.getName());
+                    assertOptionEmpty(fileAndTrack);
+                    LOG.fine("Created H264 Track from " + fileAndTrack.file.getName());
+                } else if (fileAndTrack.file.getName().endsWith(".ac3")) {
+                    Track track = new AC3TrackImpl(new FileDataSourceViaHeapImpl(fileAndTrack.file));
+                    track.getTrackMetaData().setLanguage(getFilesLanguage(fileAndTrack.file).getISO3Language());
+                    track2File.put(new TrackProxy(track), fileAndTrack.file.getName());
+                    assertOptionEmpty(fileAndTrack);
+                    LOG.fine("Created AC3 Track from " + fileAndTrack.file.getName());
+                } else if (fileAndTrack.file.getName().endsWith(".ec3")) {
+                    Track track = new EC3TrackImpl(new FileDataSourceViaHeapImpl(fileAndTrack.file));
+                    track.getTrackMetaData().setLanguage(getFilesLanguage(fileAndTrack.file).getISO3Language());
+                    track2File.put(new TrackProxy(track), fileAndTrack.file.getName());
+                    assertOptionEmpty(fileAndTrack);
+                    LOG.fine("Created EC3 Track from " + fileAndTrack.file.getName());
+                } else if (fileAndTrack.file.getName().endsWith(".dtshd")) {
+                    Track track = new DTSTrackImpl(new FileDataSourceViaHeapImpl(fileAndTrack.file));
+                    track.getTrackMetaData().setLanguage(getFilesLanguage(fileAndTrack.file).getISO3Language());
+                    track2File.put(new TrackProxy(track), fileAndTrack.file.getName());
+                    assertOptionEmpty(fileAndTrack);
+                    LOG.fine("Created DTS HD Track from " + fileAndTrack.file.getName());
                 } else {
-                    unhandled.add(inputFile);
+                    unhandled.add(fileAndTrack);
                 }
+            }
+        }
+        for (TrackProxy trackProxy : track2File.keySet()) {
+            String newLang = languageMap.get(trackProxy.getTarget().getTrackMetaData().getLanguage());
+            if (newLang != null) {
+                LOG.info("Replacing input language " + trackProxy.getTarget().getTrackMetaData().getLanguage() + " in " + trackProxy + " with " + newLang);
+                trackProxy.getTarget().getTrackMetaData().setLanguage(newLang);
             }
         }
         inputFiles.retainAll(unhandled);
@@ -954,6 +974,12 @@ public class DashFileSetSequence {
             throw new ExitCodeException("No tracks found for creating DASH stream.", 9283);
         }
         return track2File;
+    }
+
+    private void assertOptionEmpty(FileAndTrackSelector fileAndTrack) throws ExitCodeException {
+        if (fileAndTrack.language != null || fileAndTrack.type != null || fileAndTrack.trackId >= 0) {
+            throw new ExitCodeException(fileAndTrack + " references a bitstream file but contains track selectors (" + fileAndTrack +")", 237126);
+        }
     }
 
     long[] longSet2Array(Set<Long> longSet) {
@@ -1196,6 +1222,10 @@ public class DashFileSetSequence {
             return stsd;
         }
 
+        @Override
+        public String toString() {
+            return getName();
+        }
     }
 
     public void addContentProtection(AdaptationSetType adaptationSet, UUID keyId) {

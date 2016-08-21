@@ -8,21 +8,23 @@ package com.castlabs.dash.dashfragmenter.cmdlines;
 
 import com.castlabs.dash.dashfragmenter.AbstractCommand;
 import com.castlabs.dash.dashfragmenter.sequences.DashFileSetSequence;
+import com.castlabs.dash.dashfragmenter.FileAndTrackSelector;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
-import org.kohsuke.args4j.spi.FileOptionHandler;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 public class DashFileSet extends AbstractCommand {
 
 
-    @Argument(required = true, multiValued = true, handler = FileOptionHandler.class, usage = "MP4 and bitstream input files. In case that an audio input format cannot convey the input's language the filename is expected to be [basename]-[lang].[ext]", metaVar = "vid1.mp4, vid2.mp4, aud1.mp4, aud2-eng.ec3, aud3-fra.aac ...")
-    protected List<File> inputFiles;
+    @Argument(required = true, multiValued = true, handler = FileAndTrackSelectorOptionHandler.class, usage = "MP4 and bitstream input files. In case that an audio input format cannot convey the input's language the filename is expected to be [basename]-[lang].[ext]", metaVar = "vid1.mp4, vid2.mp4, aud1.mp4, aud2-eng.ec3, aud3-fra.aac ...")
+    protected List<FileAndTrackSelector> inputFiles;
 
     @Option(name = "--outputdir", aliases = "-o",
             usage = "output directory - if no output directory is given the " +
@@ -43,9 +45,12 @@ public class DashFileSet extends AbstractCommand {
     @Option(name = "--trick-mode-files", aliases = "-tmh", usage = "Add reduced framerate representations here.")
     protected List<File> trickmodefiles;
 
+    @Option(name = "--language-map", usage = "Adds a language mapping oldlang=newlang")
+    protected Map<String,String> languageMap = new HashMap<>();
+
     public void postProcessCmdLineArgs(CmdLineParser cmdLineParser) throws CmdLineException {
-        for (File inputFile : inputFiles) {
-            if (inputFile.getName().endsWith(".xml") || inputFile.getName().endsWith(".vtt") || inputFile.getName().endsWith(".dfxp")) {
+        for (FileAndTrackSelector inputFile : inputFiles) {
+            if (inputFile.file.getName().endsWith(".xml") || inputFile.file.getName().endsWith(".vtt") || inputFile.file.getName().endsWith(".dfxp")) {
                 throw new CmdLineException(cmdLineParser, new AbstractEncryptOrNotCommand.Message("Subtitle files must either be supplied via command line option --subtitles or --closed-captions"));
             }
         }
@@ -59,6 +64,7 @@ public class DashFileSet extends AbstractCommand {
         dashFileSetSequence.setSubtitles(subtitles);
         dashFileSetSequence.setTrickModeFiles(trickmodefiles);
         dashFileSetSequence.setClosedCaptions(closedCaptions);
+        dashFileSetSequence.setLanguageMap(languageMap);
         return dashFileSetSequence.run();
     }
 }

@@ -223,5 +223,48 @@ public class FullRoundtripTest {
         FileUtils.deleteDirectory(outputDir);
     }
 
+    @Test
+    public void testLivePlainWithSelectors() throws Exception {
+        File outputDir = File.createTempFile("FullRoundtrip", "testLivePlainWithSelectors");
+        outputDir.delete();
+        outputDir.mkdir();
+
+        Main.main(new String[]{
+                "dash",
+                "-o", outputDir.getAbsolutePath(),
+                "[type=video]" + new File(tos, "tears_of_steel/Tears_Of_Steel_1000000.mp4").getAbsolutePath(),
+                "[type=audio]" + new File(tos, "tears_of_steel/Tears_Of_Steel_1400000.mp4").getAbsolutePath(),
+                "[track=1]" + new File(tos, "tears_of_steel/Tears_Of_Steel_800000.mp4").getAbsolutePath(),
+                "[track=2]" + new File(tos, "tears_of_steel/Tears_Of_Steel_600000.mp4").getAbsolutePath(),
+                "[language=eng]" + new File(tos, "tears_of_steel/Tears_Of_Steel_128000_eng.mp4").getAbsolutePath(),
+                "[language=eng]" + new File(tos, "tears_of_steel/Tears_Of_Steel_128000_ita.mp4").getAbsolutePath(),
+        });
+
+        XMLUnit.setIgnoreWhitespace(true);
+        XMLAssert.assertXMLEqual(new InputSource(getClass().getResourceAsStream("testLivePlainWithSelectors.mpd")), new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))));
+        FileUtils.deleteDirectory(outputDir);
+    }
+
+    @Test
+    public void testLanguageMap() throws Exception {
+        File outputDir = File.createTempFile("FullRoundtrip", "testLivePlainWithSelectors");
+        outputDir.delete();
+        outputDir.mkdir();
+
+        Main.main(new String[]{
+                "dash",
+                "-o", outputDir.getAbsolutePath(),
+                "--language-map", "eng=spa",
+                new File(tos, "tears_of_steel/Tears_Of_Steel_1000000.mp4").getAbsolutePath(),
+                new File(tos, "tears_of_steel/Tears_Of_Steel_128000_eng.mp4").getAbsolutePath()
+                ,
+        });
+
+        XMLUnit.setIgnoreWhitespace(true);
+        XMLAssert.assertXMLEqual(new InputSource(getClass().getResourceAsStream("testLanguageMap.mpd")), new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))));
+        FileUtils.deleteDirectory(outputDir);
+    }
+
+
 
 }

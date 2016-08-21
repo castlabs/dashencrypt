@@ -44,10 +44,7 @@ public class CencEncryptAndMux extends AbstractEncryptOrNotCommand {
                     LOG.severe("Only MP4 files are supported as input.");
                     return 87263;
                 }
-                Movie m = null;
-
-                m = MovieCreator.build(inputFile.getAbsolutePath());
-
+                Movie m = MovieCreator.build(inputFile.getAbsolutePath());
 
                 for (Track track : m.getTracks()) {
                     if ("soun".equals(track.getHandler()) && audioKeyId != null) {
