@@ -517,7 +517,7 @@ public class DashFileSetSequence {
             Map<String, String> adaptationSet2Role) throws IOException {
         return new ExplodedSegmentListManifestWriterImpl(this,
                 tt(trackFamilies), t(dashedFiles), t(trackBitrate), t(representationIds),
-                t(trackToFile), initPattern, mediaPattern, false, adaptationSet2Role).getManifest();
+                t(trackToFile), initPattern, mediaPattern, true, adaptationSet2Role).getManifest();
     }
 
     protected MPDDocument getManifestSingleSidx(

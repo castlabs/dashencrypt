@@ -121,7 +121,7 @@ public class FullRoundtripTest {
         });
 
         XMLUnit.setIgnoreWhitespace(true);
-        XMLAssert.assertXMLEqual(new InputSource(getClass().getResourceAsStream("testLivePlain.mpd")), new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))));
+        XMLAssert.assertXMLEqual(new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))), new InputSource(getClass().getResourceAsStream("testLivePlain.mpd")));
         FileUtils.deleteDirectory(outputDir);
     }
 
