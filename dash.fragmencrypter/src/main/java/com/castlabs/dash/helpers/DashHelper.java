@@ -189,7 +189,11 @@ public final class DashHelper {
         final AudioSpecificConfig audioSpecificConfig = decoderConfigDescriptor.getAudioSpecificInfo();
         ChannelConfiguration cc = new ChannelConfiguration();
         cc.schemeIdUri = "urn:mpeg:dash:23003:3:audio_channel_configuration:2011";
-        cc.value = String.valueOf(audioSpecificConfig != null ? audioSpecificConfig.getChannelConfiguration() : "2");
+        cc.value = "2";
+        if (audioSpecificConfig != null && audioSpecificConfig.getChannelConfiguration()>2 ) {
+            // in case of mono let's assume stereo as it will be Parametric Stereo in most cases.
+            cc.value = String.valueOf(audioSpecificConfig.getChannelConfiguration());
+        }
         return cc;
     }
 
