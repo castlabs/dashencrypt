@@ -10,7 +10,7 @@
           <S d="61440" t="8960000"/>
         </SegmentTimeline>
       </SegmentTemplate>
-      <Representation codecs="avc1.640015" bandwidth="549100" id="Tears_Of_Steel_600000"/>
+      <Representation codecs="avc1.640015" bandwidth="564200" id="Tears_Of_Steel_600000"/>
     </AdaptationSet>
     <AdaptationSet segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" mimeType="audio/mp4" lang="eng">
       <Role schemeIdUri="urn:mpeg:dash:role:2011" value="main"/>
@@ -20,7 +20,7 @@
           <S d="675840" t="33882112" r="1"/>
         </SegmentTimeline>
       </SegmentTemplate>
-      <Representation codecs="mp4a.40.2" audioSamplingRate="48000" bandwidth="128200" id="Tears_Of_Steel_128000_eng">
+      <Representation codecs="mp4a.40.2" audioSamplingRate="48000" bandwidth="127800" id="Tears_Of_Steel_128000_eng">
         <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
       </Representation>
     </AdaptationSet>

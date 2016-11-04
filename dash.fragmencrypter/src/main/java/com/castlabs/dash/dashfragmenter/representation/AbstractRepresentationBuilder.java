@@ -799,10 +799,13 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
     public static long getBandwidth(Track track) {
         long size = 0;
         List<Sample> samples = track.getSamples();
-        for (int i = 0; i < Math.min(samples.size(), 10000); i++) {
+        int increment = samples.size() / Math.min(samples.size(), 10000);
+        int sampleSize = 0;
+        for (int i = 0; i < (samples.size()-increment); i+=increment) {
             size += samples.get(i).getSize();
+            sampleSize++;
         }
-        size = (size / Math.min(track.getSamples().size(), 10000)) * track.getSamples().size();
+        size = (size / sampleSize) * track.getSamples().size();
 
         double duration = (double) track.getDuration() / track.getTrackMetaData().getTimescale();
         return (long) ((size * 8 / duration / 100)) * 100;

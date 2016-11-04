@@ -31,7 +31,7 @@ public class ManifestOptimizerTest {
         MPDDocument mpd = MPDDocument.Factory.parse(new File(ManifestOptimizerTest.class.getProtectionDomain().getCodeSource().getLocation().getFile() + "/com/castlabs/dash/dashfragmenter/representation/exampleManifest.mpd"));
         ManifestOptimizer.adjustMinMax(mpd.getMPD().getPeriodArray(0).getAdaptationSetArray(0), "bandwidth");
         Assert.assertEquals(549100, mpd.getMPD().getPeriodArray(0).getAdaptationSetArray(0).getMinBandwidth());
-        Assert.assertEquals(1296300, mpd.getMPD().getPeriodArray(0).getAdaptationSetArray(0).getMaxBandwidth());
+        Assert.assertEquals(1356600, mpd.getMPD().getPeriodArray(0).getAdaptationSetArray(0).getMaxBandwidth());
 
         ManifestOptimizer.adjustMinMax(mpd.getMPD().getPeriodArray(0).getAdaptationSetArray(1), "bandwidth");
         Assert.assertFalse(mpd.getMPD().getPeriodArray(0).getAdaptationSetArray(1).isSetMinBandwidth());
