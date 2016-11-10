@@ -800,7 +800,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         long size = 0;
         List<Sample> samples = track.getSamples();
         int increment = samples.size() / Math.min(samples.size(), 10000);
-        int sampleSize = 0;
+        int sampleSize = 1; // start with one so that we never get into a divided by zero situation
         for (int i = 0; i < (samples.size()-increment); i+=increment) {
             size += samples.get(i).getSize();
             sampleSize++;
