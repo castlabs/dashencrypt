@@ -22,7 +22,7 @@ public class FullRoundtripTest {
 
     @Before
     public void setUp() throws Exception {
-        File de = new File(System.getProperty("java.io.tmpdir"), ".dashencrypt");
+        File de = new File(".cache");
         de.mkdir();
         tos = new File(de, "tos");
         tos.mkdir();

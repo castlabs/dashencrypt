@@ -354,9 +354,9 @@ public final class DashHelper {
             }
             final DecoderConfigDescriptor decoderConfigDescriptor = esDescriptorBox.getEsDescriptor().getDecoderConfigDescriptor();
             final AudioSpecificConfig audioSpecificConfig = decoderConfigDescriptor.getAudioSpecificInfo();
-            if (audioSpecificConfig != null && audioSpecificConfig.sbrPresentFlag) {
+            if (audioSpecificConfig != null && audioSpecificConfig.sbrPresentFlag && !audioSpecificConfig.psPresentFlag) {
                 return "mp4a.40.5";
-            } else if (audioSpecificConfig != null && audioSpecificConfig.psPresentFlag) {
+            } else if (audioSpecificConfig != null && audioSpecificConfig.sbrPresentFlag && audioSpecificConfig.psPresentFlag) {
                 return "mp4a.40.29";
             } else {
                 return "mp4a.40.2";
