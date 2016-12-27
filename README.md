@@ -1,9 +1,9 @@
-DASH.encrypt
+DASHencrypt
 ============
 
 Usually when creating a video, all that is needed is to encode it using a codec (for example H.264 or HEVC). However, to transmit a video using MPEG-DASH, an extra segmentation step is required. Typical encoders do not provide this step and produce content which is not compatible with DASH.
 
-Our DASH.encrypt project provides a solution. It takes encoded video and audio from an array of different formats and repackages them as valid DASH streams. It also generates the required manifest which is the table of contents for the stream.
+Our DASHencrypt project provides a solution. It takes encoded video and audio from an array of different formats and repackages them as valid DASH streams. It also generates the required manifest which is the table of contents for the stream.
 
 * [DASH Industry Forum](http://dashif.org/)
 * [ISO/IEC 23009-1:2014](http://www.iso.org/iso/home/store/catalogue_tc/catalogue_detail.htm?csnumber=65274)
