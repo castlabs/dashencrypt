@@ -22,7 +22,7 @@ public class FullRoundtripTest {
 
     @Before
     public void setUp() throws Exception {
-        File de = new File(".cache");
+        File de = new File(System.getProperty("user.home"), ".dash-encrypt-cache");
         de.mkdir();
         tos = new File(de, "tos");
         tos.mkdir();
