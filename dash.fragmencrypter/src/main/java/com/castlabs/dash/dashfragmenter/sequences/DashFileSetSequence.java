@@ -1,5 +1,6 @@
 package com.castlabs.dash.dashfragmenter.sequences;
 
+import com.castlabs.dash.dashfragmenter.BetterTrackGroupFragmenter;
 import com.castlabs.dash.dashfragmenter.FileAndTrackSelector;
 import com.castlabs.dash.dashfragmenter.formats.csf.DashBuilder;
 import com.castlabs.dash.dashfragmenter.formats.csf.SegmentBaseSingleSidxManifestWriterImpl;
@@ -100,7 +101,7 @@ public class DashFileSetSequence {
     protected List<File> closedCaptions;
     protected List<File> trickModeFiles;
 
-    protected Map<String,String> languageMap = new HashMap<>();
+    protected Map<String, String> languageMap = new HashMap<>();
 
 
     DocumentBuilder documentBuilder;
@@ -821,6 +822,7 @@ public class DashFileSetSequence {
     public Map<TrackProxy, long[]> findFragmentStartSamples(Map<String, List<TrackProxy>> trackFamilies) {
         Map<TrackProxy, long[]> fragmentStartSamples = new HashMap<>();
 
+
         Map<String, List<TrackProxy>> trackFamiliesForSegments = new HashMap<>();
 
         for (Map.Entry<String, List<TrackProxy>> stringListEntry : trackFamilies.entrySet()) {
@@ -836,29 +838,36 @@ public class DashFileSetSequence {
         for (String key : trackFamiliesForSegments.keySet()) {
             List<TrackProxy> trackProxies = trackFamiliesForSegments.get(key);
 
-            long[] samples = null;
 
-            for (TrackProxy track : trackProxies) {
-                long[] nu_samples;
-                if (track.getHandler().startsWith("vide")) {
-                    Fragmenter videoIntersectionFinder = new BetterFragmenter(minVideoSegmentDuration);
-                    nu_samples = videoIntersectionFinder.sampleNumbers(track.getTarget());
-                    //fragmentStartSamples.put(track, checkMaxFragmentDuration(track, videoIntersectionFinder.sampleNumbers(track)));
-                } else if (track.getHandler().startsWith("soun")) {
-                    Fragmenter soundIntersectionFinder = new BetterFragmenter(minAudioSegmentDuration);
-                    nu_samples = soundIntersectionFinder.sampleNumbers(track.getTarget());
-                } else {
-                    throw new RuntimeException("An engineer needs to tell me if " + key + " is audio or video!");
+
+            if (trackProxies.get(0).getHandler().startsWith("vide")) {
+                List<Track> tracks = new ArrayList<>();
+                for (TrackProxy trackProxy : trackProxies) {
+                    tracks.add(trackProxy.getTarget());
                 }
-                if (samples == null) {
-                    samples = nu_samples;
-                } else {
-                    samples = getCommonIndices(samples, nu_samples);
+                Fragmenter fragmenter = new BetterTrackGroupFragmenter(minVideoSegmentDuration, tracks);
+                for (TrackProxy track : trackProxies) {
+                    fragmentStartSamples.put(track, fragmenter.sampleNumbers(track.getTarget()));
                 }
+            } else if (trackProxies.get(0).getHandler().startsWith("soun")) {
+
+                long[] commonSamples = null;
+                for (TrackProxy track : trackProxies) {
+                        Fragmenter soundIntersectionFinder = new BetterFragmenter(minAudioSegmentDuration);
+                        long[] nuSamples = soundIntersectionFinder.sampleNumbers(track.getTarget());
+                    if (commonSamples == null) {
+                        commonSamples = nuSamples;
+                    } else {
+                        commonSamples = getCommonIndices(commonSamples, nuSamples);
+                    }
+                }
+                for (TrackProxy track : trackProxies) {
+                    fragmentStartSamples.put(track, commonSamples);
+                }
+            } else {
+                throw new RuntimeException("An engineer needs to tell me if " + trackProxies.get(0).getHandler() + " is audio or video!");
             }
-            for (TrackProxy track : trackProxies) {
-                fragmentStartSamples.put(track, samples);
-            }
+
         }
         return fragmentStartSamples;
     }
@@ -911,7 +920,7 @@ public class DashFileSetSequence {
                             LOG.warning("Excluding " + fileAndTrack.file + " track " + trackBox.getTrackHeaderBox().getTrackId() + " as it is encrypted. Encrypted source tracks are not yet supported");
                             continue;
                         }
-                        Track track = new Mp4TrackImpl(fileAndTrack.file + "[" + trackBox.getTrackHeaderBox().getTrackId() + "]" , trackBox);
+                        Track track = new Mp4TrackImpl(fileAndTrack.file + "[" + trackBox.getTrackHeaderBox().getTrackId() + "]", trackBox);
                         String codec = DashHelper.getFormat(track);
                         if (!supportedTypes.contains(codec)) {
                             LOG.warning("Excluding " + fileAndTrack.file + " track " + track.getTrackMetaData().getTrackId() + " as its codec " + codec + " is not yet supported");
@@ -978,7 +987,7 @@ public class DashFileSetSequence {
 
     private void assertOptionEmpty(FileAndTrackSelector fileAndTrack) throws ExitCodeException {
         if (fileAndTrack.language != null || fileAndTrack.type != null || fileAndTrack.trackId >= 0) {
-            throw new ExitCodeException(fileAndTrack + " references a bitstream file but contains track selectors (" + fileAndTrack +")", 237126);
+            throw new ExitCodeException(fileAndTrack + " references a bitstream file but contains track selectors (" + fileAndTrack + ")", 237126);
         }
     }
 
