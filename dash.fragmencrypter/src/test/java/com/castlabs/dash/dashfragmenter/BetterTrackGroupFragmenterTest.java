@@ -165,6 +165,51 @@ public class BetterTrackGroupFragmenterTest {
     }
 
     @Test
+    public void testSlightOffset() {
+        long[] timeScale = new long[]{25, 25};
+        long[][] syncSamples = new long[][]
+                {
+                        new long[30],
+                        new long[30],
+                };
+
+        for (long[] syncSample : syncSamples) {
+            long t = 1;
+            for (int i = 0; i < syncSample.length; i++) {
+                syncSample[i] = t;
+                t+=26;
+            }
+        }
+
+        long[][] sampleDuration = new long[][]{
+                generateArray(755, 1),
+                generateArray(755, 1),
+        };
+        double targetDuration = 2.0;
+
+        long[][] result = BetterTrackGroupFragmenter.getCommonSyncSamples(timeScale, syncSamples, sampleDuration, targetDuration);
+
+/*        for (long[] longs : result) {
+            for (long aLong : longs) {
+                System.err.print(aLong + ", ");
+            }
+            System.err.println();
+        }
+*/
+        long[][] expectedResult = new long[][]
+                {
+                        {1, 53, 105, 157, 209, 261, 313, 365, 417, 469, 521, 573, 625, 677, 729},
+                        {1, 53, 105, 157, 209, 261, 313, 365, 417, 469, 521, 573, 625, 677, 729},
+                };
+
+
+        for (int i = 0; i < result.length; i++) {
+            Assert.assertArrayEquals(expectedResult[i], result[i]);
+
+        }
+    }
+
+    @Test
     public void test() {
         long[] timeScale = new long[]{25,25};
         long[][] syncSamples = new long[][]

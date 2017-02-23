@@ -13,13 +13,9 @@ import static java.util.Arrays.binarySearch;
 
 public class BetterTrackGroupFragmenter implements Fragmenter {
     private final Map<Track, long[]> allTracks = new HashMap<>();
-    private double targetDuration;
-
 
 
     public BetterTrackGroupFragmenter(double targetDuration, List<Track> allTracks) {
-        this.targetDuration = targetDuration;
-
         if (allTracks.size() > 1) {
             for (Track track : allTracks) {
                 if (track.getSyncSamples() == null) {
@@ -53,6 +49,7 @@ public class BetterTrackGroupFragmenter implements Fragmenter {
             if (hasFoundNextCommonSyncSample(currentTicks, timeScale, nextTarget)) {
                 for (int i = 0; i < currentSyncSample.length; i++) {
                     fragmentSamples[i] = Mp4Arrays.copyOfAndAppend(fragmentSamples[i] ,syncSamples[i][currentSyncSample[i]]);
+                    nextTarget = (double)currentTicks[0] / (double)timeScale[0];
                 }
                 nextTarget += targetDuration;
             }
@@ -67,12 +64,10 @@ public class BetterTrackGroupFragmenter implements Fragmenter {
             if (syncSamples[j].length > currentSyncSample[j] + 1) {
                 int start = currentSyncSample[j];
                 int end = ++currentSyncSample[j];
-
                 for (int i = l2i(syncSamples[j][start]); i <  syncSamples[j][end]; i++) {
                     currentTicks[j] += sampleDuration[j][i];
                 }
             } else {
-                System.err.println();
                 break;
             }
 
