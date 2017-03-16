@@ -22,6 +22,7 @@ import org.apache.xmlbeans.XmlOptions;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -147,13 +148,12 @@ public class ManifestHelper {
     public static long getApproxTrackSize(Track track) {
         long size = 0;
         List<Sample> samples = track.getSamples();
-        int increment = samples.size() / Math.min(samples.size(), 10000);
-        int sampleSize = 0;
-        for (int i = 0; i < (samples.size()-increment); i+=increment) {
-            size += samples.get(i).getSize();
-            sampleSize++;
+        Random r = new Random(0); // I initialize the seed unsafe on purpose so that we have repeatable results
+        int maxSample = samples.size();
+        for (int i = 0; i < Math.min(samples.size(), 10000); i++) {
+            size += samples.get(r.nextInt(maxSample)).getSize();
         }
-        size = (size / sampleSize) * track.getSamples().size();
+        size = (size / Math.min(samples.size(), 10000)) * track.getSamples().size();
         return size;
     }
 }

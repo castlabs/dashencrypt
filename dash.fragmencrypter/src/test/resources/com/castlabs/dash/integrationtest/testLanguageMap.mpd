@@ -4,7 +4,7 @@
   <Period id="0" start="PT0S" duration="PT12M14S">
     <AdaptationSet id="1" segmentAlignment="true" subsegmentAlignment="true" subsegmentStartsWithSAP="1" startWithSAP="1" bitstreamSwitching="true" mimeType="video/mp4" par="12:5" width="768" height="320" frameRate="24000/1000" sar="1:1">
       <Role schemeIdUri="urn:mpeg:dash:role:2011" value="main"/>
-      <Representation codecs="avc1.64001e" id="Tears_Of_Steel_1000000.mp4" bandwidth="958400">
+      <Representation codecs="avc1.64001e" id="Tears_Of_Steel_1000000.mp4" bandwidth="945400">
         <BaseURL>Tears_Of_Steel_1000000.mp4</BaseURL>
         <SegmentBase timescale="12288" indexRangeExact="true" indexRange="710-1593">
           <Initialization range="0-709"/>

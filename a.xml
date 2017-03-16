@@ -141,7 +141,7 @@
                     <S d="673792" t="34560000"/>
                 </SegmentTimeline>
             </SegmentTemplate>
-            <Representation codecs="mp4a.40.2" audioSamplingRate="48000" bandwidth="127800" id="Tears_Of_Steel_128000_eng">
+            <Representation codecs="mp4a.40.2" audioSamplingRate="48000" bandwidth="128200" id="Tears_Of_Steel_128000_eng">
                 <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
             </Representation>
         </AdaptationSet>
@@ -201,7 +201,7 @@
                     <S d="678912" t="34560000"/>
                 </SegmentTimeline>
             </SegmentTemplate>
-            <Representation codecs="mp4a.40.2" audioSamplingRate="48000" bandwidth="127800" id="Tears_Of_Steel_128000_ita">
+            <Representation codecs="mp4a.40.2" audioSamplingRate="48000" bandwidth="128200" id="Tears_Of_Steel_128000_ita">
                 <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
             </Representation>
         </AdaptationSet>
