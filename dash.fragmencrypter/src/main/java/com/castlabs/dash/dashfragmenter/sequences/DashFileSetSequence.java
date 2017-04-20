@@ -555,7 +555,7 @@ public class DashFileSetSequence {
         Track textTrack;
         if (textTrackFile.getName().endsWith(".xml") || textTrackFile.getName().endsWith(".dfxp") || textTrackFile.getName().endsWith(".ttml")) {
             try {
-                textTrack = new TtmlTrackImpl(textTrackFile.getName(),
+                textTrack = new TtmlTrackImpl(textTrackFile.getName() + ".mp4",
                         Collections.singletonList(documentBuilder.parse(textTrackFile)));
             } catch (SAXException e) {
                 throw new IOException(e);
