@@ -21,7 +21,9 @@ import com.mp4parser.iso14496.part15.HevcConfigurationBox;
 import com.mp4parser.iso14496.part30.XMLSubtitleSampleEntry;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -510,7 +512,16 @@ public final class DashHelper {
 
                 String xml = FileUtils.readFileToString(textTrack);
                 Document xmlDocument = builder.parse(new ByteArrayInputStream(xml.getBytes()));
+
                 String lang = xmlDocument.getDocumentElement().getAttribute("xml:lang");
+                NodeList nl = xmlDocument.getDocumentElement().getElementsByTagName("div");
+                for (int i = 0; i < nl.getLength(); i++) {
+                    Attr langInDiv = (Attr) nl.item(i).getAttributes().getNamedItem("xml:lang");
+                    if (langInDiv != null) {
+                        lang = langInDiv.getValue();
+                    }
+
+                }
                 if (lang != null) {
                     return Locale.forLanguageTag(lang);
                 } else {
