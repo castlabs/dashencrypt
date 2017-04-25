@@ -568,7 +568,7 @@ public class DashFileSetSequence {
             }
 
         } else if (textTrackFile.getName().endsWith(".vtt")) {
-            textTrack = new WebVttTrack(new FileInputStream(textTrackFile), textTrackFile.getName(), getTextTrackLocale(textTrackFile));
+            textTrack = new WebVttTrack(new FileInputStream(textTrackFile), textTrackFile.getName() + ".mp4", getTextTrackLocale(textTrackFile));
         } else {
             throw new RuntimeException("Not sure what kind of textTrack " + textTrackFile.getName() + " is.");
         }
