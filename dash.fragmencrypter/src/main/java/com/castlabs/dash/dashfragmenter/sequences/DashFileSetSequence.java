@@ -236,7 +236,7 @@ public class DashFileSetSequence {
 
     public int run() {
         try {
-            if (!(outputDirectory.getAbsoluteFile().exists() ^ outputDirectory.getAbsoluteFile().mkdirs())) {
+            if (outputDirectory.getAbsoluteFile().exists() == outputDirectory.getAbsoluteFile().mkdirs()) {
                 LOG.severe("Output directory does not exist and cannot be created.");
                 return 9745;
             }
@@ -446,7 +446,7 @@ public class DashFileSetSequence {
                 double seconds = (double) representationBuilder.getTrack().getDuration() / representationBuilder.getTrack().getTrackMetaData().getTimescale();
                 // todo find actual main video FPS - will happen when
                 long maxPlayoutRate = Math.round((double) 25 / ((double) representationBuilder.getTrack().getSamples().size() / seconds));
-                RepresentationType representation = writeDataAndCreateRepresentation(representationBuilder);
+                RepresentationType representation = writeDataAndCreateRepresentation(representationBuilder, Locale.forLanguageTag(representationBuilder.getTrack().getTrackMetaData().getLanguage()));
                 representation.setMaxPlayoutRate(maxPlayoutRate);
                 representations.add(representation);
             }
@@ -455,18 +455,14 @@ public class DashFileSetSequence {
         }
     }
 
-    RepresentationType writeDataAndCreateRepresentation(RepresentationBuilder representationBuilder) throws IOException {
+    RepresentationType writeDataAndCreateRepresentation(RepresentationBuilder representationBuilder, Locale locale) throws IOException {
         RepresentationType representation;
         String id = filename2UrlPath((representationBuilder.getSource()));
         if (explode) {
             representation = representationBuilder.getLiveRepresentation();
-            String lang = representationBuilder.getTrack().getTrackMetaData().getLanguage();
-            lang = Locale.forLanguageTag(lang).getLanguage();
-            if (!lang.isEmpty()) {
-                lang += "/";
-            }
-            representation.getSegmentTemplate().setInitialization2(initPattern.replace("%lang%/", lang));
-            representation.getSegmentTemplate().setMedia(mediaPattern.replace("%lang%/", lang));
+
+            representation.getSegmentTemplate().setInitialization2(initPattern.replace("%lang%", locale.toLanguageTag()));
+            representation.getSegmentTemplate().setMedia(mediaPattern.replace("%lang%", locale.toLanguageTag()));
             representation.setId(id);
             RepresentationBuilderToFile.writeLive(representationBuilder, representation, outputDirectory);
         } else {
@@ -555,28 +551,25 @@ public class DashFileSetSequence {
         Track textTrack;
         if (textTrackFile.getName().endsWith(".xml") || textTrackFile.getName().endsWith(".dfxp") || textTrackFile.getName().endsWith(".ttml")) {
             try {
-                textTrack = new TtmlTrackImpl(textTrackFile.getName() + ".mp4",
+                textTrack = new TtmlTrackImpl(textTrackFile.getName() + "-mp4",
                         Collections.singletonList(documentBuilder.parse(textTrackFile)));
-            } catch (SAXException e) {
-                throw new IOException(e);
-            } catch (ParserConfigurationException e) {
+            } catch (SAXException | ParserConfigurationException | URISyntaxException e) {
                 throw new IOException(e);
             } catch (XPathExpressionException e) {
-                throw new IOException(e);
-            } catch (URISyntaxException e) {
                 throw new IOException(e);
             }
 
         } else if (textTrackFile.getName().endsWith(".vtt")) {
-            textTrack = new WebVttTrack(new FileInputStream(textTrackFile), textTrackFile.getName() + ".mp4", getTextTrackLocale(textTrackFile));
+            textTrack = new WebVttTrack(new FileInputStream(textTrackFile), textTrackFile.getName(), getTextTrackLocale(textTrackFile));
         } else {
             throw new RuntimeException("Not sure what kind of textTrack " + textTrackFile.getName() + " is.");
         }
+        Locale locale = getTextTrackLocale(textTrackFile);
         RepresentationBuilder representationBuilder =
                 new SyncSampleAssistedRepresentationBuilder(textTrack, textTrackFile.getName(), 10, Collections.<ProtectionSystemSpecificHeaderBox>emptyList());
-        RepresentationType representation = writeDataAndCreateRepresentation(representationBuilder);
+        RepresentationType representation = writeDataAndCreateRepresentation(representationBuilder, locale);
         AdaptationSetType adaptationSet = period.addNewAdaptationSet();
-        Locale locale = getTextTrackLocale(textTrackFile);
+
         adaptationSet.setLang(locale.getLanguage() + ("".equals(locale.getScript()) ? "" : "-" + locale.getScript()));
         adaptationSet.setMimeType("application/mp4");
         adaptationSet.setRepresentationArray(new RepresentationType[]{representation});
@@ -593,7 +586,7 @@ public class DashFileSetSequence {
         PeriodType period = mpdDocument.getMPD().getPeriodArray()[0];
         AdaptationSetType adaptationSet = period.addNewAdaptationSet();
         File tracksOutputDir = new File(outputDirectory, FilenameUtils.getBaseName(textTrack.getName()));
-        if (!(tracksOutputDir.getAbsoluteFile().exists() ^ tracksOutputDir.getAbsoluteFile().mkdirs())) {
+        if (tracksOutputDir.getAbsoluteFile().exists() == tracksOutputDir.getAbsoluteFile().mkdirs()) {
             LOG.severe("Track's output directory does not exist and cannot be created (" + tracksOutputDir.getAbsolutePath() + ")");
         }
         if (textTrack.getName().endsWith(".xml") || textTrack.getName().endsWith(".dfxp") || textTrack.getName().endsWith(".ttml")) {
@@ -622,8 +615,8 @@ public class DashFileSetSequence {
         adaptationSet.setRoleArray(roles);
         adaptationSet.setEssentialPropertyArray(essentialProperties);
         RepresentationType representation = adaptationSet.addNewRepresentation();
-        representation.setId(filename2UrlPath(FilenameUtils.getBaseName(textTrack.getName())));
-        representation.setBandwidth(128); // pointless - just invent a small number
+        representation.setId(filename2UrlPath(FilenameUtils.getBaseName(textTrack.getName())+ "-" +FilenameUtils.getExtension(textTrack.getName())));
+        representation.setBandwidth(0); // pointless - just invent a small number
         BaseURLType baseURL = representation.addNewBaseURL();
         baseURL.setStringValue(FilenameUtils.getBaseName(textTrack.getName()) + "/" + textTrack.getName());
 

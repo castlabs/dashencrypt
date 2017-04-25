@@ -13,7 +13,7 @@
     </AdaptationSet>
     <AdaptationSet mimeType="text/vtt" lang="nld">
       <Role schemeIdUri="urn:mpeg:dash:role" value="subtitle"/>
-      <Representation id="Tears_Of_Steel_nld" bandwidth="128">
+      <Representation id="Tears_Of_Steel_nld-vtt" bandwidth="0">
         <BaseURL>Tears_Of_Steel_nld/Tears_Of_Steel_nld.vtt</BaseURL>
       </Representation>
     </AdaptationSet>
@@ -28,7 +28,7 @@
     </AdaptationSet>
     <AdaptationSet mimeType="text/vtt" lang="per">
       <Role schemeIdUri="urn:mpeg:dash:role" value="subtitle"/>
-      <Representation id="Tears_Of_Steel_per" bandwidth="128">
+      <Representation id="Tears_Of_Steel_per-vtt" bandwidth="0">
         <BaseURL>Tears_Of_Steel_per/Tears_Of_Steel_per.vtt</BaseURL>
       </Representation>
     </AdaptationSet>
@@ -43,7 +43,7 @@
     </AdaptationSet>
     <AdaptationSet mimeType="text/vtt" lang="rus">
       <Role schemeIdUri="urn:mpeg:dash:role" value="subtitle"/>
-      <Representation id="Tears_Of_Steel_rus" bandwidth="128">
+      <Representation id="Tears_Of_Steel_rus-vtt" bandwidth="0">
         <BaseURL>Tears_Of_Steel_rus/Tears_Of_Steel_rus.vtt</BaseURL>
       </Representation>
     </AdaptationSet>
@@ -58,7 +58,7 @@
     </AdaptationSet>
     <AdaptationSet mimeType="text/vtt" lang="nld">
       <Role schemeIdUri="urn:mpeg:dash:role" value="caption"/>
-      <Representation id="Tears_Of_Steel_nld" bandwidth="128">
+      <Representation id="Tears_Of_Steel_nld-vtt" bandwidth="0">
         <BaseURL>Tears_Of_Steel_nld/Tears_Of_Steel_nld.vtt</BaseURL>
       </Representation>
     </AdaptationSet>
@@ -73,7 +73,7 @@
     </AdaptationSet>
     <AdaptationSet mimeType="text/vtt" lang="per">
       <Role schemeIdUri="urn:mpeg:dash:role" value="caption"/>
-      <Representation id="Tears_Of_Steel_per" bandwidth="128">
+      <Representation id="Tears_Of_Steel_per-vtt" bandwidth="0">
         <BaseURL>Tears_Of_Steel_per/Tears_Of_Steel_per.vtt</BaseURL>
       </Representation>
     </AdaptationSet>
@@ -88,7 +88,7 @@
     </AdaptationSet>
     <AdaptationSet mimeType="text/vtt" lang="rus">
       <Role schemeIdUri="urn:mpeg:dash:role" value="caption"/>
-      <Representation id="Tears_Of_Steel_rus" bandwidth="128">
+      <Representation id="Tears_Of_Steel_rus-vtt" bandwidth="0">
         <BaseURL>Tears_Of_Steel_rus/Tears_Of_Steel_rus.vtt</BaseURL>
       </Representation>
     </AdaptationSet>

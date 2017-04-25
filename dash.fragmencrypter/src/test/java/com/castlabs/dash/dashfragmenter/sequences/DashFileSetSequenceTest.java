@@ -9,6 +9,7 @@ import org.junit.Assert;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Locale;
 
 public class DashFileSetSequenceTest {
     @Test
@@ -26,8 +27,8 @@ public class DashFileSetSequenceTest {
         d.setOutputDirectory(td);
         d.writeDataAndCreateRepresentation(new AbstractRepresentationBuilder(m.getTracks().get(0), null, "id", new long[]{1}, new long[]{1}) {
 
-        });
-        Assert.assertEquals("eng", td.list()[0]);
+        }, Locale.ENGLISH);
+        Assert.assertEquals("en", td.list()[0]);
         Assert.assertTrue(td.list().length == 1);
     }
 
