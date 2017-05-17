@@ -1,5 +1,7 @@
 package com.castlabs.dash.helpers;
 
+import com.castlabs.dash.dashfragmenter.representation.Mp4RepresentationBuilder;
+import com.castlabs.dash.dashfragmenter.representation.RawFileRepresentationBuilder;
 import com.castlabs.dash.dashfragmenter.representation.RepresentationBuilder;
 import com.coremedia.iso.boxes.Container;
 import mpegDashSchemaMpd2011.RepresentationType;
@@ -22,72 +24,84 @@ public class RepresentationBuilderToFile {
     public static void writeOnDemand(RepresentationBuilder representationBuilder, RepresentationType representation, File outputDir) throws IOException {
         assert representation.getBaseURLArray().length == 1;
         assert representation.getBaseURLArray()[0].getStringValue() != null && !"".equals(representation.getBaseURLArray()[0].getStringValue());
-        File f = new File(outputDir, representation.getBaseURLArray()[0].getStringValue());
-        LOG.info("Writing " + f.getAbsolutePath());
-        WritableByteChannel wbc = Channels.newChannel(new FileOutputStream(f));
-        LOG.fine("Writing init segment");
-        representationBuilder.getInitSegment().writeContainer(wbc);
-        LOG.fine("Writing index segment");
-        representationBuilder.getIndexSegment().writeContainer(wbc);
+        File outFile = new File(outputDir, representation.getBaseURLArray()[0].getStringValue());
+        if (representationBuilder instanceof Mp4RepresentationBuilder) {
+            Mp4RepresentationBuilder mp4RepresentationBuilder = (Mp4RepresentationBuilder)representationBuilder;
 
-        LOG.fine("Writing segments");
-        for (Container fragment : representationBuilder) {
-            fragment.writeContainer(wbc);
+            LOG.info("Writing " + outFile.getAbsolutePath());
+            WritableByteChannel wbc = Channels.newChannel(new FileOutputStream(outFile));
+            LOG.fine("Writing init segment");
+            mp4RepresentationBuilder.getInitSegment().writeContainer(wbc);
+            LOG.fine("Writing index segment");
+            mp4RepresentationBuilder.getIndexSegment().writeContainer(wbc);
+
+            LOG.fine("Writing segments");
+            for (Container fragment : mp4RepresentationBuilder) {
+                fragment.writeContainer(wbc);
+            }
+            wbc.close();
+        } else if (representationBuilder instanceof RawFileRepresentationBuilder) {
+            FileUtils.copyFile(((RawFileRepresentationBuilder) representationBuilder).getFile(), outFile);
         }
-        wbc.close();
+
     }
 
 
     public static void writeLive(RepresentationBuilder representationBuilder, RepresentationType representation, File outputDirectory) throws IOException {
-        String initPattern = representation.getSegmentTemplate().getInitialization2();
-        initPattern = templateReplace(initPattern, representation.getId(), 0, representation.getBandwidth(), 0);
-        File initFile = new File(outputDirectory, initPattern);
-        FileUtils.forceMkdir(initFile.getParentFile());
-        LOG.info("Writing init file " + initFile.getAbsolutePath());
-        WritableByteChannel wbc = Channels.newChannel(new FileOutputStream(initFile));
-        representationBuilder.getInitSegment().writeContainer(wbc);
-        wbc.close();
-        long time = 0;
-        long number = representation.getSegmentTemplate().getStartNumber();
-        Iterator<Container> segments = representationBuilder.iterator();
-        LOG.info("Writing segment files " + representation.getSegmentTemplate().getMedia().replace("$RepresentationID$", representation.getId()));
-        for (SegmentTimelineType.S s : representation.getSegmentTemplate().getSegmentTimeline().getSArray()) {
-            if (s.isSetT()) {
-                time = s.getT().longValue();
-            }
-            String segmentFilename =
-                    templateReplace(
-                            representation.getSegmentTemplate().getMedia(),
-                            representation.getId(), number, representation.getBandwidth(), time);
-            Container segment = segments.next();
-            File segmentFile = new File(outputDirectory, segmentFilename);
-            FileUtils.forceMkdir(segmentFile.getParentFile());
+        if (representationBuilder instanceof Mp4RepresentationBuilder) {
+            Mp4RepresentationBuilder mp4RepresentationBuilder = (Mp4RepresentationBuilder)representationBuilder;
+            String initPattern = representation.getSegmentTemplate().getInitialization2();
+            initPattern = templateReplace(initPattern, representation.getId(), 0, representation.getBandwidth(), 0);
+            File initFile = new File(outputDirectory, initPattern);
+            FileUtils.forceMkdir(initFile.getParentFile());
+            LOG.info("Writing init file " + initFile.getAbsolutePath());
+            WritableByteChannel wbc = Channels.newChannel(new FileOutputStream(initFile));
+            mp4RepresentationBuilder.getInitSegment().writeContainer(wbc);
+            wbc.close();
+            long time = 0;
+            long number = representation.getSegmentTemplate().getStartNumber();
+            Iterator<Container> segments = mp4RepresentationBuilder.iterator();
+            LOG.info("Writing segment files " + representation.getSegmentTemplate().getMedia().replace("$RepresentationID$", representation.getId()));
+            for (SegmentTimelineType.S s : representation.getSegmentTemplate().getSegmentTimeline().getSArray()) {
+                if (s.isSetT()) {
+                    time = s.getT().longValue();
+                }
+                String segmentFilename =
+                        templateReplace(
+                                representation.getSegmentTemplate().getMedia(),
+                                representation.getId(), number, representation.getBandwidth(), time);
+                Container segment = segments.next();
+                File segmentFile = new File(outputDirectory, segmentFilename);
+                FileUtils.forceMkdir(segmentFile.getParentFile());
 
-            WritableByteChannel swbc = new FileOutputStream(segmentFile).getChannel();
-            segment.writeContainer(swbc);
-            swbc.close();
-            time += s.getD().longValue();
-            number += 1;
+                WritableByteChannel swbc = new FileOutputStream(segmentFile).getChannel();
+                segment.writeContainer(swbc);
+                swbc.close();
+                time += s.getD().longValue();
+                number += 1;
 
-            if (s.isSetR()) {
-                long r = s.getR().longValue();
-                while (r > 0) {
-                    String segmentFilenameRepeater =
-                            templateReplace(
-                                    representation.getSegmentTemplate().getMedia(),
-                                    representation.getId(), number, representation.getBandwidth(), time);
-                    Container segmentRepeater = segments.next();
-                    File segmentFileRepeater = new File(outputDirectory, segmentFilenameRepeater);
-                    FileUtils.forceMkdir(segmentFileRepeater.getParentFile());
+                if (s.isSetR()) {
+                    long r = s.getR().longValue();
+                    while (r > 0) {
+                        String segmentFilenameRepeater =
+                                templateReplace(
+                                        representation.getSegmentTemplate().getMedia(),
+                                        representation.getId(), number, representation.getBandwidth(), time);
+                        Container segmentRepeater = segments.next();
+                        File segmentFileRepeater = new File(outputDirectory, segmentFilenameRepeater);
+                        FileUtils.forceMkdir(segmentFileRepeater.getParentFile());
 
-                    WritableByteChannel swbcRepeater = new FileOutputStream(segmentFileRepeater).getChannel();
-                    segmentRepeater.writeContainer(swbcRepeater);
-                    swbcRepeater.close();
-                    time += s.getD().longValue();
-                    number += 1;
-                    r -= 1;
+                        WritableByteChannel swbcRepeater = new FileOutputStream(segmentFileRepeater).getChannel();
+                        segmentRepeater.writeContainer(swbcRepeater);
+                        swbcRepeater.close();
+                        time += s.getD().longValue();
+                        number += 1;
+                        r -= 1;
+                    }
                 }
             }
+        } else if (representation instanceof RawFileRepresentationBuilder) {
+            throw new RuntimeException("No implemented");
         }
 
     }

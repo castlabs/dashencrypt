@@ -7,7 +7,7 @@ import com.castlabs.dash.dashfragmenter.formats.csf.SegmentBaseSingleSidxManifes
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegmenttemplate.ExplodedSegmentListManifestWriterImpl;
 import com.castlabs.dash.dashfragmenter.formats.multiplefilessegmenttemplate.SingleSidxExplode;
 import com.castlabs.dash.dashfragmenter.representation.ManifestOptimizer;
-import com.castlabs.dash.dashfragmenter.representation.RepresentationBuilder;
+import com.castlabs.dash.dashfragmenter.representation.Mp4RepresentationBuilder;
 import com.castlabs.dash.dashfragmenter.representation.SyncSampleAssistedRepresentationBuilder;
 import com.castlabs.dash.dashfragmenter.tracks.NegativeCtsInsteadOfEdit;
 import com.castlabs.dash.helpers.BoxHelper;
@@ -407,7 +407,7 @@ public class DashFileSetSequence {
 
 
     private void addTrickModeTracks(MPDDocument mpdDocument) throws IOException {
-        List<RepresentationBuilder> trickModeRepresentations = new ArrayList<RepresentationBuilder>();
+        List<Mp4RepresentationBuilder> trickModeRepresentations = new ArrayList<Mp4RepresentationBuilder>();
         for (File trickModeFile : safe(trickModeFiles)) {
             if (isMp4(trickModeFile)) {
                 Movie movie = MovieCreator.build(new FileDataSourceViaHeapImpl(trickModeFile));
@@ -441,12 +441,12 @@ public class DashFileSetSequence {
             essentialProperty.setValue("1"); // an AdaptationSet built with ExplodedSegmentListManifestWriter or SegmentBaseSingleSidxManifestWriterImpl always has id "1" if it's a video.
 
             ArrayList<RepresentationType> representations = new ArrayList<RepresentationType>();
-            for (RepresentationBuilder representationBuilder : trickModeRepresentations) {
-                LOG.fine("Creating Trick Mode Representation for " + representationBuilder.getSource());
-                double seconds = (double) representationBuilder.getTrack().getDuration() / representationBuilder.getTrack().getTrackMetaData().getTimescale();
+            for (Mp4RepresentationBuilder mp4RepresentationBuilder : trickModeRepresentations) {
+                LOG.fine("Creating Trick Mode Representation for " + mp4RepresentationBuilder.getSource());
+                double seconds = (double) mp4RepresentationBuilder.getTrack().getDuration() / mp4RepresentationBuilder.getTrack().getTrackMetaData().getTimescale();
                 // todo find actual main video FPS - will happen when
-                long maxPlayoutRate = Math.round((double) 25 / ((double) representationBuilder.getTrack().getSamples().size() / seconds));
-                RepresentationType representation = writeDataAndCreateRepresentation(representationBuilder, Locale.forLanguageTag(representationBuilder.getTrack().getTrackMetaData().getLanguage()));
+                long maxPlayoutRate = Math.round((double) 25 / ((double) mp4RepresentationBuilder.getTrack().getSamples().size() / seconds));
+                RepresentationType representation = writeDataAndCreateRepresentation(mp4RepresentationBuilder, Locale.forLanguageTag(mp4RepresentationBuilder.getTrack().getTrackMetaData().getLanguage()));
                 representation.setMaxPlayoutRate(maxPlayoutRate);
                 representations.add(representation);
             }
@@ -455,21 +455,21 @@ public class DashFileSetSequence {
         }
     }
 
-    RepresentationType writeDataAndCreateRepresentation(RepresentationBuilder representationBuilder, Locale locale) throws IOException {
+    RepresentationType writeDataAndCreateRepresentation(Mp4RepresentationBuilder mp4RepresentationBuilder, Locale locale) throws IOException {
         RepresentationType representation;
-        String id = filename2UrlPath((representationBuilder.getSource()));
+        String id = filename2UrlPath((mp4RepresentationBuilder.getSource()));
         if (explode) {
-            representation = representationBuilder.getLiveRepresentation();
+            representation = mp4RepresentationBuilder.getLiveRepresentation();
 
             representation.getSegmentTemplate().setInitialization2(initPattern.replace("%lang%", locale.toLanguageTag()));
             representation.getSegmentTemplate().setMedia(mediaPattern.replace("%lang%", locale.toLanguageTag()));
             representation.setId(id);
-            RepresentationBuilderToFile.writeLive(representationBuilder, representation, outputDirectory);
+            RepresentationBuilderToFile.writeLive(mp4RepresentationBuilder, representation, outputDirectory);
         } else {
-            representation = representationBuilder.getOnDemandRepresentation();
+            representation = mp4RepresentationBuilder.getOnDemandRepresentation();
             representation.addNewBaseURL().setStringValue(id + ".mp4");
             representation.setId(id);
-            RepresentationBuilderToFile.writeOnDemand(representationBuilder, representation, outputDirectory);
+            RepresentationBuilderToFile.writeOnDemand(mp4RepresentationBuilder, representation, outputDirectory);
         }
         return representation;
     }
@@ -565,9 +565,9 @@ public class DashFileSetSequence {
             throw new RuntimeException("Not sure what kind of textTrack " + textTrackFile.getName() + " is.");
         }
         Locale locale = getTextTrackLocale(textTrackFile);
-        RepresentationBuilder representationBuilder =
+        Mp4RepresentationBuilder mp4RepresentationBuilder =
                 new SyncSampleAssistedRepresentationBuilder(textTrack, textTrackFile.getName(), 10, Collections.<ProtectionSystemSpecificHeaderBox>emptyList());
-        RepresentationType representation = writeDataAndCreateRepresentation(representationBuilder, locale);
+        RepresentationType representation = writeDataAndCreateRepresentation(mp4RepresentationBuilder, locale);
         AdaptationSetType adaptationSet = period.addNewAdaptationSet();
 
         adaptationSet.setLang(locale.getLanguage() + ("".equals(locale.getScript()) ? "" : "-" + locale.getScript()));

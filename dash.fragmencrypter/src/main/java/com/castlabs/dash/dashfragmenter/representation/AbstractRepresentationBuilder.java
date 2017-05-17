@@ -33,7 +33,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
-import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
@@ -42,13 +41,12 @@ import java.util.*;
 
 import static com.castlabs.dash.helpers.BoxHelper.boxToBytes;
 import static com.castlabs.dash.helpers.ManifestHelper.convertFramerate;
-import static com.castlabs.dash.helpers.ManifestHelper.getApproxTrackSize;
 import static com.castlabs.dash.helpers.Timing.getDuration;
 import static com.castlabs.dash.helpers.Timing.getPtss;
 import static com.castlabs.dash.helpers.Timing.getTimeMappingEditTime;
 import static com.googlecode.mp4parser.util.CastUtils.l2i;
 
-public abstract class AbstractRepresentationBuilder extends AbstractList<Container> implements RepresentationBuilder {
+public abstract class AbstractRepresentationBuilder extends AbstractList<Container> implements Mp4RepresentationBuilder {
     protected Track theTrack;
     protected final List<ProtectionSystemSpecificHeaderBox> psshs;
     protected Date date = new Date();
