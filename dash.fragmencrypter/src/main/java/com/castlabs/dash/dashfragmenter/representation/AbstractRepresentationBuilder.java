@@ -1,34 +1,31 @@
 package com.castlabs.dash.dashfragmenter.representation;
 
 import com.castlabs.dash.helpers.DashHelper;
+import com.castlabs.dash.helpers.DashHelper2;
 import com.castlabs.dash.helpers.SapHelper;
 import com.castlabs.dash.helpers.Timing;
-import com.coremedia.iso.BoxParser;
-import com.coremedia.iso.IsoFile;
-import com.coremedia.iso.IsoTypeWriter;
-import com.coremedia.iso.boxes.*;
-import com.coremedia.iso.boxes.fragment.*;
-import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
-import com.googlecode.mp4parser.DataSource;
-import com.googlecode.mp4parser.authoring.Edit;
-import com.googlecode.mp4parser.authoring.Sample;
-import com.googlecode.mp4parser.authoring.Track;
-import com.googlecode.mp4parser.authoring.tracks.CencEncryptedTrack;
-import com.googlecode.mp4parser.boxes.dece.SampleEncryptionBox;
-import com.googlecode.mp4parser.boxes.mp4.samplegrouping.CencSampleEncryptionInformationGroupEntry;
-import com.googlecode.mp4parser.boxes.mp4.samplegrouping.GroupEntry;
-import com.googlecode.mp4parser.boxes.mp4.samplegrouping.SampleGroupDescriptionBox;
-import com.googlecode.mp4parser.boxes.mp4.samplegrouping.SampleToGroupBox;
-import com.googlecode.mp4parser.boxes.threegpp26244.SegmentIndexBox;
-import com.googlecode.mp4parser.util.Path;
-import com.googlecode.mp4parser.util.UUIDConverter;
-import com.mp4parser.iso14496.part12.SampleAuxiliaryInformationOffsetsBox;
-import com.mp4parser.iso14496.part12.SampleAuxiliaryInformationSizesBox;
-import com.mp4parser.iso23001.part7.CencSampleAuxiliaryDataFormat;
-import com.mp4parser.iso23001.part7.ProtectionSystemSpecificHeaderBox;
-import com.mp4parser.iso23001.part7.TrackEncryptionBox;
 import mpegCenc2013.DefaultKIDAttribute;
 import mpegDashSchemaMpd2011.*;
+import org.apache.commons.lang.StringUtils;
+import org.mp4parser.*;
+import org.mp4parser.boxes.iso14496.part12.*;
+import org.mp4parser.boxes.iso23001.part7.CencSampleAuxiliaryDataFormat;
+import org.mp4parser.boxes.iso23001.part7.ProtectionSystemSpecificHeaderBox;
+import org.mp4parser.boxes.iso23001.part7.SampleEncryptionBox;
+import org.mp4parser.boxes.iso23001.part7.TrackEncryptionBox;
+import org.mp4parser.boxes.sampleentry.AudioSampleEntry;
+import org.mp4parser.boxes.sampleentry.SampleEntry;
+import org.mp4parser.boxes.samplegrouping.GroupEntry;
+import org.mp4parser.boxes.samplegrouping.SampleGroupDescriptionBox;
+import org.mp4parser.boxes.samplegrouping.SampleToGroupBox;
+import org.mp4parser.muxer.DataSource;
+import org.mp4parser.muxer.Edit;
+import org.mp4parser.muxer.Sample;
+import org.mp4parser.muxer.Track;
+import org.mp4parser.muxer.tracks.encryption.CencEncryptedTrack;
+import org.mp4parser.tools.IsoTypeWriter;
+import org.mp4parser.tools.Path;
+import org.mp4parser.tools.UUIDConverter;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -78,7 +75,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         minorBrands.add("avc1");
         initSegment.add(new FileTypeBox("isom", 0, minorBrands));
         initSegment.add(createMoov());
-        return new ListContainer(initSegment);
+        return new BasicContainer(initSegment);
     }
 
     protected Box createMoov() {
@@ -183,7 +180,9 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
     }
 
     protected void createStsd(Track track, SampleTableBox stbl) {
-        stbl.addBox(track.getSampleDescriptionBox());
+        SampleDescriptionBox stsd = new SampleDescriptionBox();
+        stsd.setBoxes(track.getSampleEntries());
+        stbl.addBox(stsd);
     }
 
     protected Box createMinf(Track track) {
@@ -281,16 +280,12 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
 
     protected void addContentProtection(RepresentationType representation) {
         List<String> keyIds = new ArrayList<String>();
-        if (theTrack instanceof CencEncryptedTrack) {
-            keyIds.add(((CencEncryptedTrack) theTrack).getDefaultKeyId().toString());
-            for (GroupEntry ge : theTrack.getSampleGroups().keySet()) {
-                if (ge instanceof CencSampleEncryptionInformationGroupEntry) {
-                    if (((CencSampleEncryptionInformationGroupEntry) ge).getKid() != null) {
-                        keyIds.add(((CencSampleEncryptionInformationGroupEntry) ge).getKid().toString());
-                    }
-                }
-            }
+        for (SampleEntry sampleEntry : theTrack.getSampleEntries()) {
+            TrackEncryptionBox tenc = Path.getPath((Container) sampleEntry, "sinf[0]/schi[0]/tenc[0]");
+            if (tenc != null) {
+                keyIds.add(tenc.getDefault_KID().toString());
 
+            }
         }
 
         if (!keyIds.isEmpty()) {
@@ -365,7 +360,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         } while (fragmentEndSample < endSample);
 
 
-        return new ListContainer(moofMdat);
+        return new BasicContainer(moofMdat);
     }
 
 
@@ -404,18 +399,18 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         sidx.setReserved(0);
 
         Container initSegment = getInitSegment();
-        TrackHeaderBox tkhd = Path.getPath(initSegment, "/moov[0]/trak[0]/tkhd[0]");
-        MediaHeaderBox mdhd = Path.getPath(initSegment, "/moov[0]/trak[0]/mdia[0]/mdhd[0]");
+        TrackHeaderBox tkhd = Path.getPath(initSegment, "moov[0]/trak[0]/tkhd[0]");
+        MediaHeaderBox mdhd = Path.getPath(initSegment, "moov[0]/trak[0]/mdia[0]/mdhd[0]");
         sidx.setReferenceId(tkhd.getTrackId());
         sidx.setTimeScale(mdhd.getTimescale());
         // we only have one
-        long[] ptss = getPtss(Path.<TrackRunBox>getPath(get(0), "/moof[0]/traf[0]/trun[0]"));
+        long[] ptss = getPtss(Path.<TrackRunBox>getPath(get(0), "moof[0]/traf[0]/trun[0]"));
         Arrays.sort(ptss); // index 0 has now the earliest presentation time stamp!
         long timeMappingEdit = getTimeMappingEditTime(initSegment);
-        sidx.setEarliestPresentationTime(ptss[0] - timeMappingEdit<0?0:ptss[0] - timeMappingEdit);
+        sidx.setEarliestPresentationTime(ptss[0] - timeMappingEdit < 0 ? 0 : ptss[0] - timeMappingEdit);
         List<SegmentIndexBox.Entry> entries = sidx.getEntries();
 
-        TrackExtendsBox trex = Path.getPath(initSegment, "/moov[0]/mvex[0]/trex[0]");
+        TrackExtendsBox trex = Path.getPath(initSegment, "moov[0]/mvex[0]/trex[0]");
 
         // ugly code ...
 
@@ -436,7 +431,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         }
 
         sidx.setFirstOffset(0);
-        return new ListContainer(Collections.<Box>singletonList(sidx));
+        return new BasicContainer(Collections.<Box>singletonList(sidx));
     }
 
     protected void createTfdt(long startSample, Track track, TrackFragmentBox parent) {
@@ -523,7 +518,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
                 if (track.getSampleDependencies() != null && !track.getSampleDependencies().isEmpty()) {
                     SampleDependencyTypeBox.Entry e = track.getSampleDependencies().get(i);
                     sflags.setSampleDependsOn(e.getSampleDependsOn());
-                    sflags.setSampleIsDependedOn(e.getSampleIsDependentOn());
+                    sflags.setSampleIsDependedOn(e.getSampleIsDependedOn());
                     sflags.setSampleHasRedundancy(e.getSampleHasRedundancy());
                 }
                 if (track.getSyncSamples() != null && track.getSyncSamples().length > 0) {
@@ -562,10 +557,10 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         TrackFragmentBox traf = new TrackFragmentBox();
         parent.addBox(traf);
         createTfhd(traf);
-        TrackFragmentHeaderBox tfhd = (TrackFragmentHeaderBox) traf.getBoxes().get(traf.getBoxes().size()-1);
+        TrackFragmentHeaderBox tfhd = (TrackFragmentHeaderBox) traf.getBoxes().get(traf.getBoxes().size() - 1);
         createTfdt(startSample, track, traf);
         createTrun(startSample, endSample, track, traf);
-        TrackRunBox trun = (TrackRunBox) traf.getBoxes().get(traf.getBoxes().size()-1);
+        TrackRunBox trun = (TrackRunBox) traf.getBoxes().get(traf.getBoxes().size() - 1);
         SampleFlags first = null;
         SampleFlags second = null;
         boolean allFllowingSame = true;
@@ -591,11 +586,11 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         if (track instanceof CencEncryptedTrack) {
             createSaiz(startSample, endSample, (CencEncryptedTrack) track, traf);
             createSenc(startSample, endSample, (CencEncryptedTrack) track, traf);
-            createSaio(traf);
+            createSaio(traf, parent);
         }
 
 
-        Map<String, List<GroupEntry>> groupEntryFamilies = new HashMap<String, List<GroupEntry>>();
+        Map<String, List<GroupEntry>> groupEntryFamilies = new HashMap<>();
         for (Map.Entry<GroupEntry, long[]> sg : track.getSampleGroups().entrySet()) {
             String type = sg.getKey().getType();
             List<GroupEntry> groupEntries = groupEntryFamilies.get(type);
@@ -667,7 +662,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         parent.addBox(senc);
     }
 
-    protected void createSaio(TrackFragmentBox parent) {
+    protected void createSaio(TrackFragmentBox parent, MovieFragmentBox moof) {
         SampleAuxiliaryInformationOffsetsBox saio = new SampleAuxiliaryInformationOffsetsBox();
         parent.addBox(saio);
         assert parent.getBoxes(TrackRunBox.class).size() == 1 : "Don't know how to deal with multiple Track Run Boxes when encrypting";
@@ -683,7 +678,6 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
                 offset += box.getSize();
             }
         }
-        MovieFragmentBox moof = (MovieFragmentBox) parent.getParent();
         offset += 16; // traf header till 1st child box
         for (Box box : moof.getBoxes()) {
             if (box == parent) {
@@ -699,26 +693,27 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
     }
 
     protected void createSaiz(long startSample, long endSample, CencEncryptedTrack track, TrackFragmentBox parent) {
-        SampleDescriptionBox sampleDescriptionBox = track.getSampleDescriptionBox();
 
-        TrackEncryptionBox tenc = Path.getPath(sampleDescriptionBox, "enc.[0]/sinf[0]/schi[0]/tenc[0]");
+        TrackEncryptionBox tenc = Path.getPath((Container) track.getSamples().get(l2i(startSample)).getSampleEntry(), "sinf[0]/schi[0]/tenc[0]");
+        if (tenc != null) {
+            SampleAuxiliaryInformationSizesBox saiz = new SampleAuxiliaryInformationSizesBox();
+            saiz.setAuxInfoType("cenc");
+            saiz.setFlags(1);
+            if (track.hasSubSampleEncryption()) {
+                short[] sizes = new short[l2i(endSample - startSample)];
+                List<CencSampleAuxiliaryDataFormat> auxs =
+                        track.getSampleEncryptionEntries().subList(l2i(startSample - 1), l2i(endSample - 1));
+                for (int i = 0; i < sizes.length; i++) {
+                    sizes[i] = (short) auxs.get(i).getSize();
+                }
+                saiz.setSampleInfoSizes(sizes);
+            } else {
 
-        SampleAuxiliaryInformationSizesBox saiz = new SampleAuxiliaryInformationSizesBox();
-        saiz.setAuxInfoType("cenc");
-        saiz.setFlags(1);
-        if (track.hasSubSampleEncryption()) {
-            short[] sizes = new short[l2i(endSample - startSample)];
-            List<CencSampleAuxiliaryDataFormat> auxs =
-                    track.getSampleEncryptionEntries().subList(l2i(startSample - 1), l2i(endSample - 1));
-            for (int i = 0; i < sizes.length; i++) {
-                sizes[i] = (short) auxs.get(i).getSize();
+                saiz.setDefaultSampleInfoSize(tenc.getDefaultIvSize());
+                saiz.setSampleCount(l2i(endSample - startSample));
             }
-            saiz.setSampleInfoSizes(sizes);
-        } else {
-            saiz.setDefaultSampleInfoSize(tenc.getDefaultIvSize());
-            saiz.setSampleCount(l2i(endSample - startSample));
+            parent.addBox(saiz);
         }
-        parent.addBox(saiz);
     }
 
     protected Box createMdat(final long startSample, final long endSample) {
@@ -726,18 +721,6 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         class Mdat implements Box {
             Container parent;
             long size_ = -1;
-
-            public Container getParent() {
-                return parent;
-            }
-
-            public void setParent(Container parent) {
-                this.parent = parent;
-            }
-
-            public long getOffset() {
-                throw new RuntimeException("Doesn't have any meaning for programmatically created boxes");
-            }
 
             public long getSize() {
                 if (size_ != -1) return size_;
@@ -790,7 +773,11 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
     }
 
     public String getCodec() {
-        return DashHelper.getRfc6381Codec(theTrack.getSampleDescriptionBox().getSampleEntry());
+        LinkedHashSet<String> codecs = new LinkedHashSet<>();
+        for (SampleEntry sampleEntry : theTrack.getSampleEntries()) {
+            codecs.add(DashHelper2.getRfc6381Codec(sampleEntry));
+        }
+        return StringUtils.join(codecs.toArray(), ",");
     }
 
 
@@ -799,7 +786,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         List<Sample> samples = track.getSamples();
         int increment = samples.size() / Math.min(samples.size(), 10000);
         int sampleSize = 1; // start with one so that we never get into a divided by zero situation
-        for (int i = 0; i < (samples.size()-increment); i+=increment) {
+        for (int i = 0; i < (samples.size() - increment); i += increment) {
             size += samples.get(i).getSize();
             sampleSize++;
         }
@@ -874,15 +861,15 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
             representation.setSar("1:1");
             // too hard to find it out. Ignoring even though it should be set according to DASH-AVC-264-v2.00-hd-mca.pdf
         } else if (theTrack.getHandler().equals("soun")) {
-
-            AudioSampleEntry ase = (AudioSampleEntry) theTrack.getSampleDescriptionBox().getSampleEntry();
-
             representation.setMimeType("audio/mp4");
-            representation.setCodecs(DashHelper.getRfc6381Codec(ase));
-            representation.setAudioSamplingRate("" + DashHelper.getAudioSamplingRate(ase));
+
+            AudioSampleEntry ase = (AudioSampleEntry) theTrack.getSampleEntries().get(0);
+
+            representation.setCodecs(DashHelper2.getRfc6381Codec(ase));
+            representation.setAudioSamplingRate("" + DashHelper2.getAudioSamplingRate(ase));
 
             DescriptorType audio_channel_conf = representation.addNewAudioChannelConfiguration();
-            DashHelper.ChannelConfiguration cc = DashHelper.getChannelConfiguration(ase);
+            DashHelper2.ChannelConfiguration cc = DashHelper2.getChannelConfiguration(ase);
             audio_channel_conf.setSchemeIdUri(cc.schemeIdUri);
             audio_channel_conf.setValue(cc.value);
 
@@ -896,7 +883,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         }
 
 
-        representation.setBandwidth(getBandwidth ());
+        representation.setBandwidth(getBandwidth());
 
         addContentProtection(representation);
 

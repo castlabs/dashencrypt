@@ -1,8 +1,7 @@
 package com.castlabs.dash.dashfragmenter.representation;
 
-import com.coremedia.iso.boxes.Container;
-import com.googlecode.mp4parser.authoring.Track;
-import mpegDashSchemaMpd2011.RepresentationType;
+import org.mp4parser.Container;
+import org.mp4parser.muxer.Track;
 
 import java.util.List;
 

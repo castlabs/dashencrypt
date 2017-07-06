@@ -107,6 +107,11 @@
             <version>1.1.22</version>
         </dependency>
         <dependency>
+            <groupId>org.mp4parser</groupId>
+            <version>1.9.28-SNAPSHOT</version>
+            <artifactId>muxer</artifactId>
+        </dependency>
+        <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>2.4</version>

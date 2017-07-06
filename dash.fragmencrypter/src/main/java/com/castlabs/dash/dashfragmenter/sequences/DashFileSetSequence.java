@@ -12,6 +12,7 @@ import com.castlabs.dash.dashfragmenter.representation.SyncSampleAssistedReprese
 import com.castlabs.dash.dashfragmenter.tracks.NegativeCtsInsteadOfEdit;
 import com.castlabs.dash.helpers.BoxHelper;
 import com.castlabs.dash.helpers.DashHelper;
+import com.castlabs.dash.helpers.DashHelper2;
 import com.castlabs.dash.helpers.RepresentationBuilderToFile;
 import com.coremedia.iso.IsoFile;
 import com.coremedia.iso.boxes.*;
@@ -21,12 +22,9 @@ import com.googlecode.mp4parser.authoring.*;
 import com.googlecode.mp4parser.authoring.builder.BetterFragmenter;
 import com.googlecode.mp4parser.authoring.builder.Fragmenter;
 import com.googlecode.mp4parser.authoring.builder.StaticFragmentIntersectionFinderImpl;
-import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import com.googlecode.mp4parser.authoring.tracks.*;
 import com.googlecode.mp4parser.authoring.tracks.h264.H264TrackImpl;
 import com.googlecode.mp4parser.authoring.tracks.ttml.TtmlHelpers;
-import com.googlecode.mp4parser.authoring.tracks.ttml.TtmlTrackImpl;
-import com.googlecode.mp4parser.authoring.tracks.webvtt.WebVttTrack;
 import com.googlecode.mp4parser.boxes.mp4.samplegrouping.CencSampleEncryptionInformationGroupEntry;
 import com.googlecode.mp4parser.util.Mp4Arrays;
 import com.googlecode.mp4parser.util.Path;
@@ -74,7 +72,8 @@ public class DashFileSetSequence {
     protected UUID videoKeyid;
     protected SecretKey videoKey;
 
-    protected Map<UUID, List<ProtectionSystemSpecificHeaderBox>> psshBoxes = new HashMap<UUID, List<ProtectionSystemSpecificHeaderBox>>();
+    protected Map<UUID, List<ProtectionSystemSpecificHeaderBox>> psshBoxes = new HashMap<>();
+    protected Map<UUID, List<org.mp4parser.boxes.iso23001.part7.ProtectionSystemSpecificHeaderBox>> psshBoxes2 = new HashMap<>();
 
     protected List<FileAndTrackSelector> inputFilesOrig;
     protected List<FileAndTrackSelector> inputFiles;
@@ -119,6 +118,18 @@ public class DashFileSetSequence {
 
     public void setPsshBoxes(Map<UUID, List<ProtectionSystemSpecificHeaderBox>> psshBoxes) {
         this.psshBoxes = psshBoxes;
+        this.psshBoxes2 = new HashMap<>();
+        for (UUID uuid : psshBoxes.keySet()) {
+            List<org.mp4parser.boxes.iso23001.part7.ProtectionSystemSpecificHeaderBox> l = new ArrayList<>();
+            for (ProtectionSystemSpecificHeaderBox pssh : psshBoxes.get(uuid)) {
+                org.mp4parser.boxes.iso23001.part7.ProtectionSystemSpecificHeaderBox pssh2
+                        = new org.mp4parser.boxes.iso23001.part7.ProtectionSystemSpecificHeaderBox();
+                pssh2.setSystemId(pssh.getSystemId());
+                pssh2.setKeyIds(pssh.getKeyIds());
+                pssh2.setContent(pssh.getContent());
+                l.add(pssh2);
+            }
+        }
     }
 
     public void setSubtitles(List<File> subtitles) {
@@ -266,7 +277,7 @@ public class DashFileSetSequence {
             useNegativeCtsToPreventEdits(track2File);
 
             Map<TrackProxy, UUID> track2KeyId = assignKeyIds(track2File);
-            Map<UUID, SecretKey> keyId2Key = createKeyMap(track2KeyId);
+            Map<UUID, SecretKey> keyId2Key = createKeyMap();
 
             encryptTracks(track2File, track2KeyId, keyId2Key);
 
@@ -348,7 +359,7 @@ public class DashFileSetSequence {
         }
     }
 
-    public Map<UUID, SecretKey> createKeyMap(Map<TrackProxy, UUID> track2KeyId) {
+    public Map<UUID, SecretKey> createKeyMap() {
         Map<UUID, SecretKey> keyIds = new HashMap<UUID, SecretKey>();
         keyIds.put(audioKeyid, audioKey);
         keyIds.put(videoKeyid, videoKey);
@@ -410,24 +421,24 @@ public class DashFileSetSequence {
         List<Mp4RepresentationBuilder> trickModeRepresentations = new ArrayList<Mp4RepresentationBuilder>();
         for (File trickModeFile : safe(trickModeFiles)) {
             if (isMp4(trickModeFile)) {
-                Movie movie = MovieCreator.build(new FileDataSourceViaHeapImpl(trickModeFile));
-                for (Track track : movie.getTracks()) {
+                org.mp4parser.muxer.Movie movie = org.mp4parser.muxer.container.mp4.MovieCreator.build(trickModeFile.getAbsolutePath());
+                for (org.mp4parser.muxer.Track track : movie.getTracks()) {
                     if ("vide".equals(track.getHandler())) {
                         if (videoKeyid != null) {
-                            track = new CencEncryptingTrackImpl(track, videoKeyid, videoKey, false);
+                            track = new org.mp4parser.muxer.tracks.encryption.CencEncryptingTrackImpl(track, videoKeyid, videoKey, false);
                         }
-                        trickModeRepresentations.add(new SyncSampleAssistedRepresentationBuilder(track, trickModeFile.getName(), time2Frames(track, 3), psshBoxes.get(videoKeyid)));
+                        trickModeRepresentations.add(new SyncSampleAssistedRepresentationBuilder(track, trickModeFile.getName(), com.castlabs.dash.helpers.DashHelper2.time2Frames(track, 3), psshBoxes2.get(videoKeyid)));
                     } else {
                         LOG.warning("Excluding " + trickModeFile + " track " + track.getTrackMetaData().getTrackId() + " as it's not a video track");
 
                     }
                 }
             } else if (trickModeFile.getName().endsWith(".h264") || trickModeFile.getName().endsWith(".264")) {
-                Track track = new H264TrackImpl(new FileDataSourceViaHeapImpl(trickModeFile));
+                org.mp4parser.muxer.Track track = new org.mp4parser.muxer.tracks.h264.H264TrackImpl(new org.mp4parser.muxer.FileDataSourceViaHeapImpl(trickModeFile));
                 if (videoKeyid != null) {
-                    track = new CencEncryptingTrackImpl(track, videoKeyid, videoKey, false);
+                    track = new org.mp4parser.muxer.tracks.encryption.CencEncryptingTrackImpl(track, videoKeyid, videoKey, false);
                 }
-                trickModeRepresentations.add(new SyncSampleAssistedRepresentationBuilder(track, trickModeFile.getName(), time2Frames(track, 3), psshBoxes.get(videoKeyid)));
+                trickModeRepresentations.add(new SyncSampleAssistedRepresentationBuilder(track, trickModeFile.getName(), DashHelper2.time2Frames(track, 3), psshBoxes2.get(videoKeyid)));
             } else {
                 throw new IOException("Trick Mode file " + trickModeFile + " is not a valid trick mode file. Expecting *.[h]264 or *.mp4");
             }
@@ -548,10 +559,10 @@ public class DashFileSetSequence {
         LOG.info("Creating Muxed Text Track AdaptationSet for " + textTrackFile.getName());
         PeriodType period = mpdDocument.getMPD().getPeriodArray()[0];
 
-        Track textTrack;
+        org.mp4parser.muxer.Track textTrack;
         if (textTrackFile.getName().endsWith(".xml") || textTrackFile.getName().endsWith(".dfxp") || textTrackFile.getName().endsWith(".ttml")) {
             try {
-                textTrack = new TtmlTrackImpl(textTrackFile.getName() + "-mp4",
+                textTrack = new org.mp4parser.muxer.tracks.ttml.TtmlTrackImpl(textTrackFile.getName() + "-mp4",
                         Collections.singletonList(documentBuilder.parse(textTrackFile)));
             } catch (SAXException | ParserConfigurationException | URISyntaxException e) {
                 throw new IOException(e);
@@ -560,13 +571,13 @@ public class DashFileSetSequence {
             }
 
         } else if (textTrackFile.getName().endsWith(".vtt")) {
-            textTrack = new WebVttTrack(new FileInputStream(textTrackFile), textTrackFile.getName(), getTextTrackLocale(textTrackFile));
+            textTrack = new org.mp4parser.muxer.tracks.webvtt.WebVttTrack(new FileInputStream(textTrackFile), textTrackFile.getName(), getTextTrackLocale(textTrackFile));
         } else {
             throw new RuntimeException("Not sure what kind of textTrack " + textTrackFile.getName() + " is.");
         }
         Locale locale = getTextTrackLocale(textTrackFile);
         Mp4RepresentationBuilder mp4RepresentationBuilder =
-                new SyncSampleAssistedRepresentationBuilder(textTrack, textTrackFile.getName(), 10, Collections.<ProtectionSystemSpecificHeaderBox>emptyList());
+                new SyncSampleAssistedRepresentationBuilder(textTrack, textTrackFile.getName(), 10, Collections.emptyList());
         RepresentationType representation = writeDataAndCreateRepresentation(mp4RepresentationBuilder, locale);
         AdaptationSetType adaptationSet = period.addNewAdaptationSet();
 

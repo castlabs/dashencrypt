@@ -3,7 +3,6 @@ package com.castlabs.dash.helpers;
 import com.castlabs.dash.dashfragmenter.representation.Mp4RepresentationBuilder;
 import com.castlabs.dash.dashfragmenter.representation.RawFileRepresentationBuilder;
 import com.castlabs.dash.dashfragmenter.representation.RepresentationBuilder;
-import com.coremedia.iso.boxes.Container;
 import mpegDashSchemaMpd2011.RepresentationType;
 import mpegDashSchemaMpd2011.SegmentTimelineType;
 import org.apache.commons.io.FileUtils;
@@ -36,7 +35,7 @@ public class RepresentationBuilderToFile {
             mp4RepresentationBuilder.getIndexSegment().writeContainer(wbc);
 
             LOG.fine("Writing segments");
-            for (Container fragment : mp4RepresentationBuilder) {
+            for (org.mp4parser.Container fragment : mp4RepresentationBuilder) {
                 fragment.writeContainer(wbc);
             }
             wbc.close();
@@ -60,7 +59,7 @@ public class RepresentationBuilderToFile {
             wbc.close();
             long time = 0;
             long number = representation.getSegmentTemplate().getStartNumber();
-            Iterator<Container> segments = mp4RepresentationBuilder.iterator();
+            Iterator<org.mp4parser.Container> segments = mp4RepresentationBuilder.iterator();
             LOG.info("Writing segment files " + representation.getSegmentTemplate().getMedia().replace("$RepresentationID$", representation.getId()));
             for (SegmentTimelineType.S s : representation.getSegmentTemplate().getSegmentTimeline().getSArray()) {
                 if (s.isSetT()) {
@@ -70,7 +69,7 @@ public class RepresentationBuilderToFile {
                         templateReplace(
                                 representation.getSegmentTemplate().getMedia(),
                                 representation.getId(), number, representation.getBandwidth(), time);
-                Container segment = segments.next();
+                org.mp4parser.Container segment = segments.next();
                 File segmentFile = new File(outputDirectory, segmentFilename);
                 FileUtils.forceMkdir(segmentFile.getParentFile());
 
@@ -87,7 +86,7 @@ public class RepresentationBuilderToFile {
                                 templateReplace(
                                         representation.getSegmentTemplate().getMedia(),
                                         representation.getId(), number, representation.getBandwidth(), time);
-                        Container segmentRepeater = segments.next();
+                        org.mp4parser.Container segmentRepeater = segments.next();
                         File segmentFileRepeater = new File(outputDirectory, segmentFilenameRepeater);
                         FileUtils.forceMkdir(segmentFileRepeater.getParentFile());
 

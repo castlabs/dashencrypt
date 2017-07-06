@@ -1,6 +1,5 @@
 package com.castlabs.dash.helpers;
 
-import com.castlabs.dash.dashfragmenter.sequences.TrackProxy;
 import com.coremedia.iso.boxes.Box;
 import com.googlecode.mp4parser.authoring.Edit;
 import com.googlecode.mp4parser.authoring.Track;
@@ -16,6 +15,16 @@ import java.util.List;
  */
 public class BoxHelper {
     public static byte[] boxToBytes(Box b) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        try {
+            b.getBox(Channels.newChannel(baos));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return baos.toByteArray();
+    }
+    public static byte[] boxToBytes(org.mp4parser.Box b) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
         try {

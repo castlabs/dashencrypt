@@ -1,14 +1,13 @@
 package com.castlabs.dash.dashfragmenter.sequences;
 
 import com.castlabs.dash.dashfragmenter.representation.AbstractRepresentationBuilder;
-import com.googlecode.mp4parser.authoring.Movie;
-import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import org.junit.Test;
 import org.junit.Assert;
+import org.mp4parser.muxer.Movie;
+import org.mp4parser.muxer.container.mp4.MovieCreator;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Locale;
 
 public class DashFileSetSequenceTest {
