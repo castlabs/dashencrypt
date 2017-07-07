@@ -43,7 +43,7 @@ import static com.castlabs.dash.helpers.Timing.getPtss;
 import static com.castlabs.dash.helpers.Timing.getTimeMappingEditTime;
 import static com.googlecode.mp4parser.util.CastUtils.l2i;
 
-public abstract class AbstractRepresentationBuilder extends AbstractList<Container> implements Mp4RepresentationBuilder {
+public class RepresentationBuilderImpl extends AbstractList<Container> implements Mp4RepresentationBuilder {
     protected Track theTrack;
     protected final List<ProtectionSystemSpecificHeaderBox> psshs;
     protected Date date = new Date();
@@ -51,7 +51,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
     protected long[] segmentStartSamples;
     protected long[] fragmentStartSamples;
 
-    public AbstractRepresentationBuilder(Track track, List<ProtectionSystemSpecificHeaderBox> psshs, String source, long[] segmentStartSamples, long[] fragmentStartSamples) {
+    public RepresentationBuilderImpl(Track track, List<ProtectionSystemSpecificHeaderBox> psshs, String source, long[] segmentStartSamples, long[] fragmentStartSamples) {
         this.theTrack = track;
         this.psshs = psshs;
         this.source = source;
@@ -580,6 +580,15 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
             tfhd.setDefaultSampleFlags(second);
         }
 
+        SampleEntry current = track.getSamples().get(l2i(startSample-1)).getSampleEntry();
+        int sdi = 1;
+        for (SampleEntry entry : track.getSampleEntries()) {
+            if (current.equals(entry)) {
+                tfhd.setSampleDescriptionIndex(sdi);
+            }
+            sdi++;
+        }
+
 
         createSubs(startSample, endSample, track, traf);
 
@@ -593,11 +602,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
         Map<String, List<GroupEntry>> groupEntryFamilies = new HashMap<>();
         for (Map.Entry<GroupEntry, long[]> sg : track.getSampleGroups().entrySet()) {
             String type = sg.getKey().getType();
-            List<GroupEntry> groupEntries = groupEntryFamilies.get(type);
-            if (groupEntries == null) {
-                groupEntries = new ArrayList<GroupEntry>();
-                groupEntryFamilies.put(type, groupEntries);
-            }
+            List<GroupEntry> groupEntries = groupEntryFamilies.computeIfAbsent(type, k -> new ArrayList<>());
             groupEntries.add(sg.getKey());
         }
 
@@ -694,7 +699,7 @@ public abstract class AbstractRepresentationBuilder extends AbstractList<Contain
 
     protected void createSaiz(long startSample, long endSample, CencEncryptedTrack track, TrackFragmentBox parent) {
 
-        TrackEncryptionBox tenc = Path.getPath((Container) track.getSamples().get(l2i(startSample)).getSampleEntry(), "sinf[0]/schi[0]/tenc[0]");
+        TrackEncryptionBox tenc = Path.getPath((Container) track.getSamples().get(l2i(startSample-1)).getSampleEntry(), "sinf[0]/schi[0]/tenc[0]");
         if (tenc != null) {
             SampleAuxiliaryInformationSizesBox saiz = new SampleAuxiliaryInformationSizesBox();
             saiz.setAuxInfoType("cenc");

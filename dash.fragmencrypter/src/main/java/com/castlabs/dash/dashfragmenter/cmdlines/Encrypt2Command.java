@@ -15,8 +15,11 @@ import org.kohsuke.args4j.Option;
 import org.mp4parser.Version;
 import org.mp4parser.boxes.iso23001.part7.ProtectionSystemSpecificHeaderBox;
 import org.mp4parser.muxer.Track;
+import org.mp4parser.muxer.builder.DefaultFragmenterImpl;
 import org.mp4parser.muxer.tracks.encryption.CencEncryptingTrackImpl;
+import org.mp4parser.tools.RangeStartMap;
 
+import javax.crypto.SecretKey;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -29,6 +32,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static com.castlabs.dash.helpers.ManifestHelper.getXmlOptions;
+import static org.mp4parser.tools.CastUtils.l2i;
 
 public class Encrypt2Command extends AbstractEncryptOrNotCommand {
     private static final Logger LOG = Logger.getLogger(Encrypt2Command.class.getName());
@@ -49,6 +53,9 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
     @Option(name = "-mv", usage = "Minimum Video Segment Duration.")
     protected double minVideoSegmentDuration = 4;
 
+    @Option(name = "-clearlead", usage = "Sets the number of clear seconds in the representation in the beginning. Set to at least the minimum segment duration as only full segment can be clear")
+    protected int clearLead = 0;
+
 
     DocumentBuilder documentBuilder;
 
@@ -64,7 +71,7 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
 
     }
 
-    MPDDocument getManifest(Map<Integer,List<AdaptationSetType>> periods2AdaptationSets, Map<Integer, Duration> durations) throws IOException {
+    MPDDocument getManifest(Map<Integer, List<AdaptationSetType>> periods2AdaptationSets, Map<Integer, Duration> durations) throws IOException {
 
         List<Integer> ids = new ArrayList<>(periods2AdaptationSets.keySet());
         Collections.sort(ids);
@@ -76,21 +83,20 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
         for (Integer periodId : ids) {
             PeriodType periodType = mpd.addNewPeriod();
             periodType.setId("period-" + periodId.toString());
-            periodType.setStart(new GDuration(1, 0, 0, 0, (int)total.getSeconds()/3600, (int)(total.getSeconds()%3600) / 60, (int)total.getSeconds() % 60, BigDecimal.ZERO));
+            periodType.setStart(new GDuration(1, 0, 0, 0, (int) total.getSeconds() / 3600, (int) (total.getSeconds() % 3600) / 60, (int) total.getSeconds() % 60, BigDecimal.ZERO));
 
             List<AdaptationSetType> adaptationSets = periods2AdaptationSets.get(periodId);
             periodType.setAdaptationSetArray(adaptationSets.toArray(new AdaptationSetType[adaptationSets.size()]));
-            Duration d =  durations.get(periodId);
+            Duration d = durations.get(periodId);
             total = total.plus(d);
-            periodType.setDuration(new GDuration(1, 0, 0, 0, (int)d.getSeconds()/3600, (int)(d.getSeconds()%3600) / 60, (int)d.getSeconds() % 60, BigDecimal.ZERO));
+            periodType.setDuration(new GDuration(1, 0, 0, 0, (int) d.getSeconds() / 3600, (int) (d.getSeconds() % 3600) / 60, (int) d.getSeconds() % 60, BigDecimal.ZERO));
         }
-        mpd.setMediaPresentationDuration(new GDuration(1, 0, 0, 0, (int)total.getSeconds()/3600, (int)(total.getSeconds()%3600) / 60, (int)total.getSeconds() % 60, BigDecimal.ZERO));
+        mpd.setMediaPresentationDuration(new GDuration(1, 0, 0, 0, (int) total.getSeconds() / 3600, (int) (total.getSeconds() % 3600) / 60, (int) total.getSeconds() % 60, BigDecimal.ZERO));
 
         mpd.setProfiles("urn:mpeg:dash:profile:isoff-on-demand:2011");
         mpd.setType(PresentationType.STATIC);
 
         mpd.setMinBufferTime(new GDuration(1, 0, 0, 0, 0, 0, 4, BigDecimal.ZERO));
-
 
 
         return mdd;
@@ -129,16 +135,22 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
         return theTracks;
     }
 
-    public Track encryptIfNeeded(Track in) {
+    public Track encryptIfNeeded(Track in, long encStartSample) {
         if (in.getHandler().equals("soun")) {
             if (audioKeyId != null) {
-                return new CencEncryptingTrackImpl(in, audioKeyId, audioKey, false);
+                RangeStartMap<Integer, UUID> indexToKeyId = new RangeStartMap<>(0, null);
+                indexToKeyId.put(l2i(encStartSample), audioKeyId);
+                Map<UUID, SecretKey > keys = Collections.singletonMap(audioKeyId, audioKey);
+                return new CencEncryptingTrackImpl(in, indexToKeyId, keys, "cenc", false, false);
             } else {
                 return in;
             }
         } else if (in.getHandler().equals("vide")) {
             if (videoKeyId != null) {
-                return new CencEncryptingTrackImpl(in, videoKeyId, videoKey, false);
+                RangeStartMap<Integer, UUID> indexToKeyId = new RangeStartMap<>(0, null);
+                indexToKeyId.put(l2i(encStartSample), videoKeyId);
+                Map<UUID, SecretKey > keys = Collections.singletonMap(audioKeyId, videoKey);
+                return new CencEncryptingTrackImpl(in, indexToKeyId, keys, "cenc", false, false);
             } else {
                 return in;
             }
@@ -177,7 +189,8 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
 
             long totalSize = 0;
             long startTime = System.currentTimeMillis();
-
+            DefaultFragmenterImpl videoFragmenter = new DefaultFragmenterImpl(minVideoSegmentDuration);
+            DefaultFragmenterImpl audioFragmenter = new DefaultFragmenterImpl(minAudioSegmentDuration);
 
             for (InputOutputSelector inputSource : inputs) {
                 List<Track> tracks = inputSource.getSelectedTracks();
@@ -186,12 +199,16 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
                 if (hasTrack(tracks, "hvc1", "hev1", "avc1", "avc3")) {
 
                     for (Track track : getTrack(tracks, "hvc1", "hev1", "avc1", "avc3")) {
+
                         String name = getName(representationNames, inputSource.getName());
-                        representationBuilders.put(new SyncSampleAssistedRepresentationBuilder(
-                                encryptIfNeeded(track),
+                        long[] fragStartSamples = videoFragmenter.sampleNumbers(track);
+                        representationBuilders.put(new RepresentationBuilderImpl(
+                                encryptIfNeeded(track, fragStartSamples[(int)(clearLead/minVideoSegmentDuration)]),
+                                psshs.get(videoKeyId),
                                 name,
-                                minVideoSegmentDuration,
-                                psshs.get(videoKeyId)
+                                fragStartSamples,
+                                fragStartSamples
+
                         ), inputSource);
                         LOG.fine("Added " + name);
                     }
@@ -199,11 +216,14 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
 
                 for (Track track : getTrack(tracks, "dtsl", "dtse", "ec-3", "ac-3", "mlpa", "mp4a")) {
                     String name = getName(representationNames, inputSource.getName());
-                    representationBuilders.put(new SyncSampleAssistedRepresentationBuilder(
-                            encryptIfNeeded(track),
-                            name,
-                            minAudioSegmentDuration,
-                            psshs.get(audioKeyId)), inputSource);
+                    long[] fragStartSamples = audioFragmenter.sampleNumbers(track);
+                    representationBuilders.put(new RepresentationBuilderImpl(
+                                    encryptIfNeeded(track, fragStartSamples[(int)(clearLead/minAudioSegmentDuration)]),
+                                    psshs.get(audioKeyId),
+                                    name,
+                                    fragStartSamples,
+                                    fragStartSamples),
+                            inputSource);
                     LOG.fine("Added " + name);
                 }
 
@@ -283,20 +303,12 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
 
                 } else if (rb instanceof RawTextTrackRepresentationBuilder) {
                     RawTextTrackRepresentationBuilder representationBuilder = (RawTextTrackRepresentationBuilder) rb;
-                    Map<String, AdaptationSetType> adaptationSets = period2AdaptationSets.get(periodId);
-                    if (adaptationSets == null) {
-                        adaptationSets = new LinkedHashMap<>();
-                        period2AdaptationSets.put(periodId, adaptationSets);
-                    }
+                    Map<String, AdaptationSetType> adaptationSets = period2AdaptationSets.computeIfAbsent(periodId, k -> new LinkedHashMap<>());
                     AdaptationSetType adaptationSet = AdaptationSetType.Factory.newInstance();
                     adaptationSet.setLang(outOptions.get("lang"));
                     DescriptorType textTrackRole = adaptationSet.addNewRole();
                     textTrackRole.setSchemeIdUri("urn:mpeg:dash:role");
-                    if (outOptions.containsKey("role")) {
-                        textTrackRole.setValue(outOptions.get("role"));
-                    } else {
-                        textTrackRole.setValue("subtitle");
-                    }
+                    textTrackRole.setValue(outOptions.getOrDefault("role", "subtitle"));
                     RepresentationType representationType = representationBuilder.getOnDemandRepresentation();
 
                     adaptationSet.setRepresentationArray(new RepresentationType[]{representationType});
@@ -336,14 +348,14 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
     }
 
     private Duration getDuration(Mp4RepresentationBuilder representationBuilder) {
-        double duration = representationBuilder.getTrack().getDuration() / (double)representationBuilder.getTrack().getTrackMetaData().getTimescale();
+        double duration = representationBuilder.getTrack().getDuration() / (double) representationBuilder.getTrack().getTrackMetaData().getTimescale();
         long ms = (long) (duration * 1000);
         return Duration.ofMillis(ms);
 
     }
 
 
-    public Map<UUID,List<ProtectionSystemSpecificHeaderBox>> getPsshs() {
+    public Map<UUID, List<ProtectionSystemSpecificHeaderBox>> getPsshs() {
         return Collections.emptyMap();
     }
 }

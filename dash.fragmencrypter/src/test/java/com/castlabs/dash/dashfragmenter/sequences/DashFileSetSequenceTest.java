@@ -1,6 +1,6 @@
 package com.castlabs.dash.dashfragmenter.sequences;
 
-import com.castlabs.dash.dashfragmenter.representation.AbstractRepresentationBuilder;
+import com.castlabs.dash.dashfragmenter.representation.RepresentationBuilderImpl;
 import org.junit.Test;
 import org.junit.Assert;
 import org.mp4parser.muxer.Movie;
@@ -24,7 +24,7 @@ public class DashFileSetSequenceTest {
         File td = File.createTempFile("testWriteDataAndCreateRepresentation", "DashFileSetSequenceTest");
         td.delete();
         d.setOutputDirectory(td);
-        d.writeDataAndCreateRepresentation(new AbstractRepresentationBuilder(m.getTracks().get(0), null, "id", new long[]{1}, new long[]{1}) {
+        d.writeDataAndCreateRepresentation(new RepresentationBuilderImpl(m.getTracks().get(0), null, "id", new long[]{1}, new long[]{1}) {
 
         }, Locale.ENGLISH);
         Assert.assertEquals("en", td.list()[0]);
