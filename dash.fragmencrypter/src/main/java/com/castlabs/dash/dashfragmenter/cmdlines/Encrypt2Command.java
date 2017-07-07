@@ -172,7 +172,7 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
 
 
             Map<UUID, List<ProtectionSystemSpecificHeaderBox>> psshs = getPsshs();
-            Map<RepresentationBuilder, InputOutputSelector> representationBuilders = new HashMap<>();
+            Map<RepresentationBuilder, InputOutputSelector> representationBuilders = new LinkedHashMap<>();
             Set<String> representationNames = new HashSet<>();
 
             long totalSize = 0;
@@ -221,8 +221,8 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
             }
 
 
-            Map<Integer, Map<String, AdaptationSetType>> period2AdaptationSets = new HashMap<>();
-            Map<Integer, Duration> period2Duration = new HashMap<>();
+            Map<Integer, Map<String, AdaptationSetType>> period2AdaptationSets = new LinkedHashMap<>();
+            Map<Integer, Duration> period2Duration = new LinkedHashMap<>();
 
             // Assigns all representations to a Period and then to an AdaptationSet within the Period
             for (Map.Entry<RepresentationBuilder, InputOutputSelector> e : representationBuilders.entrySet()) {

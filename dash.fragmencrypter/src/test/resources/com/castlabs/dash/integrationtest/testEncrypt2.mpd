@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--com.castlabs.dash dash.fragmencrypter 1.7.52-SNAPSHOT-->
+<!--isoparser-1.9.28-SNAPSHOT-->
+<MPD mediaPresentationDuration="PT12M14S" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static" minBufferTime="PT4S" xmlns="urn:mpeg:dash:schema:mpd:2011">
+  <ProgramInformation moreInformationURL="www.castLabs.com"/>
+  <Period id="period-0" start="PT0S" duration="PT12M14S">
+    <AdaptationSet lang="und" mimeType="video/mp4" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" frameRate="24000/1000" sar="1:1" minWidth="500" maxWidth="1152" minHeight="208" maxHeight="480" minBandwidth="564200" maxBandwidth="1356600">
+      <Representation codecs="avc1.64001e" width="768" height="320" bandwidth="958200" id="Tears_Of_Steel_1000000">
+        <BaseURL>Tears_Of_Steel_1000000.mp4</BaseURL>
+        <SegmentBase timescale="12288" indexRangeExact="true" indexRange="738-1621">
+          <Initialization range="0-737"/>
+        </SegmentBase>
+      </Representation>
+      <Representation codecs="avc1.64001f" width="1152" height="480" bandwidth="1356600" id="Tears_Of_Steel_1400000">
+        <BaseURL>Tears_Of_Steel_1400000.mp4</BaseURL>
+        <SegmentBase timescale="12288" indexRangeExact="true" indexRange="738-1621">
+          <Initialization range="0-737"/>
+        </SegmentBase>
+      </Representation>
+      <Representation codecs="avc1.640015" width="614" height="256" bandwidth="761400" id="Tears_Of_Steel_800000">
+        <BaseURL>Tears_Of_Steel_800000.mp4</BaseURL>
+        <SegmentBase timescale="12288" indexRangeExact="true" indexRange="737-1620">
+          <Initialization range="0-736"/>
+        </SegmentBase>
+      </Representation>
+      <Representation codecs="avc1.640015" width="500" height="208" bandwidth="564200" id="Tears_Of_Steel_600000">
+        <BaseURL>Tears_Of_Steel_600000.mp4</BaseURL>
+        <SegmentBase timescale="12288" indexRangeExact="true" indexRange="737-1620">
+          <Initialization range="0-736"/>
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet lang="eng" mimeType="audio/mp4" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
+      <Representation codecs="mp4a.40.2" audioSamplingRate="48000" bandwidth="127800" id="Tears_Of_Steel_128000_eng">
+        <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
+        <BaseURL>Tears_Of_Steel_128000_eng.mp4</BaseURL>
+        <SegmentBase timescale="48000" indexRangeExact="true" indexRange="628-1247">
+          <Initialization range="0-627"/>
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+    <AdaptationSet lang="ita" mimeType="audio/mp4" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
+      <Representation codecs="mp4a.40.2" audioSamplingRate="48000" bandwidth="127800" id="Tears_Of_Steel_128000_ita">
+        <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
+        <BaseURL>Tears_Of_Steel_128000_ita.mp4</BaseURL>
+        <SegmentBase timescale="48000" indexRangeExact="true" indexRange="628-1247">
+          <Initialization range="0-627"/>
+        </SegmentBase>
+      </Representation>
+    </AdaptationSet>
+  </Period>
+</MPD>
