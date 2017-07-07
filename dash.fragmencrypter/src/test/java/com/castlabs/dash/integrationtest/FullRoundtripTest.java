@@ -86,7 +86,7 @@ public class FullRoundtripTest {
     }
 
     @Test
-    public void testEncrypt2() throws Exception {
+    public void testEncrypt2_plain() throws Exception {
         File outputDir = File.createTempFile("FullRoundtrip", "testEncrypt2");
         outputDir.delete();
         outputDir.mkdir();
@@ -103,7 +103,57 @@ public class FullRoundtripTest {
         });
 
         XMLUnit.setIgnoreWhitespace(true);
-        XMLAssert.assertXMLEqual(new InputSource(getClass().getResourceAsStream("testEncrypt2.mpd")), new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))));
+        XMLAssert.assertXMLEqual(new InputSource(getClass().getResourceAsStream("testEncrypt2_plain.mpd")), new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))));
+        FileUtils.deleteDirectory(outputDir);
+    }
+
+    @Test
+    public void testEncrypt2_encrypted1() throws Exception {
+        File outputDir = File.createTempFile("FullRoundtrip", "testEncrypt2");
+        outputDir.delete();
+        outputDir.mkdir();
+
+        Main.main(new String[]{
+                "encrypt2",
+                "-o", outputDir.getAbsolutePath(),
+                "--secretKey:v", "550e8400e29b11d4a716446655441111",
+                "--uuid:v", "550e8400-e29b-11d4-a716-446655440000",
+                new File(tos, "tears_of_steel/Tears_Of_Steel_1000000.mp4").getAbsolutePath(),
+                new File(tos, "tears_of_steel/Tears_Of_Steel_1400000.mp4").getAbsolutePath(),
+                new File(tos, "tears_of_steel/Tears_Of_Steel_800000.mp4").getAbsolutePath(),
+                new File(tos, "tears_of_steel/Tears_Of_Steel_600000.mp4").getAbsolutePath(),
+                new File(tos, "tears_of_steel/Tears_Of_Steel_128000_eng.mp4").getAbsolutePath(),
+                new File(tos, "tears_of_steel/Tears_Of_Steel_128000_ita.mp4").getAbsolutePath(),
+        });
+
+        XMLUnit.setIgnoreWhitespace(true);
+        XMLAssert.assertXMLEqual(new InputSource(getClass().getResourceAsStream("testEncrypt2_encrypted1.mpd")), new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))));
+        FileUtils.deleteDirectory(outputDir);
+    }
+
+    @Test
+    public void testEncrypt2_encrypted2() throws Exception {
+        File outputDir = File.createTempFile("FullRoundtrip", "testEncrypt2");
+        outputDir.delete();
+        outputDir.mkdir();
+
+        Main.main(new String[]{
+                "encrypt2",
+                "-o", outputDir.getAbsolutePath(),
+                "--secretKey:v", "550e8400e29b11d4a716446655441111",
+                "--uuid:v", "550e8400-e29b-11d4-a716-446655440000",
+                "--secretKey:a", "660e8400e29b11d4a716446655441111",
+                "--uuid:a", "660e8400-e29b-11d4-a716-446655440000",
+                new File(tos, "tears_of_steel/Tears_Of_Steel_1000000.mp4").getAbsolutePath(),
+                new File(tos, "tears_of_steel/Tears_Of_Steel_1400000.mp4").getAbsolutePath(),
+                new File(tos, "tears_of_steel/Tears_Of_Steel_800000.mp4").getAbsolutePath(),
+                new File(tos, "tears_of_steel/Tears_Of_Steel_600000.mp4").getAbsolutePath(),
+                new File(tos, "tears_of_steel/Tears_Of_Steel_128000_eng.mp4").getAbsolutePath(),
+                new File(tos, "tears_of_steel/Tears_Of_Steel_128000_ita.mp4").getAbsolutePath(),
+        });
+
+        XMLUnit.setIgnoreWhitespace(true);
+        XMLAssert.assertXMLEqual(new InputSource(getClass().getResourceAsStream("testEncrypt2_encrypted2.mpd")), new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))));
         FileUtils.deleteDirectory(outputDir);
     }
 
