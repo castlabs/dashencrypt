@@ -661,23 +661,28 @@ public class RepresentationBuilderImpl extends AbstractList<Container> implement
 
 
     protected void createSenc(long startSample, long endSample, CencEncryptedTrack track, TrackFragmentBox parent) {
-        SampleEncryptionBox senc = new SampleEncryptionBox();
-        senc.setSubSampleEncryption(track.hasSubSampleEncryption());
-        senc.setEntries(track.getSampleEncryptionEntries().subList(l2i(startSample - 1), l2i(endSample - 1)));
-        parent.addBox(senc);
+        TrackEncryptionBox tenc = Path.getPath((Container) track.getSamples().get(l2i(startSample-1)).getSampleEntry(), "sinf[0]/schi[0]/tenc[0]");
+        if (tenc != null) {
+            SampleEncryptionBox senc = new SampleEncryptionBox();
+            senc.setSubSampleEncryption(track.hasSubSampleEncryption());
+            senc.setEntries(track.getSampleEncryptionEntries().subList(l2i(startSample - 1), l2i(endSample - 1)));
+            parent.addBox(senc);
+        }
     }
 
     protected void createSaio(TrackFragmentBox parent, MovieFragmentBox moof) {
         SampleAuxiliaryInformationOffsetsBox saio = new SampleAuxiliaryInformationOffsetsBox();
-        parent.addBox(saio);
+
         assert parent.getBoxes(TrackRunBox.class).size() == 1 : "Don't know how to deal with multiple Track Run Boxes when encrypting";
         saio.setAuxInfoType("cenc");
         saio.setFlags(1);
         long offset = 0;
+        boolean add = false;
         offset += 8; // traf header till 1st child box
         for (Box box : parent.getBoxes()) {
             if (box instanceof SampleEncryptionBox) {
                 offset += ((SampleEncryptionBox) box).getOffsetToFirstIV();
+                add = true;
                 break;
             } else {
                 offset += box.getSize();
@@ -692,8 +697,10 @@ public class RepresentationBuilderImpl extends AbstractList<Container> implement
             }
 
         }
-
         saio.setOffsets(new long[]{offset});
+        if (add) {
+            parent.addBox(saio);
+        }
 
     }
 

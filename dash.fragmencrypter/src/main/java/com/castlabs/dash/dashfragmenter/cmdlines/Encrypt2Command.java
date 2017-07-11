@@ -139,7 +139,7 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
         if (in.getHandler().equals("soun")) {
             if (audioKeyId != null) {
                 RangeStartMap<Integer, UUID> indexToKeyId = new RangeStartMap<>(0, null);
-                indexToKeyId.put(l2i(encStartSample), audioKeyId);
+                indexToKeyId.put(l2i(encStartSample-1), audioKeyId);
                 Map<UUID, SecretKey > keys = Collections.singletonMap(audioKeyId, audioKey);
                 return new CencEncryptingTrackImpl(in, indexToKeyId, keys, "cenc", false, false);
             } else {
@@ -148,8 +148,8 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
         } else if (in.getHandler().equals("vide")) {
             if (videoKeyId != null) {
                 RangeStartMap<Integer, UUID> indexToKeyId = new RangeStartMap<>(0, null);
-                indexToKeyId.put(l2i(encStartSample), videoKeyId);
-                Map<UUID, SecretKey > keys = Collections.singletonMap(audioKeyId, videoKey);
+                indexToKeyId.put(l2i(encStartSample-1), videoKeyId);
+                Map<UUID, SecretKey > keys = Collections.singletonMap(videoKeyId, videoKey);
                 return new CencEncryptingTrackImpl(in, indexToKeyId, keys, "cenc", false, false);
             } else {
                 return in;

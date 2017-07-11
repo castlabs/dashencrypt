@@ -116,8 +116,8 @@ public class FullRoundtripTest {
         Main.main(new String[]{
                 "encrypt2",
                 "-o", outputDir.getAbsolutePath(),
-                "--secretKey:v", "550e8400e29b11d4a716446655441111",
-                "--uuid:v", "550e8400-e29b-11d4-a716-446655440000",
+                "--secretKey:v", "cbfed0736042e5962db8e23ddf1d0425",
+                "--uuid:v", "22089b3b-527f-4612-a7bb-944559547306",
                 new File(tos, "tears_of_steel/Tears_Of_Steel_1000000.mp4").getAbsolutePath(),
                 new File(tos, "tears_of_steel/Tears_Of_Steel_1400000.mp4").getAbsolutePath(),
                 new File(tos, "tears_of_steel/Tears_Of_Steel_800000.mp4").getAbsolutePath(),
@@ -141,8 +141,8 @@ public class FullRoundtripTest {
                 "encrypt2",
                 "-o", outputDir.getAbsolutePath(),
                 "-clearlead", "30",
-                "--secretKey:v", "550e8400e29b11d4a716446655441111",
-                "--uuid:v", "550e8400-e29b-11d4-a716-446655440000",
+                "--secretKey:v", "cbfed0736042e5962db8e23ddf1d0425",
+                "--uuid:v", "22089b3b-527f-4612-a7bb-944559547306",
                 new File(tos, "tears_of_steel/Tears_Of_Steel_1000000.mp4").getAbsolutePath(),
                 new File(tos, "tears_of_steel/Tears_Of_Steel_1400000.mp4").getAbsolutePath(),
                 new File(tos, "tears_of_steel/Tears_Of_Steel_800000.mp4").getAbsolutePath(),
@@ -182,7 +182,7 @@ public class FullRoundtripTest {
         FileUtils.deleteDirectory(outputDir);
     }
 
-    @Test
+     @Test
     public void testOnDemandPlainIsmvInput() throws Exception {
         File outputDir = File.createTempFile("FullRoundtrip", "testOnDemandPlainIsmvInput");
         outputDir.delete();
