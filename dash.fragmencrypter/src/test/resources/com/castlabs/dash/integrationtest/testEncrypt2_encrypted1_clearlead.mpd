@@ -32,7 +32,7 @@
             </Representation>
         </AdaptationSet>
         <AdaptationSet lang="eng" mimeType="audio/mp4" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
-            <ContentProtection cenc:default_KID="550e8400-e29b-11d4-a716-446655440000" schemeIdUri="urn:mpeg:dash:mp4protection:2011" value="cenc"/>
+            <ContentProtection cenc:default_KID="22089b3b-527f-4612-a7bb-944559547306" schemeIdUri="urn:mpeg:dash:mp4protection:2011" value="cenc"/>
             <Representation codecs="mp4a.40.2" audioSamplingRate="48000" bandwidth="127800" id="Tears_Of_Steel_128000_eng">
                 <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
                 <BaseURL>Tears_Of_Steel_128000_eng.mp4</BaseURL>
@@ -42,7 +42,7 @@
             </Representation>
         </AdaptationSet>
         <AdaptationSet lang="ita" mimeType="audio/mp4" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011">
-            <ContentProtection cenc:default_KID="550e8400-e29b-11d4-a716-446655440000" schemeIdUri="urn:mpeg:dash:mp4protection:2011" value="cenc"/>
+            <ContentProtection cenc:default_KID="22089b3b-527f-4612-a7bb-944559547306" schemeIdUri="urn:mpeg:dash:mp4protection:2011" value="cenc"/>
             <Representation codecs="mp4a.40.2" audioSamplingRate="48000" bandwidth="127800" id="Tears_Of_Steel_128000_ita">
                 <AudioChannelConfiguration schemeIdUri="urn:mpeg:dash:23003:3:audio_channel_configuration:2011" value="2"/>
                 <BaseURL>Tears_Of_Steel_128000_ita.mp4</BaseURL>
