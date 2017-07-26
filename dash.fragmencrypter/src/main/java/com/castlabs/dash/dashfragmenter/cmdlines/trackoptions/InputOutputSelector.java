@@ -34,7 +34,7 @@ public class InputOutputSelector {
     public static final List<Track> THUMBTRACK = new ArrayList<>();
 
     private static final Pattern periodPattern = Pattern.compile("period-([0-9]+)");
-    private static final String[] outputOptionsKeys = new String[]{"lang", "period", "role", "htiles", "vtiles"};
+    private static final String[] outputOptionsKeys = new String[]{"lang", "period", "role", "htiles", "vtiles", "thduration"};
 
     private static final Set<String> MP4_FILE_EXTS = new HashSet<>(Arrays.asList("mp4", "m4a", "m4v", "ismv", "isma", "mov"));
     private static final Set<String> THUMB_FILE_EXTS = new HashSet<>(Arrays.asList("jpg", "jpeg", "png"));
@@ -53,9 +53,10 @@ public class InputOutputSelector {
         Map<String, String> outPop = new HashMap<>(out);
 
 
-
         this.files = Glob.get(new File(""), filePattern);
-
+        if (files.isEmpty()) {
+            throw new IllegalArgumentException("The file pattern " + filePattern + " doesn't yield any results.");
+        }
 
         for (String outputOptionsKey : outputOptionsKeys) {
             outPop.remove(outputOptionsKey);
@@ -79,12 +80,12 @@ public class InputOutputSelector {
             }
 
 
-        if (MP4_FILE_EXTS.contains(FilenameUtils.getExtension(f.getName()).toLowerCase())) {
-            IsoFile isoFile = new IsoFile(f);
-            List<TrackBox> trackBoxes = isoFile.getMovieBox().getBoxes(TrackBox.class);
-            String type = inPop.remove("type");
-            String language = inPop.remove("lang");
-            String trackNo = inPop.remove("trackNo");
+            if (MP4_FILE_EXTS.contains(FilenameUtils.getExtension(f.getName()).toLowerCase())) {
+                IsoFile isoFile = new IsoFile(f);
+                List<TrackBox> trackBoxes = isoFile.getMovieBox().getBoxes(TrackBox.class);
+                String type = inPop.remove("type");
+                String language = inPop.remove("lang");
+                String trackNo = inPop.remove("trackNo");
 
 
                 if (!inPop.isEmpty()) {
@@ -138,6 +139,7 @@ public class InputOutputSelector {
                 if (!inPop.isEmpty()) {
                     throw new IllegalArgumentException("in Options " + inPop.keySet() + " not supported for text tracks");
                 }
+
                 tracks = THUMBTRACK;
                 if (!outputOptions.containsKey("htiles")) {
                     throw new IllegalArgumentException("All " + FilenameUtils.getExtension(f.getName()) + " thumbnail tracks require 'htiles' output property to be set (number of tiles left to right)");
@@ -145,12 +147,18 @@ public class InputOutputSelector {
                 if (!outputOptions.containsKey("vtiles")) {
                     throw new IllegalArgumentException("All " + FilenameUtils.getExtension(f.getName()) + " thumbnail tracks require 'vtiles' output property to be set (number of tiles top to bottom)");
                 }
+                if (!outputOptions.containsKey("thduration")) {
+                    throw new IllegalArgumentException("All " + FilenameUtils.getExtension(f.getName()) + " thumbnail tracks require 'thduration' output property to be set (duration of a single thumbnail in seconds)");
+                }
                 for (File file : files) {
                     if (!FilenameUtils.getExtension(file.getName()).toLowerCase().equals(FilenameUtils.getExtension(f.getName()).toLowerCase())) {
                         throw new IllegalArgumentException("The pattern " + filePattern + " also includes " + file.getName() + " which is of a different type. All ");
                     }
                 }
-
+                List<File> sortedFiles = new ArrayList<>(files);
+                sortedFiles.sort(new WindowsExplorerComparator());
+                this.files = sortedFiles;
+                break;
             } else {
                 throw new IllegalArgumentException("File Extension of " + f + " unknown");
             }
@@ -177,5 +185,63 @@ public class InputOutputSelector {
 
     private static Logger LOG = Logger.getLogger(InputOutputSelector.class.getName());
 
+    public static class WindowsExplorerComparator implements Comparator<File> {
+
+        private static final Pattern splitPattern = Pattern.compile("\\d+|\\.|\\s");
+
+        @Override
+        public int compare(File f1, File f2) {
+            String str1 = f1.getName();
+            String str2 = f2.getName();
+            Iterator<String> i1 = splitStringPreserveDelimiter(str1).iterator();
+            Iterator<String> i2 = splitStringPreserveDelimiter(str2).iterator();
+            while (true) {
+                //Til here all is equal.
+                if (!i1.hasNext() && !i2.hasNext()) {
+                    return 0;
+                }
+                //first has no more parts -> comes first
+                if (!i1.hasNext() && i2.hasNext()) {
+                    return -1;
+                }
+                //first has more parts than i2 -> comes after
+                if (i1.hasNext() && !i2.hasNext()) {
+                    return 1;
+                }
+
+                String data1 = i1.next();
+                String data2 = i2.next();
+                int result;
+                try {
+                    //If both datas are numbers, then compare numbers
+                    result = Long.compare(Long.valueOf(data1), Long.valueOf(data2));
+                    //If numbers are equal than longer comes first
+                    if (result == 0) {
+                        result = -Integer.compare(data1.length(), data2.length());
+                    }
+                } catch (NumberFormatException ex) {
+                    //compare text case insensitive
+                    result = data1.compareToIgnoreCase(data2);
+                }
+
+                if (result != 0) {
+                    return result;
+                }
+            }
+        }
+
+        private List<String> splitStringPreserveDelimiter(String str) {
+            Matcher matcher = splitPattern.matcher(str);
+            List<String> list = new ArrayList<String>();
+            int pos = 0;
+            while (matcher.find()) {
+                list.add(str.substring(pos, matcher.start()));
+                list.add(matcher.group());
+                pos = matcher.end();
+            }
+            list.add(str.substring(pos));
+            return list;
+        }
+    }
 
 }

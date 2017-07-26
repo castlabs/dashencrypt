@@ -478,7 +478,7 @@ public final class DashHelper2 {
     }
 
     public static String getFormat(Track track) {
-        List<SampleEntry> ses   = track.getSampleEntries();
+        List<SampleEntry> ses  = track.getSampleEntries();
         String format = null;
         for (SampleEntry se : ses) {
 

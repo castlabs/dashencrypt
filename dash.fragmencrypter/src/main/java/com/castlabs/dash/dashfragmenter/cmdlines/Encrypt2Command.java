@@ -10,6 +10,7 @@ import com.castlabs.dash.helpers.RepresentationBuilderToFile;
 import ietfParamsXmlNsKeyprovPskc.impl.StringDataTypeImpl;
 import mpegCenc2013.DefaultKIDAttribute;
 import mpegDashSchemaMpd2011.*;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.xmlbeans.GDuration;
@@ -41,6 +42,7 @@ import java.math.BigDecimal;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static com.castlabs.dash.helpers.BoxHelper.boxToBytes;
 import static com.castlabs.dash.helpers.ManifestHelper.convertFramerate;
@@ -185,122 +187,7 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
                             return p;
                         });
 
-                if (hasTrack(tracks, "hvc1", "hev1", "avc1", "avc3")) {
-                    AdaptationSetType adaptationSetType =
-                            Arrays.stream(periodType.getAdaptationSetArray()).filter(a -> a.getMimeType().equals("video/mp4")).findFirst().orElseGet(() -> {
-                                AdaptationSetType as = periodType.addNewAdaptationSet();
-                                as.setMimeType("video/mp4");
-                                if (outOptions.containsKey("role")) {
-                                    DescriptorType role = as.addNewRole();
-                                    role.setSchemeIdUri("urn:mpeg:dash:role");
-                                    role.setValue(outOptions.get("role"));
-                                }
-                                return as;
-                            });
-
-
-                    for (Track track : getTrack(tracks, "hvc1", "hev1", "avc1", "avc3")) {
-
-                        long[] fragStartSamples = videoFragmenter.sampleNumbers(track);
-                        Track t = encryptIfNeeded(track, fragStartSamples[(int) (clearLead / minVideoSegmentDuration)]);
-                        RepresentationBuilderImpl rb = new RepresentationBuilderImpl(
-                                t,
-                                getPsshs().get(videoKeyId),
-                                "",
-                                fragStartSamples,
-                                fragStartSamples);
-                        RepresentationType representationType = adaptationSetType.addNewRepresentation();
-                        representationType.setProfiles("urn:mpeg:dash:profile:isoff-on-demand:2011");
-                        addContentProtection(representationType, t);
-                        long videoHeight = (long) track.getTrackMetaData().getHeight();
-                        long videoWidth = (long) track.getTrackMetaData().getWidth();
-                        double framesPerSecond = (double) (track.getSamples().size() * track.getTrackMetaData().getTimescale()) / track.getDuration();
-
-                        LinkedHashSet<String> codecs = new LinkedHashSet<>();
-                        for (SampleEntry sampleEntry : track.getSampleEntries()) {
-                            codecs.add(DashHelper2.getRfc6381Codec(sampleEntry));
-                        }
-                        representationType.setCodecs(StringUtils.join(codecs.toArray(), ","));
-                        representationType.setWidth(videoWidth);
-                        representationType.setHeight(videoHeight);
-                        representationType.setFrameRate(convertFramerate(framesPerSecond));
-                        representationType.setSar("1:1");
-                        representationType.setBandwidth(rb.getBandwidth());
-                        representationType.setId(findRepresentationId(track, mpd));
-                        BaseURLType baseURLType = representationType.addNewBaseURL();
-                        baseURLType.set(representationType.getId() + ".mp4");
-                        RepresentationBuilderToFile.writeOnDemand(
-                                rb,
-                                representationType,
-                                outputDirectory);
-
-                        updateDuration(periodType, (double) track.getDuration() / track.getTrackMetaData().getTimescale());
-                        addSegmentBase(rb, representationType);
-                    }
-                }
-
-                for (Track track : getTrack(tracks, "dtsl", "dtse", "ec-3", "ac-3", "mlpa", "mp4a")) {
-                    long[] fragStartSamples = audioFragmenter.sampleNumbers(track);
-                    AdaptationSetType as = periodType.addNewAdaptationSet();
-                    Locale locale;
-                    if (outOptions.containsKey("lang")) {
-                        locale = Locale.forLanguageTag(outOptions.remove("lang"));
-                        track.getTrackMetaData().setLanguage(locale.getISO3Language());
-                    } else {
-                        locale = Locale.forLanguageTag(track.getTrackMetaData().getLanguage());
-                    }
-                    as.setLang(locale.toLanguageTag());
-
-
-                    Track t = encryptIfNeeded(track, fragStartSamples[(int) (clearLead / minAudioSegmentDuration)]);
-                    RepresentationBuilderImpl rb = new RepresentationBuilderImpl(
-                            t,
-                            getPsshs().get(audioKeyId),
-                            "audio",
-                            fragStartSamples,
-                            fragStartSamples);
-                    RepresentationType representationType = as.addNewRepresentation();
-                    representationType.setProfiles("urn:mpeg:dash:profile:isoff-on-demand:2011");
-                    as.setMimeType("audio/mp4");
-                    if (outOptions.containsKey("role")) {
-                        DescriptorType role = as.addNewRole();
-                        role.setSchemeIdUri("urn:mpeg:dash:role");
-                        role.setValue(outOptions.get("role"));
-                    }
-                    addContentProtection(representationType, t);
-                    LinkedHashSet<String> codecs = new LinkedHashSet<>();
-                    AudioSampleEntry ase = null;
-                    for (SampleEntry sampleEntry : track.getSampleEntries()) {
-                        if (sampleEntry instanceof AudioSampleEntry) {
-                            ase = (AudioSampleEntry) sampleEntry;
-                        }
-                        codecs.add(DashHelper2.getRfc6381Codec(sampleEntry));
-                    }
-                    assert ase != null;
-                    representationType.setCodecs(String.join(",", codecs));
-                    representationType.setAudioSamplingRate("" + DashHelper2.getAudioSamplingRate(ase));
-                    representationType.setBandwidth(rb.getBandwidth());
-                    representationType.setId(findRepresentationId(track, mpd));
-                    BaseURLType baseURLType = representationType.addNewBaseURL();
-                    baseURLType.set(representationType.getId() + ".mp4");
-                    RepresentationBuilderToFile.writeOnDemand(
-                            rb,
-                            representationType,
-                            outputDirectory);
-
-                    DashHelper2.ChannelConfiguration cc = DashHelper2.getChannelConfiguration(ase);
-                    if (cc != null) {
-                        DescriptorType audio_channel_conf = representationType.addNewAudioChannelConfiguration();
-                        audio_channel_conf.setSchemeIdUri(cc.schemeIdUri);
-                        audio_channel_conf.setValue(cc.value);
-                    }
-
-                    updateDuration(periodType, (double) track.getDuration() / track.getTrackMetaData().getTimescale());
-                    addSegmentBase(rb, representationType);
-                }
-
                 if (tracks == InputOutputSelector.TEXTTRACK) {
-
                     AdaptationSetType adaptationSet = periodType.addNewAdaptationSet();
                     adaptationSet.setLang(outOptions.get("lang"));
                     RepresentationType representation = adaptationSet.addNewRepresentation();
@@ -322,13 +209,170 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
                     BaseURLType baseURL = representation.addNewBaseURL();
                     baseURL.setStringValue(inputSource.getFiles().get(0).getName());
 
+                } else if (tracks == InputOutputSelector.THUMBTRACK) {
+                    List<File> files = inputSource.getFiles();
+                    LOG.info("Using thumbnail files in following order: " + files.stream().map(File::getName).collect(Collectors.joining(", ")));
+                    String prefix = files.get(0).getName();
+                    for (File file : files) {
+                        prefix = greatestCommonPrefix(prefix, file.getName());
+                    }
+                    File targetDir = new File(outputDirectory, prefix);
+                    long thumbsize = 0;
+                    for (int i = 1; i <= files.size(); i++) {
+                        FileUtils.copyFile(files.get(i-1), new File(targetDir, prefix + i + "." + FilenameUtils.getExtension(files.get(0).getName())));
+                        thumbsize += files.get(i-1).length();
+                    }
+                    int htiles = Integer.parseInt(outOptions.get("htiles"));
+                    int vtiles = Integer.parseInt(outOptions.get("vtiles"));
+                    double thduration = Integer.parseInt(outOptions.get("thduration"));
+
+/*
+* &lt;AdaptationSet id=&quot;3&quot; mimeType=&quot;image/jpeg&quot; contentType=&quot;image&quot;&gt;
+&lt;SegmentTemplate media=&quot;$RepresentationID$/tile$Number$.jpg” duration=&quot;125&quot;
+startNumber=&quot;1&quot;/&gt;
+&lt;Representation bandwidth=&quot;10000&quot; id=&quot;thumbnails&quot; width=&quot;6400&quot; height=&quot;180&quot;&gt;
+&lt;EssentialProperty schemeIdUri=&quot;http://dashif.org/guidelines/thumbnail_tile&quot;
+value=&quot;25x1&quot;/&gt;
+&lt;/Representation&gt;
+&lt;/AdaptationSet&gt;
+* */
+                    AdaptationSetType adaptationSet = periodType.addNewAdaptationSet();
+                    adaptationSet.setMimeType("image/jpeg");
+                    adaptationSet.setContentType("image");
+                    SegmentTemplateType segmentTemplateType = adaptationSet.addNewSegmentTemplate();
+                    segmentTemplateType.setMedia("$RepresentationID$/" + prefix  + "$Number$." + FilenameUtils.getExtension(files.get(0).getName()));
+                    segmentTemplateType.setDuration((long)(vtiles * htiles * thduration));
+                    RepresentationType representation = adaptationSet.addNewRepresentation();
+                    representation.setId(prefix);
+                    representation.setBandwidth((long)((thumbsize * 8) / (files.size() * vtiles * htiles * thduration)));
+                    DescriptorType essentialPropery = representation.addNewEssentialProperty();
+                    essentialPropery.setSchemeIdUri("http://dashif.org/guidelines/thumbnail_tile");
+                    essentialPropery.setValue("" + htiles + "x" + vtiles);
+
+
+                } else {
+                    int tracksWritten = 0;
+
+                    if (hasTrack(tracks, "hvc1", "hev1", "avc1", "avc3")) {
+                        AdaptationSetType adaptationSetType =
+                                Arrays.stream(periodType.getAdaptationSetArray()).filter(a -> a.getMimeType().equals("video/mp4")).findFirst().orElseGet(() -> {
+                                    AdaptationSetType as = periodType.addNewAdaptationSet();
+                                    as.setMimeType("video/mp4");
+                                    if (outOptions.containsKey("role")) {
+                                        DescriptorType role = as.addNewRole();
+                                        role.setSchemeIdUri("urn:mpeg:dash:role");
+                                        role.setValue(outOptions.get("role"));
+                                    }
+                                    return as;
+                                });
+
+
+                        for (Track track : getTrack(tracks, "hvc1", "hev1", "avc1", "avc3")) {
+
+                            long[] fragStartSamples = videoFragmenter.sampleNumbers(track);
+                            Track t = encryptIfNeeded(track, fragStartSamples[(int) (clearLead / minVideoSegmentDuration)]);
+                            RepresentationBuilderImpl rb = new RepresentationBuilderImpl(
+                                    t,
+                                    getPsshs().get(videoKeyId),
+                                    "",
+                                    fragStartSamples,
+                                    fragStartSamples);
+                            RepresentationType representationType = adaptationSetType.addNewRepresentation();
+                            representationType.setProfiles("urn:mpeg:dash:profile:isoff-on-demand:2011");
+                            addContentProtection(representationType, t);
+                            long videoHeight = (long) track.getTrackMetaData().getHeight();
+                            long videoWidth = (long) track.getTrackMetaData().getWidth();
+                            double framesPerSecond = (double) (track.getSamples().size() * track.getTrackMetaData().getTimescale()) / track.getDuration();
+
+                            LinkedHashSet<String> codecs = new LinkedHashSet<>();
+                            for (SampleEntry sampleEntry : track.getSampleEntries()) {
+                                codecs.add(DashHelper2.getRfc6381Codec(sampleEntry));
+                            }
+                            representationType.setCodecs(StringUtils.join(codecs.toArray(), ","));
+                            representationType.setWidth(videoWidth);
+                            representationType.setHeight(videoHeight);
+                            representationType.setFrameRate(convertFramerate(framesPerSecond));
+                            representationType.setSar("1:1");
+                            representationType.setBandwidth(rb.getBandwidth());
+                            representationType.setId(findRepresentationId(track, mpd));
+                            BaseURLType baseURLType = representationType.addNewBaseURL();
+                            baseURLType.set(representationType.getId() + ".mp4");
+                            RepresentationBuilderToFile.writeOnDemand(
+                                    rb,
+                                    representationType,
+                                    outputDirectory);
+                            tracksWritten++;
+                            updateDuration(periodType, (double) track.getDuration() / track.getTrackMetaData().getTimescale());
+                            addSegmentBase(rb, representationType);
+                        }
+                    }
+
+                    for (Track track : getTrack(tracks, "dtsl", "dtse", "ec-3", "ac-3", "mlpa", "mp4a")) {
+                        long[] fragStartSamples = audioFragmenter.sampleNumbers(track);
+                        AdaptationSetType as = periodType.addNewAdaptationSet();
+                        Locale locale;
+                        if (outOptions.containsKey("lang")) {
+                            locale = Locale.forLanguageTag(outOptions.remove("lang"));
+                            track.getTrackMetaData().setLanguage(locale.getISO3Language());
+                        } else {
+                            locale = Locale.forLanguageTag(track.getTrackMetaData().getLanguage());
+                        }
+                        as.setLang(locale.toLanguageTag());
+
+
+                        Track t = encryptIfNeeded(track, fragStartSamples[(int) (clearLead / minAudioSegmentDuration)]);
+                        RepresentationBuilderImpl rb = new RepresentationBuilderImpl(
+                                t,
+                                getPsshs().get(audioKeyId),
+                                "audio",
+                                fragStartSamples,
+                                fragStartSamples);
+                        RepresentationType representationType = as.addNewRepresentation();
+                        representationType.setProfiles("urn:mpeg:dash:profile:isoff-on-demand:2011");
+                        as.setMimeType("audio/mp4");
+                        if (outOptions.containsKey("role")) {
+                            DescriptorType role = as.addNewRole();
+                            role.setSchemeIdUri("urn:mpeg:dash:role");
+                            role.setValue(outOptions.get("role"));
+                        }
+                        addContentProtection(representationType, t);
+                        LinkedHashSet<String> codecs = new LinkedHashSet<>();
+                        AudioSampleEntry ase = null;
+                        for (SampleEntry sampleEntry : track.getSampleEntries()) {
+                            if (sampleEntry instanceof AudioSampleEntry) {
+                                ase = (AudioSampleEntry) sampleEntry;
+                            }
+                            codecs.add(DashHelper2.getRfc6381Codec(sampleEntry));
+                        }
+                        assert ase != null;
+                        representationType.setCodecs(String.join(",", codecs));
+                        representationType.setAudioSamplingRate("" + DashHelper2.getAudioSamplingRate(ase));
+                        representationType.setBandwidth(rb.getBandwidth());
+                        representationType.setId(findRepresentationId(track, mpd));
+                        BaseURLType baseURLType = representationType.addNewBaseURL();
+                        baseURLType.set(representationType.getId() + ".mp4");
+                        RepresentationBuilderToFile.writeOnDemand(
+                                rb,
+                                representationType,
+                                outputDirectory);
+                        tracksWritten++;
+                        DashHelper2.ChannelConfiguration cc = DashHelper2.getChannelConfiguration(ase);
+                        if (cc != null) {
+                            DescriptorType audio_channel_conf = representationType.addNewAudioChannelConfiguration();
+                            audio_channel_conf.setSchemeIdUri(cc.schemeIdUri);
+                            audio_channel_conf.setValue(cc.value);
+                        }
+
+                        updateDuration(periodType, (double) track.getDuration() / track.getTrackMetaData().getTimescale());
+                        addSegmentBase(rb, representationType);
+                    }
+
+
+                    if (tracksWritten < tracks.size()) {
+                        throw new RuntimeException("Not all input tracks have been used in the Manifest");
+                    }
+
                 }
-
-           /*     if (tracks == InputOutputSelector.THUMBTRACK) {
-                   representationBuilders.put(new RawTextTrackRepresentationBuilder(inputSource.getName(), inputSource.getFiles()), inputSource);
-                }*/
-
-
             }
 
             ManifestOptimizer.optimize(mdd);
@@ -449,6 +493,14 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
                 widevineCPN.appendChild(wvPssh);
             }
         }
-
+    }
+    public String greatestCommonPrefix(String a, String b) {
+        int minLength = Math.min(a.length(), b.length());
+        for (int i = 0; i < minLength; i++) {
+            if (a.charAt(i) != b.charAt(i)) {
+                return a.substring(0, i);
+            }
+        }
+        return a.substring(0, minLength);
     }
 }
