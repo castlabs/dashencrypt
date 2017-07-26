@@ -6,6 +6,7 @@ import mpegDashSchemaMpd2011.RepresentationType;
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
+import java.util.List;
 
 import static com.castlabs.dash.helpers.DashHelper.filename2UrlPath;
 
@@ -14,9 +15,9 @@ public class RawTextTrackRepresentationBuilder implements RawFileRepresentationB
     private String source;
     private File file;
 
-    public RawTextTrackRepresentationBuilder(String source, File file) {
+    public RawTextTrackRepresentationBuilder(String source, List<File> file) {
         this.source = source;
-        this.file = file;
+        //this.file = file;
     }
 
     @Override

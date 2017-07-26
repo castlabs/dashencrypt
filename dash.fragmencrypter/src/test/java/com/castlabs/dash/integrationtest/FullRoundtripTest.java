@@ -127,6 +127,7 @@ public class FullRoundtripTest {
         });
 
         XMLUnit.setIgnoreWhitespace(true);
+        System.out.println(FileUtils.readFileToString(new File(outputDir, "Manifest.mpd")));
         XMLAssert.assertXMLEqual(new InputSource(getClass().getResourceAsStream("testEncrypt2_encrypted1.mpd")), new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))));
         FileUtils.deleteDirectory(outputDir);
     }

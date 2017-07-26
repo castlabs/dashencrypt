@@ -20,11 +20,12 @@ import static com.castlabs.dash.helpers.ManifestHelper.templateReplace;
 public class RepresentationBuilderToFile {
     private static Logger LOG = Logger.getLogger(RepresentationBuilderToFile.class.getName());
 
-    public static void writeOnDemand(RepresentationBuilder representationBuilder, RepresentationType representation, File outputDir) throws IOException {
+    public static long writeOnDemand(RepresentationBuilder representationBuilder, RepresentationType representation, File outputDir) throws IOException {
         assert representation.getBaseURLArray().length == 1;
         assert representation.getBaseURLArray()[0].getStringValue() != null && !"".equals(representation.getBaseURLArray()[0].getStringValue());
-        File outFile = new File(outputDir, representation.getBaseURLArray()[0].getStringValue());
+
         if (representationBuilder instanceof Mp4RepresentationBuilder) {
+            File outFile = new File(outputDir, representation.getBaseURLArray()[0].getStringValue());
             Mp4RepresentationBuilder mp4RepresentationBuilder = (Mp4RepresentationBuilder)representationBuilder;
 
             LOG.info("Writing " + outFile.getAbsolutePath());
@@ -39,10 +40,13 @@ public class RepresentationBuilderToFile {
                 fragment.writeContainer(wbc);
             }
             wbc.close();
+            return outFile.length();
         } else if (representationBuilder instanceof RawFileRepresentationBuilder) {
+            File outFile = new File(outputDir, representation.getBaseURLArray()[0].getStringValue());
             FileUtils.copyFile(((RawFileRepresentationBuilder) representationBuilder).getFile(), outFile);
+            return outFile.length();
         }
-
+        throw new RuntimeException();
     }
 
 

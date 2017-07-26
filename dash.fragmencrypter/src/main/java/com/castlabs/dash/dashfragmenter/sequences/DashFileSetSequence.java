@@ -451,11 +451,11 @@ public class DashFileSetSequence {
         }
 
         if (!trickModeRepresentations.isEmpty()) {
-            LOG.info("Creating Trick Mode AdaptationSet");
+            LOG.info("Creating Trick Mode AdaptationSetBuilder");
             AdaptationSetType adaptationSet = mpdDocument.getMPD().getPeriodArray(0).addNewAdaptationSet();
             DescriptorType essentialProperty = adaptationSet.addNewEssentialProperty();
             essentialProperty.setSchemeIdUri("http://dashif.org/guide-lines/trickmode");
-            essentialProperty.setValue("1"); // an AdaptationSet built with ExplodedSegmentListManifestWriter or SegmentBaseSingleSidxManifestWriterImpl always has id "1" if it's a video.
+            essentialProperty.setValue("1"); // an AdaptationSetBuilder built with ExplodedSegmentListManifestWriter or SegmentBaseSingleSidxManifestWriterImpl always has id "1" if it's a video.
 
             ArrayList<RepresentationType> representations = new ArrayList<RepresentationType>();
             for (Mp4RepresentationBuilder mp4RepresentationBuilder : trickModeRepresentations) {
@@ -468,7 +468,7 @@ public class DashFileSetSequence {
                 representations.add(representation);
             }
             adaptationSet.setRepresentationArray(representations.toArray(new RepresentationType[representations.size()]));
-            LOG.info("Trick Mode AdaptationSet: Done.");
+            LOG.info("Trick Mode AdaptationSetBuilder: Done.");
         }
     }
 
@@ -562,7 +562,7 @@ public class DashFileSetSequence {
     }
 
     private void addMuxedTextTrack(MPDDocument mpdDocument, File textTrackFile, DescriptorType[] roles, DescriptorType[] essentialProperties) throws IOException {
-        LOG.info("Creating Muxed Text Track AdaptationSet for " + textTrackFile.getName());
+        LOG.info("Creating Muxed Text Track AdaptationSetBuilder for " + textTrackFile.getName());
         PeriodType period = mpdDocument.getMPD().getPeriodArray()[0];
 
         org.mp4parser.muxer.Track textTrack;
@@ -594,13 +594,13 @@ public class DashFileSetSequence {
         adaptationSet.setRoleArray(roles);
         adaptationSet.setEssentialPropertyArray(essentialProperties);
 
-        LOG.info("Muxed Text Track AdaptationSet: Done.");
+        LOG.info("Muxed Text Track AdaptationSetBuilder: Done.");
     }
 
 
     public void addRawTextTrack(MPDDocument mpdDocument, File textTrack, DescriptorType[] roles, DescriptorType[] essentialProperties) throws IOException {
 
-        LOG.info("Creating Raw Text Track AdaptationSet for " + textTrack.getName());
+        LOG.info("Creating Raw Text Track AdaptationSetBuilder for " + textTrack.getName());
         PeriodType period = mpdDocument.getMPD().getPeriodArray()[0];
         AdaptationSetType adaptationSet = period.addNewAdaptationSet();
         File tracksOutputDir = new File(outputDirectory, FilenameUtils.getBaseName(textTrack.getName()));
@@ -638,7 +638,7 @@ public class DashFileSetSequence {
         BaseURLType baseURL = representation.addNewBaseURL();
         baseURL.setStringValue(FilenameUtils.getBaseName(textTrack.getName()) + "/" + textTrack.getName());
 
-        LOG.info("Raw Text Track AdaptationSet: Done.");
+        LOG.info("Raw Text Track AdaptationSetBuilder: Done.");
     }
 
 

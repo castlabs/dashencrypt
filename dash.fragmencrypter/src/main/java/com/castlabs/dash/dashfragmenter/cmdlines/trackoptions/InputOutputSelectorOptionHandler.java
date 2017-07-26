@@ -46,13 +46,8 @@ public class InputOutputSelectorOptionHandler extends
                         out.put(m2.group(1).trim(), m2.group(2).trim());
                     }
                 }
-                File file = new File(m1.group(2));
-                if (!file.exists()) {
-                    throw new CmdLineException(owner,
-                            argument + " is not valid. The given file " + file + " does not exist.");
 
-                }
-                return new InputOutputSelector(in, file, out);
+                return new InputOutputSelector(in, m1.group(2), out);
             } else {
                 throw new CmdLineException(owner,
                         argument + " is not valid. Format is [in-prop=value]filename[out-prop=value]");
@@ -60,6 +55,9 @@ public class InputOutputSelectorOptionHandler extends
         } catch (IOException e) {
             throw new CmdLineException(owner,
                     e.getMessage(), e);
+        } catch (IllegalArgumentException e) {
+            throw new CmdLineException(owner,
+                    e.getMessage());
         }
     }
 

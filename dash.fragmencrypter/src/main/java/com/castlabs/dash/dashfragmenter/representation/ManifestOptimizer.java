@@ -2,6 +2,7 @@ package com.castlabs.dash.dashfragmenter.representation;
 
 import mpegDashSchemaMpd2011.*;
 import org.apache.commons.lang.math.Fraction;
+import org.apache.xmlbeans.GDuration;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Node;
 
@@ -14,6 +15,7 @@ import java.util.List;
  */
 public class ManifestOptimizer {
     public static void optimize(MPDDocument mpdDocument) {
+        adjustDuration(mpdDocument);
         for (PeriodType periodType : mpdDocument.getMPD().getPeriodArray()) {
             for (AdaptationSetType adaptationSetType : periodType.getAdaptationSetArray()) {
                 optimize(adaptationSetType);
@@ -23,6 +25,14 @@ public class ManifestOptimizer {
                 adjustMinMaxFrameRate(adaptationSetType); // special handling cause the type is special (fraction)
             }
         }
+    }
+
+    public static void adjustDuration(MPDDocument mpdDocument) {
+        GDuration total = new GDuration();
+        for (PeriodType periodType : mpdDocument.getMPD().getPeriodArray()) {
+            total = total.add(periodType.getDuration());
+        }
+        mpdDocument.getMPD().setMediaPresentationDuration(total);
     }
 
     public static void adjustMinMaxFrameRate(AdaptationSetType adaptationSetType) {
@@ -75,7 +85,7 @@ public class ManifestOptimizer {
     public static void optimize(AdaptationSetType adaptationSetType) {
         optimizeContentProtection(adaptationSetType, adaptationSetType.getRepresentationArray());
         optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "mimeType");
-        // This is commented out as customer P0132's chromecast player doesn't look for the codecs attribute on AdaptationSet level
+        // This is commented out as customer P0132's chromecast player doesn't look for the codecs attribute on AdaptationSetBuilder level
         // The deal is to update the player before 2016. If you see this here in 2016 you can remove the comment and optimize
         // the codecs attribute as well.
         // optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "codecs");
