@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Created with Unified Streaming Platform(version=1.7.6) -->
+<tt
+  xmlns="http://www.w3.org/ns/ttml"
+  xmlns:ttm="http://www.w3.org/ns/ttml#metadata"
+  xmlns:tts="http://www.w3.org/ns/ttml#styling"
+  xml:lang="fa">
+  <head>
+    <metadata>
+      <ttm:title></ttm:title>
+      <ttm:desc></ttm:desc>
+      <ttm:copyright></ttm:copyright>
+    </metadata>
+    <styling>
+      <style
+        xml:id="backgroundStyle"
+        tts:backgroundColor="rgba(0,0,0,100)"
+        tts:displayAlign="center"
+        tts:extent="80% 10%"
+        tts:fontFamily="proportionalSansSerif"
+        tts:fontSize="16px"
+        tts:origin="10% 85%"
+        tts:textAlign="center" />
+      <style
+        style="backgroundStyle"
+        xml:id="speakerStyle"
+        tts:backgroundColor="transparent"
+        tts:color="white" />
+    </styling>
+    <layout>
+      <region
+        style="speakerStyle"
+        xml:id="speaker"
+        tts:zIndex="1" />
+      <region
+        style="backgroundStyle"
+        xml:id="background"
+        tts:zIndex="0" />
+    </layout>
+  </head>
+  <body>
+    <div
+      style="default"
+      xml:lang="fa">
+      <p
+        begin="00:00:23.000"
+        end="00:00:24.500"
+        region="speaker">.تو یه احمقی،تام</p>
+      <p
+        begin="00:00:25.000"
+        end="00:00:26.965"
+        region="speaker">نگاه کن سلیا،ما باید به دنبال علایقمون بریم</p>
+      <p
+        begin="00:00:27.000"
+        end="00:00:30.500"
+        region="speaker">...تو ربات هات رو داری،<br />.و من فقط میخوام تو فضا فوق العاده باشم</p>
+      <p
+        begin="00:00:30.800"
+        end="00:00:34.000"
+        region="speaker">چرا فقط اعتراف نمیکنی که از دست رباتی من ترسیدی؟</p>
+      <p
+        begin="00:00:34.500"
+        end="00:00:36.000"
+        region="speaker">...من نترسیدم از اون</p>
+      <p
+        begin="00:00:37.000"
+        end="00:00:37.965"
+        region="speaker">!باشه!خوبه</p>
+      <p
+        begin="00:00:38.000"
+        end="00:00:41.000"
+        region="speaker">...ترسیدم! من کابوس میبینم که دارم تعقیب میشم</p>
+      <p
+        begin="00:00:41.035"
+        end="00:00:42.000"
+        region="speaker">...با چنگال های مرگ این غولهای ربات</p>
+      <p
+        begin="00:00:43.000"
+        end="00:00:45.000"
+        region="speaker">.حالا هرچی، تام. ما دیگه باهم کاری نداریم</p>
+      <p
+        begin="00:00:50.000"
+        end="00:00:53.500"
+        region="speaker">!حافظه ی ربات ها همگام سازی شده و قفل شدست</p>
+      <p
+        begin="00:01:01.000"
+        end="00:01:03.000"
+        region="speaker">.این خیلی حال بهم زنه</p>
+      <p
+        begin="00:01:57.000"
+        end="00:01:59.000"
+        region="speaker">نباید اون پایین باشی؟</p>
+      <p
+        begin="00:02:11.000"
+        end="00:02:13.000"
+        region="speaker">.من دیشب شندیم داشتین حرف میزدین</p>
+      <p
+        begin="00:02:16.000"
+        end="00:02:18.000"
+        region="speaker">.این تقصیر من نیست،میدونی</p>
+      <p
+        begin="00:03:11.000"
+        end="00:03:12.000"
+        region="speaker">حاضری؟</p>
+      <p
+        begin="00:03:13.000"
+        end="00:03:15.000"
+        region="speaker">.البته که حاضری، تو یه ستاره راکی</p>
+      <p
+        begin="00:03:17.000"
+        end="00:03:18.000"
+        region="speaker">چطور به نظر میرسه، برلی؟</p>
+      <p
+        begin="00:03:19.000"
+        end="00:03:21.000"
+        region="speaker">...ما باید حدود 10 دقیقه وقت داشته باشیم</p>
+      <p
+        begin="00:03:21.500"
+        end="00:03:23.000"
+        region="speaker">.خب، عالیه</p>
+      <p
+        begin="00:03:23.500"
+        end="00:03:26.500"
+        region="speaker">!ما همه یکی هستیم! تمام سیسستم ها برین<br />!آره با شمام، برین</p>
+      <p
+        begin="00:03:28.000"
+        end="00:03:32.000"
+        region="speaker">!برین!یالا!برین برین برین</p>
+      <p
+        begin="00:03:43.000"
+        end="00:03:44.000"
+        region="speaker">.عالیه</p>
+      <p
+        begin="00:03:44.500"
+        end="00:03:45.700"
+        region="speaker">.چیزی برای نگرانی وجود نداره</p>
+      <p
+        begin="00:03:46.000"
+        end="00:03:47.000"
+        region="speaker">.تام</p>
+      <p
+        begin="00:03:51.000"
+        end="00:03:53.000"
+        region="speaker">.ایناهاشش</p>
+      <p
+        begin="00:03:53.500"
+        end="00:03:54.500"
+        region="speaker">.حالا</p>
+      <p
+        begin="00:03:55.000"
+        end="00:03:56.000"
+        region="speaker">.تو عاشقشی</p>
+      <p
+        begin="00:03:57.000"
+        end="00:03:58.500"
+        region="speaker">!اون عشقته</p>
+      <p
+        begin="00:04:00.000"
+        end="00:04:01.000"
+        region="speaker">.باهاش مهربون باش</p>
+      <p
+        begin="00:04:01.500"
+        end="00:04:04.500"
+        region="speaker">.صادق باش! مهربون باش باهاش</p>
+      <p
+        begin="00:04:05.000"
+        end="00:04:08.000"
+        region="speaker">.بهش یادآوری کن که عشق چیه</p>
+      <p
+        begin="00:04:52.000"
+        end="00:04:55.000"
+        region="speaker">!...و، حالا</p>
+      <p
+        begin="00:04:56.500"
+        end="00:04:58.000"
+        region="speaker">!رونوشت حافظه در حال انجام</p>
+      <p
+        begin="00:05:02.500"
+        end="00:05:05.000"
+        region="speaker">.اوه-متاسفم! متاسفم</p>
+      <p
+        begin="00:05:16.000"
+        end="00:05:17.000"
+        region="speaker">.نگاه کن سلیا</p>
+      <p
+        begin="00:05:18.000"
+        end="00:05:20.000"
+        region="speaker">.ما باید از علایقمون پیروی کنیم</p>
+      <p
+        begin="00:05:21.000"
+        end="00:05:23.000"
+        region="speaker">...تو ربات هات رو داری</p>
+      <p
+        begin="00:05:25.000"
+        end="00:05:28.000"
+        region="speaker">،...تو ربات هات رو داری<br />.و من فقط میخوام تو فضا فوق العاده باشم</p>
+      <p
+        begin="00:05:39.000"
+        end="00:05:41.000"
+        region="speaker">!باشه، دارن میان. دو دقیقه باقی مونده</p>
+      <p
+        begin="00:05:44.000"
+        end="00:05:45.000"
+        region="speaker">!سریعتر</p>
+      <p
+        begin="00:05:47.000"
+        end="00:05:50.000"
+        region="speaker">چرا فقط اعتراف نمیکنی که از دست رباتی من ترسیدی؟</p>
+      <p
+        begin="00:05:56.000"
+        end="00:05:59.000"
+        region="speaker">...گوش کن سلیا، من جوون بودم</p>
+      <p
+        begin="00:05:59.500"
+        end="00:06:00.965"
+        region="speaker">...و عوضی</p>
+      <p
+        begin="00:06:01.000"
+        end="00:06:03.000"
+        region="speaker">.ولی اون دلیلی برای نابودی دنبا نمیشه</p>
+      <p
+        begin="00:06:05.000"
+        end="00:06:06.000"
+        region="speaker">برای چی داره این کارو میکنه؟</p>
+      <p
+        begin="00:06:06.500"
+        end="00:06:08.500"
+        region="speaker">!ما قبلا امتحانش کردیم</p>
+      <p
+        begin="00:06:11.500"
+        end="00:06:12.500"
+        region="speaker">!لغوش کن</p>
+      <p
+        begin="00:06:13.000"
+        end="00:06:14.000"
+        region="speaker">!قطعش کن</p>
+      <p
+        begin="00:06:14.035"
+        end="00:06:15.000"
+        region="speaker"></p>
+      <p
+        begin="00:06:19.000"
+        end="00:06:20.000"
+        region="speaker"></p>
+      <p
+        begin="00:06:21.000"
+        end="00:06:22.965"
+        region="speaker"></p>
+      <p
+        begin="00:06:23.000"
+        end="00:06:25.000"
+        region="speaker">.قلبمو شکوندی</p>
+      <p
+        begin="00:06:26.000"
+        end="00:06:26.965"
+        region="speaker">.میدونم</p>
+      <p
+        begin="00:06:27.000"
+        end="00:06:29.000"
+        region="speaker">.تو منو تو زمین فراموش کردی</p>
+      <p
+        begin="00:06:29.035"
+        end="00:06:30.000"
+        region="speaker">میدونم</p>
+      <p
+        begin="00:06:30.500"
+        end="00:06:33.000"
+        region="speaker">.من باید نابودت کنم</p>
+      <p
+        begin="00:06:36.000"
+        end="00:06:37.000"
+        region="speaker">من-</p>
+      <p
+        begin="00:06:47.000"
+        end="00:06:48.000"
+        region="speaker">.من متاسفم</p>
+      <p
+        begin="00:06:50.000"
+        end="00:06:51.000"
+        region="speaker">.فی البداهه خوبی بود</p>
+      <p
+        begin="00:06:59.000"
+        end="00:07:00.500"
+        region="speaker">.تقصیر من نیست</p>
+      <p
+        begin="00:07:02.000"
+        end="00:07:03.000"
+        region="speaker">.این زمان</p>
+      <p
+        begin="00:07:08.000"
+        end="00:07:09.500"
+        region="speaker">!خاموشی</p>
+      <p
+        begin="00:07:10.000"
+        end="00:07:11.000"
+        region="speaker">!وقتمون تموم شده</p>
+      <p
+        begin="00:08:13.000"
+        end="00:08:14.000"
+        region="speaker">!یالا</p>
+      <p
+        begin="00:08:22.000"
+        end="00:08:23.965"
+        region="speaker"></p>
+      <p
+        begin="00:08:24.000"
+        end="00:08:25.000"
+        region="speaker">.رونوشت حافظه، 90 درصد</p>
+      <p
+        begin="00:08:26.000"
+        end="00:08:28.000"
+        region="speaker">!کاپیتان! باید لغوش کنیم</p>
+      <p
+        begin="00:08:38.000"
+        end="00:08:40.000"
+        region="speaker">...دنیا عوض شده، سلیا</p>
+      <p
+        begin="00:08:54.250"
+        end="00:08:56.750"
+        region="speaker">.(شاید ما هم بتونیم(عوض بشیم</p>
+      <p
+        begin="00:08:58.150"
+        end="00:09:00.150"
+        region="speaker">!رونوشت حافظه تموم شد</p>
+      <p
+        begin="00:09:19.000"
+        end="00:09:20.000"
+        region="speaker">.میدونی</p>
+      <p
+        begin="00:09:22.000"
+        end="00:09:24.000"
+        region="speaker">.باید یه درسی از این گرفت</p>
+      <p
+        begin="00:09:26.000"
+        end="00:09:27.000"
+        region="speaker">.میتونست بدتر بشه</p>
+    </div>
+  </body>
+</tt>

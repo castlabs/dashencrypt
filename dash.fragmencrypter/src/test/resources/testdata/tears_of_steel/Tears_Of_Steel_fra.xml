@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Created with Unified Streaming Platform(version=1.7.6) -->
+<tt
+  xmlns="http://www.w3.org/ns/ttml"
+  xmlns:ttm="http://www.w3.org/ns/ttml#metadata"
+  xmlns:tts="http://www.w3.org/ns/ttml#styling"
+  xml:lang="fr">
+  <head>
+    <metadata>
+      <ttm:title></ttm:title>
+      <ttm:desc></ttm:desc>
+      <ttm:copyright></ttm:copyright>
+    </metadata>
+    <styling>
+      <style
+        xml:id="backgroundStyle"
+        tts:backgroundColor="rgba(0,0,0,100)"
+        tts:displayAlign="center"
+        tts:extent="80% 10%"
+        tts:fontFamily="proportionalSansSerif"
+        tts:fontSize="16px"
+        tts:origin="10% 85%"
+        tts:textAlign="center" />
+      <style
+        style="backgroundStyle"
+        xml:id="speakerStyle"
+        tts:backgroundColor="transparent"
+        tts:color="white" />
+    </styling>
+    <layout>
+      <region
+        style="speakerStyle"
+        xml:id="speaker"
+        tts:zIndex="1" />
+      <region
+        style="backgroundStyle"
+        xml:id="background"
+        tts:zIndex="0" />
+    </layout>
+  </head>
+  <body>
+    <div
+      style="default"
+      xml:lang="fr">
+      <p
+        begin="00:00:23.000"
+        end="00:00:24.500"
+        region="speaker">T&apos;es un salaud, Thom.</p>
+      <p
+        begin="00:00:25.000"
+        end="00:00:27.000"
+        region="speaker">Celia, on doit poursuivre nos passions;</p>
+      <p
+        begin="00:00:27.000"
+        end="00:00:30.500"
+        region="speaker">...toi t&apos;as la robotique, et moi <br />je veux juste être super dans l&apos;espace.</p>
+      <p
+        begin="00:00:30.800"
+        end="00:00:34.000"
+        region="speaker">Pourquoi est ce que t&apos;admets pas<br />que t&apos;as peur de ma main robotique?</p>
+      <p
+        begin="00:00:34.500"
+        end="00:00:36.000"
+        region="speaker">J&apos;ai pas peur, c&apos;est...</p>
+      <p
+        begin="00:00:37.000"
+        end="00:00:38.000"
+        region="speaker">...d&apos;accord! Parfait!</p>
+      <p
+        begin="00:00:38.000"
+        end="00:00:41.000"
+        region="speaker">J&apos;ai peur! j&apos;ai des cauchemards<br />que je suis poursuivi...</p>
+      <p
+        begin="00:00:41.000"
+        end="00:00:42.000"
+        region="speaker">...par des pinces robotiques géantes...</p>
+      <p
+        begin="00:00:43.000"
+        end="00:00:45.000"
+        region="speaker">Quoiqu&apos;il en soit, Thom. C&apos;est fini.</p>
+      <p
+        begin="00:00:50.000"
+        end="00:00:53.500"
+        region="speaker">Mémoire Robot synchronisée et verrouillée. </p>
+      <p
+        begin="00:01:01.000"
+        end="00:01:03.000"
+        region="speaker">C&apos;est tout bizarre.</p>
+      <p
+        begin="00:01:57.000"
+        end="00:01:59.000"
+        region="speaker">Tu ne devrais pas être en bas?</p>
+      <p
+        begin="00:02:11.000"
+        end="00:02:13.000"
+        region="speaker">Je vous ai entendus parler hier soir.</p>
+      <p
+        begin="00:02:16.000"
+        end="00:02:18.000"
+        region="speaker">Ce n&apos;est pas de ma faute, tu sais.</p>
+      <p
+        begin="00:03:11.000"
+        end="00:03:12.000"
+        region="speaker">Est ce que t&apos;es prêt?</p>
+      <p
+        begin="00:03:13.000"
+        end="00:03:15.000"
+        region="speaker">Bien sûr que t&apos;es prêt. T&apos;es une rockstar.</p>
+      <p
+        begin="00:03:17.000"
+        end="00:03:18.000"
+        region="speaker">alors, Barley?</p>
+      <p
+        begin="00:03:19.000"
+        end="00:03:21.000"
+        region="speaker">On a une petite dizaine de minutes...</p>
+      <p
+        begin="00:03:21.500"
+        end="00:03:23.000"
+        region="speaker">Et bien c&apos;est parfait.</p>
+      <p
+        begin="00:03:23.500"
+        end="00:03:26.500"
+        region="speaker">On est en ligne dans une minute!<br />tous en route! Oui, toi, vas y!</p>
+      <p
+        begin="00:03:28.000"
+        end="00:03:32.000"
+        region="speaker">Allez y! bougez vos culs!<br />Allez allez allez!</p>
+      <p
+        begin="00:03:33.000"
+        end="00:03:37.000"
+        region="speaker">J&apos;adore ça! allez y, allez!</p>
+      <p
+        begin="00:03:43.000"
+        end="00:03:44.000"
+        region="speaker">C&apos;est bien. </p>
+      <p
+        begin="00:03:44.500"
+        end="00:03:45.700"
+        region="speaker">Rien d&apos;inquiétant.</p>
+      <p
+        begin="00:03:46.000"
+        end="00:03:47.000"
+        region="speaker">Thom.</p>
+      <p
+        begin="00:03:51.000"
+        end="00:03:53.000"
+        region="speaker">Elle est là.</p>
+      <p
+        begin="00:03:53.500"
+        end="00:03:54.500"
+        region="speaker">Maintenant.</p>
+      <p
+        begin="00:03:55.000"
+        end="00:03:56.000"
+        region="speaker">Tu l&apos;aimes.</p>
+      <p
+        begin="00:03:57.000"
+        end="00:03:58.500"
+        region="speaker">C&apos;est ta passion.</p>
+      <p
+        begin="00:04:00.000"
+        end="00:04:01.000"
+        region="speaker">Soit tendre avec elle. </p>
+      <p
+        begin="00:04:01.500"
+        end="00:04:04.500"
+        region="speaker">Soit honnête! Et- soit tendre. </p>
+      <p
+        begin="00:04:05.000"
+        end="00:04:08.000"
+        region="speaker">Rappelle lui ce que c&apos;est l&apos;amour.</p>
+      <p
+        begin="00:04:52.000"
+        end="00:04:55.000"
+        region="speaker">...et, action!</p>
+      <p
+        begin="00:04:56.500"
+        end="00:04:58.000"
+        region="speaker">Ecrasement de mémoire en cours!</p>
+      <p
+        begin="00:04:59.000"
+        end="00:05:01.000"
+        region="speaker">T&apos;es un salaud, Thom.</p>
+      <p
+        begin="00:05:02.500"
+        end="00:05:05.000"
+        region="speaker">Ohp- Désolé! pardon.</p>
+      <p
+        begin="00:05:16.000"
+        end="00:05:17.000"
+        region="speaker">Celia.</p>
+      <p
+        begin="00:05:18.000"
+        end="00:05:20.000"
+        region="speaker">On doit suivre nos passions.</p>
+      <p
+        begin="00:05:21.000"
+        end="00:05:23.000"
+        region="speaker">...t&apos;as la robotique,</p>
+      <p
+        begin="00:05:25.000"
+        end="00:05:28.000"
+        region="speaker">et je veux juste être super dans l&apos;espace.</p>
+      <p
+        begin="00:05:39.000"
+        end="00:05:41.000"
+        region="speaker">D&apos;accord, ils arrivent. Deux minutes!</p>
+      <p
+        begin="00:05:43.000"
+        end="00:05:44.000"
+        region="speaker">Plus vite, Thom!</p>
+      <p
+        begin="00:05:45.000"
+        end="00:05:46.000"
+        region="speaker">Vivacissimo!</p>
+      <p
+        begin="00:05:47.000"
+        end="00:05:50.000"
+        region="speaker">Pourquoi est ce que t&apos;admets pas<br />que t&apos;as peur de ma main robotique?</p>
+      <p
+        begin="00:05:56.000"
+        end="00:05:59.000"
+        region="speaker">Ecoute Celia, j&apos;étais jeune...</p>
+      <p
+        begin="00:05:59.500"
+        end="00:06:01.000"
+        region="speaker">...et con. </p>
+      <p
+        begin="00:06:01.000"
+        end="00:06:03.000"
+        region="speaker">Mais ce n&apos;est pas une raison<br />pour détruire la planète.</p>
+      <p
+        begin="00:06:05.000"
+        end="00:06:06.000"
+        region="speaker">Pourquoi est ce qu&apos;il fait ça?</p>
+      <p
+        begin="00:06:06.500"
+        end="00:06:08.500"
+        region="speaker">On a déjà essayé celui la!</p>
+      <p
+        begin="00:06:11.500"
+        end="00:06:12.500"
+        region="speaker">Arrête!</p>
+      <p
+        begin="00:06:13.000"
+        end="00:06:14.000"
+        region="speaker">Coupé!</p>
+      <p
+        begin="00:06:14.000"
+        end="00:06:15.000"
+        region="speaker">Whoaaa!</p>
+      <p
+        begin="00:06:19.000"
+        end="00:06:20.000"
+        region="speaker">Whoaaa!</p>
+      <p
+        begin="00:06:21.000"
+        end="00:06:23.000"
+        region="speaker">Nooooonnn!</p>
+      <p
+        begin="00:06:23.000"
+        end="00:06:25.000"
+        region="speaker">T&apos;as brisé mon coeur</p>
+      <p
+        begin="00:06:26.000"
+        end="00:06:27.000"
+        region="speaker">Je sais.</p>
+      <p
+        begin="00:06:27.000"
+        end="00:06:29.000"
+        region="speaker">Tu m&apos;as oubliée sur terre.</p>
+      <p
+        begin="00:06:29.000"
+        end="00:06:30.000"
+        region="speaker">Je sais</p>
+      <p
+        begin="00:06:30.500"
+        end="00:06:33.000"
+        region="speaker">Je devrais t&apos;écraser.</p>
+      <p
+        begin="00:06:36.000"
+        end="00:06:37.000"
+        region="speaker">Je-</p>
+      <p
+        begin="00:06:47.000"
+        end="00:06:48.000"
+        region="speaker">Je suis désolé.</p>
+      <p
+        begin="00:06:50.000"
+        end="00:06:51.000"
+        region="speaker">Bien dit.</p>
+      <p
+        begin="00:06:59.000"
+        end="00:07:00.500"
+        region="speaker">Pas ma faute!</p>
+      <p
+        begin="00:07:02.000"
+        end="00:07:03.000"
+        region="speaker">cette fois ci.</p>
+      <p
+        begin="00:07:08.000"
+        end="00:07:09.500"
+        region="speaker">Silence sur le plateau!</p>
+      <p
+        begin="00:07:10.000"
+        end="00:07:11.000"
+        region="speaker">On n&apos;a plus le temps!</p>
+      <p
+        begin="00:08:13.000"
+        end="00:08:14.000"
+        region="speaker">Allez!</p>
+      <p
+        begin="00:08:22.000"
+        end="00:08:24.000"
+        region="speaker">RAAAAAAAAH!</p>
+      <p
+        begin="00:08:24.000"
+        end="00:08:25.000"
+        region="speaker">Ecrasement de mémoire, 90%.</p>
+      <p
+        begin="00:08:26.000"
+        end="00:08:28.000"
+        region="speaker">Capitaine! On doit arrêter!</p>
+      <p
+        begin="00:08:38.000"
+        end="00:08:40.000"
+        region="speaker">Le monde a changé, Celia...</p>
+      <p
+        begin="00:08:54.000"
+        end="00:08:56.000"
+        region="speaker">...peut être qu&apos;on peut changer aussi.</p>
+      <p
+        begin="00:08:58.000"
+        end="00:08:59.000"
+        region="speaker">Ecrasement de mémoire terminé!</p>
+      <p
+        begin="00:09:19.000"
+        end="00:09:20.000"
+        region="speaker">Tu sais.</p>
+      <p
+        begin="00:09:22.000"
+        end="00:09:24.000"
+        region="speaker">On peut apprendre une leçon de tout ça.</p>
+      <p
+        begin="00:09:26.000"
+        end="00:09:27.000"
+        region="speaker">Ca aurait pu être pire.</p>
+    </div>
+  </body>
+</tt>

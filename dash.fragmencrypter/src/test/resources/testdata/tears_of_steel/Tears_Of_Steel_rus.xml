@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Created with Unified Streaming Platform(version=1.7.6) -->
+<tt
+  xmlns="http://www.w3.org/ns/ttml"
+  xmlns:ttm="http://www.w3.org/ns/ttml#metadata"
+  xmlns:tts="http://www.w3.org/ns/ttml#styling"
+  xml:lang="ru">
+  <head>
+    <metadata>
+      <ttm:title></ttm:title>
+      <ttm:desc></ttm:desc>
+      <ttm:copyright></ttm:copyright>
+    </metadata>
+    <styling>
+      <style
+        xml:id="backgroundStyle"
+        tts:backgroundColor="rgba(0,0,0,100)"
+        tts:displayAlign="center"
+        tts:extent="80% 10%"
+        tts:fontFamily="proportionalSansSerif"
+        tts:fontSize="16px"
+        tts:origin="10% 85%"
+        tts:textAlign="center" />
+      <style
+        style="backgroundStyle"
+        xml:id="speakerStyle"
+        tts:backgroundColor="transparent"
+        tts:color="white" />
+    </styling>
+    <layout>
+      <region
+        style="speakerStyle"
+        xml:id="speaker"
+        tts:zIndex="1" />
+      <region
+        style="backgroundStyle"
+        xml:id="background"
+        tts:zIndex="0" />
+    </layout>
+  </head>
+  <body>
+    <div
+      style="default"
+      xml:lang="ru">
+      <p
+        begin="00:00:23.000"
+        end="00:00:24.500"
+        region="speaker">Ты придурок, Том!</p>
+      <p
+        begin="00:00:25.000"
+        end="00:00:27.000"
+        region="speaker">Послушай Селия, мы должны <br />следовать нашим желаниям...</p>
+      <p
+        begin="00:00:27.000"
+        end="00:00:30.500"
+        region="speaker">...у тебя есть твои роботы,<br />а я хочу быть самым крутым в космосе.</p>
+      <p
+        begin="00:00:30.800"
+        end="00:00:34.000"
+        region="speaker">Почему ты просто не признаешь,<br />что психуешь из-за моей руки?</p>
+      <p
+        begin="00:00:34.500"
+        end="00:00:36.000"
+        region="speaker">Я не психую, я...</p>
+      <p
+        begin="00:00:37.000"
+        end="00:00:38.000"
+        region="speaker">...ладно! Хорошо!</p>
+      <p
+        begin="00:00:38.000"
+        end="00:00:41.000"
+        region="speaker">Я психую! У меня кошмары,<br />что за мной гонятся...</p>
+      <p
+        begin="00:00:41.000"
+        end="00:00:42.000"
+        region="speaker">...эти огромные клешни...</p>
+      <p
+        begin="00:00:43.000"
+        end="00:00:45.000"
+        region="speaker">Неважно, Том. Всё кончено.</p>
+      <p
+        begin="00:00:50.000"
+        end="00:00:53.500"
+        region="speaker">Память робота синхронизирована и заблокирована.</p>
+      <p
+        begin="00:01:01.000"
+        end="00:01:03.000"
+        region="speaker">Всё это довольно дико.</p>
+      <p
+        begin="00:01:57.000"
+        end="00:01:59.000"
+        region="speaker">Вам не пора вниз?</p>
+      <p
+        begin="00:02:11.000"
+        end="00:02:13.000"
+        region="speaker">Я слышал ваш разговор вчера ночью.</p>
+      <p
+        begin="00:02:16.000"
+        end="00:02:18.000"
+        region="speaker">Это не моя вина, ясно?</p>
+      <p
+        begin="00:03:11.000"
+        end="00:03:12.000"
+        region="speaker">Ты готов?</p>
+      <p
+        begin="00:03:13.000"
+        end="00:03:15.000"
+        region="speaker">Конечно, ты готов, ты у нас звезда!</p>
+      <p
+        begin="00:03:17.000"
+        end="00:03:18.000"
+        region="speaker">Как там дела, Барли?</p>
+      <p
+        begin="00:03:19.000"
+        end="00:03:21.000"
+        region="speaker">У нас около десяти минут...</p>
+      <p
+        begin="00:03:21.500"
+        end="00:03:23.000"
+        region="speaker">Ну и отлично.</p>
+      <p
+        begin="00:03:23.500"
+        end="00:03:26.500"
+        region="speaker">Всем внимание! Старт всех систем!<br />Да ты, давай!</p>
+      <p
+        begin="00:03:28.000"
+        end="00:03:32.000"
+        region="speaker">Вперед! Шевелите задницами! </p>
+      <p
+        begin="00:03:33.000"
+        end="00:03:37.000"
+        region="speaker">Мне нравится! Давайте!</p>
+      <p
+        begin="00:03:43.000"
+        end="00:03:44.000"
+        region="speaker">Прекрасно!</p>
+      <p
+        begin="00:03:44.500"
+        end="00:03:45.700"
+        region="speaker">Не о чем волноваться.</p>
+      <p
+        begin="00:03:46.000"
+        end="00:03:47.000"
+        region="speaker">Том.</p>
+      <p
+        begin="00:03:51.000"
+        end="00:03:53.000"
+        region="speaker">Вот она.</p>
+      <p
+        begin="00:03:53.500"
+        end="00:03:54.500"
+        region="speaker">Здесь.</p>
+      <p
+        begin="00:03:55.000"
+        end="00:03:56.000"
+        region="speaker">Ты её любишь.</p>
+      <p
+        begin="00:03:57.000"
+        end="00:03:58.500"
+        region="speaker">Она твоя страсть!</p>
+      <p
+        begin="00:04:00.000"
+        end="00:04:01.000"
+        region="speaker">Будь ласков с ней.</p>
+      <p
+        begin="00:04:01.500"
+        end="00:04:04.500"
+        region="speaker">Будь честен! Будь... ласков.</p>
+      <p
+        begin="00:04:05.000"
+        end="00:04:08.000"
+        region="speaker">Напомни ей, что такое любовь.</p>
+      <p
+        begin="00:04:52.000"
+        end="00:04:55.000"
+        region="speaker">...и, начали!</p>
+      <p
+        begin="00:04:56.500"
+        end="00:04:58.000"
+        region="speaker">Начата перезапись памяти!</p>
+      <p
+        begin="00:04:59.000"
+        end="00:05:01.000"
+        region="speaker">Ты придурок, Том!</p>
+      <p
+        begin="00:05:02.500"
+        end="00:05:05.000"
+        region="speaker">Ой, простите! Простите...</p>
+      <p
+        begin="00:05:16.000"
+        end="00:05:17.000"
+        region="speaker">Послушай Селия.</p>
+      <p
+        begin="00:05:18.000"
+        end="00:05:20.000"
+        region="speaker">Мы должны следовать нашим желаниям.</p>
+      <p
+        begin="00:05:21.000"
+        end="00:05:23.000"
+        region="speaker">У тебя есть твои роботы...</p>
+      <p
+        begin="00:05:25.000"
+        end="00:05:28.000"
+        region="speaker">...а я хочу быть самым крутым в космосе.</p>
+      <p
+        begin="00:05:39.000"
+        end="00:05:41.000"
+        region="speaker">Так, они идут. У нас две минуты!</p>
+      <p
+        begin="00:05:43.000"
+        end="00:05:44.000"
+        region="speaker">Поднажми, Том!</p>
+      <p
+        begin="00:05:45.000"
+        end="00:05:46.000"
+        region="speaker">Поживее!</p>
+      <p
+        begin="00:05:47.000"
+        end="00:05:50.000"
+        region="speaker">Почему ты просто не признаешь,<br />что психуешь из-за моей руки?</p>
+      <p
+        begin="00:05:56.000"
+        end="00:05:59.000"
+        region="speaker">Послушай, Селия. Я был молод...</p>
+      <p
+        begin="00:05:59.500"
+        end="00:06:01.000"
+        region="speaker">...и глуп.</p>
+      <p
+        begin="00:06:01.000"
+        end="00:06:03.000"
+        region="speaker">Но это не причина, чтобы<br />разрушать весь мир.</p>
+      <p
+        begin="00:06:05.000"
+        end="00:06:06.000"
+        region="speaker">Почему он это делает?</p>
+      <p
+        begin="00:06:06.500"
+        end="00:06:08.500"
+        region="speaker">Мы же уже пробовали это!</p>
+      <p
+        begin="00:06:11.500"
+        end="00:06:12.500"
+        region="speaker">Отмена!</p>
+      <p
+        begin="00:06:13.000"
+        end="00:06:14.000"
+        region="speaker">Стоп!</p>
+      <p
+        begin="00:06:14.000"
+        end="00:06:15.000"
+        region="speaker">Ааааааа?</p>
+      <p
+        begin="00:06:19.000"
+        end="00:06:20.000"
+        region="speaker">Ааааааа?</p>
+      <p
+        begin="00:06:21.000"
+        end="00:06:23.000"
+        region="speaker">Нееет!</p>
+      <p
+        begin="00:06:23.000"
+        end="00:06:25.000"
+        region="speaker">Ты разбил мне сердце.</p>
+      <p
+        begin="00:06:26.000"
+        end="00:06:27.000"
+        region="speaker">Я знаю.</p>
+      <p
+        begin="00:06:27.000"
+        end="00:06:29.000"
+        region="speaker">Ты забыл меня на Земле.</p>
+      <p
+        begin="00:06:29.000"
+        end="00:06:30.000"
+        region="speaker">Я знаю.</p>
+      <p
+        begin="00:06:30.500"
+        end="00:06:33.000"
+        region="speaker">Я должна раздавить тебя!</p>
+      <p
+        begin="00:06:36.000"
+        end="00:06:37.000"
+        region="speaker">Я...</p>
+      <p
+        begin="00:06:47.000"
+        end="00:06:48.000"
+        region="speaker">Прости меня.</p>
+      <p
+        begin="00:06:50.000"
+        end="00:06:51.000"
+        region="speaker">Хорошо придумал.</p>
+      <p
+        begin="00:06:59.000"
+        end="00:07:00.500"
+        region="speaker">Это не я!</p>
+      <p
+        begin="00:07:02.000"
+        end="00:07:03.000"
+        region="speaker">В этот раз.</p>
+      <p
+        begin="00:07:08.000"
+        end="00:07:09.500"
+        region="speaker">Тишина на площадке!</p>
+      <p
+        begin="00:07:10.000"
+        end="00:07:11.000"
+        region="speaker">У нас нет времени! Нет времени!</p>
+      <p
+        begin="00:08:13.000"
+        end="00:08:14.000"
+        region="speaker">Ну давайте!</p>
+      <p
+        begin="00:08:22.000"
+        end="00:08:24.000"
+        region="speaker">АААААААА!</p>
+      <p
+        begin="00:08:24.000"
+        end="00:08:25.000"
+        region="speaker">Перезапись памяти, 90%.</p>
+      <p
+        begin="00:08:26.000"
+        end="00:08:28.000"
+        region="speaker">Капитан! Мы должны остановить!..</p>
+      <p
+        begin="00:08:38.000"
+        end="00:08:40.000"
+        region="speaker">Мир изменился, Селия...</p>
+      <p
+        begin="00:08:54.000"
+        end="00:08:56.000"
+        region="speaker">...может пора и нам.</p>
+      <p
+        begin="00:08:58.000"
+        end="00:08:59.000"
+        region="speaker">Перезапись памяти завершена!</p>
+      <p
+        begin="00:09:19.000"
+        end="00:09:20.000"
+        region="speaker">Знаешь...</p>
+      <p
+        begin="00:09:22.000"
+        end="00:09:24.000"
+        region="speaker">Это урок всем нам.</p>
+      <p
+        begin="00:09:26.000"
+        end="00:09:27.000"
+        region="speaker">Могло быть и хуже.</p>
+    </div>
+  </body>
+</tt>

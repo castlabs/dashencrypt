@@ -1,0 +1,8 @@
+Tears_Of_Steel_128000_ac3_eng.mp4 filter=lfs diff=lfs merge=lfs -text
+Tears_Of_Steel_128000_ac3_ita.mp4 filter=lfs diff=lfs merge=lfs -text
+Tears_Of_Steel_128000_eng.mp4 filter=lfs diff=lfs merge=lfs -text
+Tears_Of_Steel_128000_ita.mp4 filter=lfs diff=lfs merge=lfs -text
+Tears_Of_Steel_1400000.mp4 filter=lfs diff=lfs merge=lfs -text
+Tears_Of_Steel_600000.mp4 filter=lfs diff=lfs merge=lfs -text
+Tears_Of_Steel_800000.mp4 filter=lfs diff=lfs merge=lfs -text
+Tears_Of_Steel_1000000.mp4 filter=lfs diff=lfs merge=lfs -text
