@@ -806,7 +806,6 @@ public class RepresentationBuilderImpl extends AbstractList<Container> implement
 
         double duration = (double) track.getDuration() / track.getTrackMetaData().getTimescale();
         return (long) ((size * 8 / duration / 100)) * 100;
-
     }
 
     public long getBandwidth() {
