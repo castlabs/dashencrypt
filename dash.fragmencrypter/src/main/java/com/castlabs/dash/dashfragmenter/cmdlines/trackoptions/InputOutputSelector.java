@@ -37,7 +37,7 @@ public class InputOutputSelector {
     private static final String[] outputOptionsKeys = new String[]{"lang", "period", "role", "htiles", "vtiles", "thduration"};
 
     private static final Set<String> MP4_FILE_EXTS = new HashSet<>(Arrays.asList("mp4", "m4a", "m4v", "ismv", "isma", "mov"));
-    private static final Set<String> THUMB_FILE_EXTS = new HashSet<>(Arrays.asList("jpg", "jpeg", "png"));
+    private static final Set<String> THUMB_FILE_EXTS = new HashSet<>(Arrays.asList("jpg", "jpeg"));
 
 
     private Map<String, String> outputOptions = new HashMap<>();
