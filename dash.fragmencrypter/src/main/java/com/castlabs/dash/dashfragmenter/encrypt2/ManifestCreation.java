@@ -201,11 +201,11 @@ public class ManifestCreation {
 
     public static void addThumbnailTrack(PeriodType periodType, List<File> files, File outputDirectory, Map<String, String> outOptions) throws IOException {
         LOG.info("Using thumbnail files in following order: " + files.stream().map(File::getName).collect(Collectors.joining(", ")));
-        String prefix = files.get(0).getName();
+        String prefix = files.get(0).getAbsolutePath();
 
         Dimension dRef = null;
         for (File file : files) {
-            prefix = greatestCommonPrefix(prefix, file.getName());
+            prefix = greatestCommonPrefix(prefix, file.getAbsolutePath());
             Dimension d = getImageDimension(file);
             if (dRef == null) {
                 dRef = d;
@@ -215,6 +215,7 @@ public class ManifestCreation {
                 }
             }
         }
+        prefix = prefix.split(File.separator)[prefix.split(File.separator).length-1];
         assert dRef != null;
         File targetDir = new File(outputDirectory, prefix);
         long thumbsize = 0;
@@ -310,6 +311,21 @@ public class ManifestCreation {
         representationType.setWidth(videoWidth);
         representationType.setHeight(videoHeight);
         representationType.setFrameRate(convertFramerate(framesPerSecond));
+        /*for (SampleEntry se : t.getSampleEntries()) {
+            OriginalFormatBox frma = Path.getPath((Box) se, "sinf/frma");
+            String type;
+            if (frma != null) {
+                type = frma.getDataFormat();
+            } else {
+                type = se.getType();
+            }
+            if (type.startsWith("avc")) {
+                AvcConfigurationBox avcConfigurationBox = Path.getPath((Box) se, "avcC");
+                SeqParameterSet sps = SeqParameterSet.read(avcConfigurationBox.getSequenceParameterSets().get(0).array());
+                System.err.println( sps.vuiParams.aspect_ratio_info_present_flag);
+
+            }
+        }*/
         representationType.setSar("1:1");
         representationType.setBandwidth(RepresentationBuilderImpl.getBandwidth(t));
         representationType.setId(representationId);
