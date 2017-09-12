@@ -5,10 +5,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.mp4parser.Box;
 import org.mp4parser.Container;
-import org.mp4parser.boxes.dolby.AC3SpecificBox;
-import org.mp4parser.boxes.dolby.DTSSpecificBox;
-import org.mp4parser.boxes.dolby.EC3SpecificBox;
-import org.mp4parser.boxes.dolby.MLPSpecificBox;
+import org.mp4parser.boxes.dolby.*;
 import org.mp4parser.boxes.iso14496.part1.objectdescriptors.AudioSpecificConfig;
 import org.mp4parser.boxes.iso14496.part1.objectdescriptors.DecoderConfigDescriptor;
 import org.mp4parser.boxes.iso14496.part12.OriginalFormatBox;
@@ -157,7 +154,7 @@ public final class DashHelper2 {
                 0b0000000000000010, // 8 - LFE2
         };
         for (int i = 0; i < chanLoc2audioChannelConfiguration.length; i++) {
-            if ((chan_loc & (0b000000001 << i)) >0) {
+            if ((chan_loc & (0b000000001 << i)) > 0) {
                 audioChannelValue |= chanLoc2audioChannelConfiguration[i];
             }
         }
@@ -195,7 +192,7 @@ public final class DashHelper2 {
         ChannelConfiguration cc = new ChannelConfiguration();
         cc.schemeIdUri = "urn:mpeg:dash:23003:3:audio_channel_configuration:2011";
         cc.value = "2";
-        if (audioSpecificConfig != null && audioSpecificConfig.getChannelConfiguration()>2 ) {
+        if (audioSpecificConfig != null && audioSpecificConfig.getChannelConfiguration() > 2) {
             // in case of mono let's assume stereo as it will be Parametric Stereo in most cases.
             cc.value = String.valueOf(audioSpecificConfig.getChannelConfiguration());
         }
@@ -387,9 +384,7 @@ public final class DashHelper2 {
             int c;
             HevcConfigurationBox hvcc = Path.getPath((Box) se, "hvcC");
 
-            String codec = "";
-
-            codec += type + ".";
+            String codec = type + ".";
 
             if (hvcc.getGeneral_profile_space() == 1) {
                 codec += "A";
@@ -467,6 +462,9 @@ public final class DashHelper2 {
                 return "stpp";
             }
 
+        } else if (type.equals("dvav") && type.equals("dva1") && type.equals("dvhe") && type.equals("dvh1")) {
+            DoViConfigurationBox dvcC = Path.getPath((Box) se, "dvcC");
+            return type + String.format(".%02d.%02d", dvcC.getDvProfile(), dvcC.getDvLevel());
         } else {
             return null;
         }
@@ -478,11 +476,11 @@ public final class DashHelper2 {
     }
 
     public static String getFormat(Track track) {
-        List<SampleEntry> ses  = track.getSampleEntries();
+        List<SampleEntry> ses = track.getSampleEntries();
         String format = null;
         for (SampleEntry se : ses) {
 
-            OriginalFormatBox frma = Path.getPath((Container)se, "sinf/frma");
+            OriginalFormatBox frma = Path.getPath((Container) se, "sinf/frma");
             if (frma != null) {
                 if (format == null || format.equals(frma.getDataFormat())) {
                     format = frma.getDataFormat();
@@ -491,7 +489,7 @@ public final class DashHelper2 {
                 }
 
             } else {
-                if (format == null ||format.equals(se.getType())) {
+                if (format == null || format.equals(se.getType())) {
                     format = se.getType();
                 } else {
                     throw new RuntimeException("cant determine format of track");

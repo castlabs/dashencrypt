@@ -11,11 +11,14 @@ import org.apache.xmlbeans.GDuration;
 import org.mp4parser.Box;
 import org.mp4parser.Container;
 import org.mp4parser.boxes.iso14496.part12.MovieHeaderBox;
+import org.mp4parser.boxes.iso14496.part12.OriginalFormatBox;
+import org.mp4parser.boxes.iso14496.part15.AvcConfigurationBox;
 import org.mp4parser.boxes.iso23001.part7.ProtectionSystemSpecificHeaderBox;
 import org.mp4parser.boxes.iso23001.part7.TrackEncryptionBox;
 import org.mp4parser.boxes.sampleentry.AudioSampleEntry;
 import org.mp4parser.boxes.sampleentry.SampleEntry;
 import org.mp4parser.muxer.Track;
+import org.mp4parser.muxer.tracks.h264.parsing.model.SeqParameterSet;
 import org.mp4parser.tools.Path;
 import org.mp4parser.tools.UUIDConverter;
 import org.w3c.dom.Document;
@@ -311,7 +314,7 @@ public class ManifestCreation {
         representationType.setWidth(videoWidth);
         representationType.setHeight(videoHeight);
         representationType.setFrameRate(convertFramerate(framesPerSecond));
-        /*for (SampleEntry se : t.getSampleEntries()) {
+        for (SampleEntry se : t.getSampleEntries()) {
             OriginalFormatBox frma = Path.getPath((Box) se, "sinf/frma");
             String type;
             if (frma != null) {
@@ -321,11 +324,15 @@ public class ManifestCreation {
             }
             if (type.startsWith("avc")) {
                 AvcConfigurationBox avcConfigurationBox = Path.getPath((Box) se, "avcC");
-                SeqParameterSet sps = SeqParameterSet.read(avcConfigurationBox.getSequenceParameterSets().get(0).array());
-                System.err.println( sps.vuiParams.aspect_ratio_info_present_flag);
+                SeqParameterSet sps = null;
+                try {
+                    sps = SeqParameterSet.read(avcConfigurationBox.getSequenceParameterSets().get(0).array());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
 
             }
-        }*/
+        }
         representationType.setSar("1:1");
         representationType.setBandwidth(RepresentationBuilderImpl.getBandwidth(t));
         representationType.setId(representationId);

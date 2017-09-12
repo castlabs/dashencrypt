@@ -108,7 +108,7 @@
         </dependency>
         <dependency>
             <groupId>org.mp4parser</groupId>
-            <version>1.9.29</version>
+            <version>1.9.30</version>
             <artifactId>muxer</artifactId>
         </dependency>
         <dependency>
