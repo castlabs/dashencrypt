@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static com.castlabs.dash.helpers.BoxHelper.boxToBytes;
 import static com.castlabs.dash.helpers.ManifestHelper.getXmlOptions;
 import static org.mp4parser.tools.CastUtils.l2i;
 
@@ -113,20 +112,6 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
 
     }
 
-    public String getName(Set<String> representationNames, String baseName) {
-        if (representationNames.contains(baseName)) {
-            int i = 1;
-            while (representationNames.contains(baseName + "_" + i)) {
-                i++;
-            }
-            representationNames.add(baseName + "_" + i);
-            return baseName + "_" + i;
-        } else {
-            representationNames.add(baseName);
-            return baseName;
-        }
-    }
-
     public int run() {
         try {
             if (outputDirectory.getAbsoluteFile().exists() == outputDirectory.getAbsoluteFile().mkdirs()) {
@@ -202,9 +187,9 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
                                     fragStartSamples);
 
                             ManifestCreation.addContentProtection(representationType, t, getPsshs());
-                            ManifestCreation.updateDuration( periodType, (double) t.getDuration() / t.getTrackMetaData().getTimescale());
+                            ManifestCreation.updateDuration(periodType, (double) t.getDuration() / t.getTrackMetaData().getTimescale());
                             ManifestCreation.addSegmentBase(rb, representationType);
-                            RepresentationBuilderToFile.writeOnDemand(
+                            totalSize += RepresentationBuilderToFile.writeOnDemand(
                                     rb,
                                     representationType,
                                     outputDirectory);
@@ -239,7 +224,7 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
                         ManifestCreation.addContentProtection(representationType, t, getPsshs());
                         ManifestCreation.updateDuration(periodType, (double) t.getDuration() / t.getTrackMetaData().getTimescale());
                         ManifestCreation.addSegmentBase(rb, representationType);
-                        RepresentationBuilderToFile.writeOnDemand(
+                        totalSize += RepresentationBuilderToFile.writeOnDemand(
                                 rb,
                                 representationType,
                                 outputDirectory);

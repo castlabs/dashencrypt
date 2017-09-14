@@ -34,8 +34,6 @@ public class Main {
             usage = "Command required. Supported commands are: [dash, encrypt, mux]"
     )
     @SubCommands({
-            @SubCommand(name = "dash", impl = DashFileSet.class),
-            @SubCommand(name = "encrypt", impl = DashFileSetEncrypt.class),
             @SubCommand(name = "encrypt2", impl = Encrypt2Command.class),
             @SubCommand(name = "mux", impl = MuxMp4.class),
             @SubCommand(name = "cenc", impl = CencEncryptAndMux.class),

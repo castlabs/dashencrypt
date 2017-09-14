@@ -6,23 +6,15 @@
 
 package com.castlabs.dash.helpers;
 
-import com.coremedia.iso.boxes.Box;
-import com.coremedia.iso.boxes.Container;
-import com.coremedia.iso.boxes.sampleentry.AudioSampleEntry;
-import com.googlecode.mp4parser.authoring.Sample;
-import com.googlecode.mp4parser.authoring.Track;
-import com.googlecode.mp4parser.boxes.threegpp26244.SegmentIndexBox;
-import com.googlecode.mp4parser.util.Path;
-import mpegDashSchemaMpd2011.AdaptationSetType;
-import mpegDashSchemaMpd2011.DescriptorType;
-import mpegDashSchemaMpd2011.RepresentationType;
 import org.apache.commons.lang.math.Fraction;
 import org.apache.xmlbeans.XmlOptions;
+import org.mp4parser.Box;
+import org.mp4parser.Container;
+import org.mp4parser.boxes.iso14496.part12.SegmentIndexBox;
+import org.mp4parser.tools.Path;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -61,47 +53,7 @@ public class ManifestHelper {
     }
 
 
-    /**
-     * Creates a representation and AudioChannelConfiguration if appropriate.
-     */
-    public static RepresentationType createRepresentation(AdaptationSetType adaptationSet, Track track) {
-        RepresentationType representation = adaptationSet.addNewRepresentation();
-        if (track.getHandler().equals("vide")) {
 
-            long videoHeight = (long) track.getTrackMetaData().getHeight();
-            long videoWidth = (long) track.getTrackMetaData().getWidth();
-            double framesPerSecond = (double) (track.getSamples().size() * track.getTrackMetaData().getTimescale()) / track.getDuration();
-
-            Fraction fraction = Fraction.getFraction((int) videoWidth, (int) videoHeight).reduce();
-            adaptationSet.setPar("" + fraction.getNumerator() + ":" + fraction.getDenominator());
-
-
-            //representation.setMimeType("video/mp4");
-            representation.setCodecs(DashHelper.getRfc6381Codec(track.getSampleDescriptionBox().getSampleEntry()));
-            representation.setWidth(videoWidth);
-            representation.setHeight(videoHeight);
-            representation.setFrameRate(convertFramerate(framesPerSecond));
-            representation.setSar("1:1");
-            // too hard to find it out. Ignoring even though it should be set according to DASH-AVC-264-v2.00-hd-mca.pdf
-        }
-
-        if (track.getHandler().equals("soun")) {
-
-
-            AudioSampleEntry ase = (AudioSampleEntry) track.getSampleDescriptionBox().getSampleEntry();
-
-            //representation.setMimeType("audio/mp4");
-            representation.setCodecs(DashHelper.getRfc6381Codec(ase));
-            representation.setAudioSamplingRate("" + DashHelper.getAudioSamplingRate(ase));
-
-            DescriptorType audio_channel_conf = representation.addNewAudioChannelConfiguration();
-            DashHelper.ChannelConfiguration cc = DashHelper.getChannelConfiguration(ase);
-            audio_channel_conf.setSchemeIdUri(cc.schemeIdUri);
-            audio_channel_conf.setValue(cc.value);
-
-        }
-        return representation;
-    }
 
     static Pattern REPRESENTATION_PATTERN = Pattern.compile("(\\$RepresentationID(%0[0-9]+d)?\\$)");
     static Pattern NUMBER_PATTERN = Pattern.compile("(\\$Number(%0[0-9]+d)?\\$)");
@@ -145,15 +97,4 @@ public class ManifestHelper {
         return xmlOptions;
     }
 
-    public static long getApproxTrackSize(Track track) {
-        long size = 0;
-        List<Sample> samples = track.getSamples();
-        Random r = new Random(0); // I initialize the seed unsafe on purpose so that we have repeatable results
-        int maxSample = samples.size();
-        for (int i = 0; i < Math.min(samples.size(), 10000); i++) {
-            size += samples.get(r.nextInt(maxSample)).getSize();
-        }
-        size = (size / Math.min(samples.size(), 10000)) * track.getSamples().size();
-        return size;
-    }
 }

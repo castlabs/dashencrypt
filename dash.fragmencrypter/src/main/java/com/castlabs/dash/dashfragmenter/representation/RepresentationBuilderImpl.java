@@ -1,19 +1,13 @@
 package com.castlabs.dash.dashfragmenter.representation;
 
-import com.castlabs.dash.helpers.DashHelper;
-import com.castlabs.dash.helpers.DashHelper2;
 import com.castlabs.dash.helpers.SapHelper;
 import com.castlabs.dash.helpers.Timing;
-import mpegCenc2013.DefaultKIDAttribute;
-import mpegDashSchemaMpd2011.*;
-import org.apache.commons.lang.StringUtils;
 import org.mp4parser.*;
 import org.mp4parser.boxes.iso14496.part12.*;
 import org.mp4parser.boxes.iso23001.part7.CencSampleAuxiliaryDataFormat;
 import org.mp4parser.boxes.iso23001.part7.ProtectionSystemSpecificHeaderBox;
 import org.mp4parser.boxes.iso23001.part7.SampleEncryptionBox;
 import org.mp4parser.boxes.iso23001.part7.TrackEncryptionBox;
-import org.mp4parser.boxes.sampleentry.AudioSampleEntry;
 import org.mp4parser.boxes.sampleentry.SampleEntry;
 import org.mp4parser.boxes.samplegrouping.GroupEntry;
 import org.mp4parser.boxes.samplegrouping.SampleGroupDescriptionBox;
@@ -25,23 +19,15 @@ import org.mp4parser.muxer.Track;
 import org.mp4parser.muxer.tracks.encryption.CencEncryptedTrack;
 import org.mp4parser.tools.IsoTypeWriter;
 import org.mp4parser.tools.Path;
-import org.mp4parser.tools.UUIDConverter;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 
 import java.io.IOException;
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 import java.util.*;
 
-import static com.castlabs.dash.helpers.BoxHelper.boxToBytes;
-import static com.castlabs.dash.helpers.ManifestHelper.convertFramerate;
-import static com.castlabs.dash.helpers.Timing.getDuration;
 import static com.castlabs.dash.helpers.Timing.getPtss;
 import static com.castlabs.dash.helpers.Timing.getTimeMappingEditTime;
-import static com.googlecode.mp4parser.util.CastUtils.l2i;
+import static org.mp4parser.tools.CastUtils.l2i;
 
 public class RepresentationBuilderImpl extends AbstractList<Container> implements Mp4RepresentationBuilder {
     protected Track theTrack;
@@ -57,10 +43,6 @@ public class RepresentationBuilderImpl extends AbstractList<Container> implement
         this.source = source;
         this.fragmentStartSamples = fragmentStartSamples;
         this.segmentStartSamples = segmentStartSamples;
-    }
-
-    public String getSource() {
-        return source;
     }
 
     public Track getTrack() {
@@ -277,57 +259,6 @@ public class RepresentationBuilderImpl extends AbstractList<Container> implement
         }
     }
 
-
-    protected void addContentProtection(RepresentationType representation) {
-        List<String> keyIds = new ArrayList<String>();
-        for (SampleEntry sampleEntry : theTrack.getSampleEntries()) {
-            TrackEncryptionBox tenc = Path.getPath((Container) sampleEntry, "sinf[0]/schi[0]/tenc[0]");
-            if (tenc != null) {
-                keyIds.add(tenc.getDefault_KID().toString());
-
-            }
-        }
-
-        if (!keyIds.isEmpty()) {
-            DescriptorType contentProtection = representation.addNewContentProtection();
-            final DefaultKIDAttribute defaultKIDAttribute = DefaultKIDAttribute.Factory.newInstance();
-
-            defaultKIDAttribute.setDefaultKID(keyIds);
-            contentProtection.set(defaultKIDAttribute);
-            contentProtection.setSchemeIdUri("urn:mpeg:dash:mp4protection:2011");
-            contentProtection.setValue("cenc");
-        }
-
-        if (psshs != null) {
-            for (ProtectionSystemSpecificHeaderBox pssh : psshs) {
-                DescriptorType dt = representation.addNewContentProtection();
-                byte[] psshContent = pssh.getContent();
-                dt.setSchemeIdUri("urn:uuid:" + UUIDConverter.convert(pssh.getSystemId()).toString());
-                if (Arrays.equals(ProtectionSystemSpecificHeaderBox.PLAYREADY_SYSTEM_ID, pssh.getSystemId())) {
-                    dt.setValue("MSPR 2.0");
-                    Node playReadyCPN = dt.getDomNode();
-                    Document d = playReadyCPN.getOwnerDocument();
-                    Element pro = d.createElementNS("urn:microsoft:playready", "pro");
-                    Element prPssh = d.createElementNS("urn:mpeg:cenc:2013", "pssh");
-
-                    pro.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(psshContent)));
-                    prPssh.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(boxToBytes(pssh))));
-
-                    playReadyCPN.appendChild(pro);
-                    playReadyCPN.appendChild(prPssh);
-                }
-                if (Arrays.equals(ProtectionSystemSpecificHeaderBox.WIDEVINE, pssh.getSystemId())) {
-                    // Widevvine
-                    Node widevineCPN = dt.getDomNode();
-                    Document d = widevineCPN.getOwnerDocument();
-                    Element wvPssh = d.createElementNS("urn:mpeg:cenc:2013", "pssh");
-                    wvPssh.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(boxToBytes(pssh))));
-
-                    widevineCPN.appendChild(wvPssh);
-                }
-            }
-        }
-    }
 
     public int size() {
         return segmentStartSamples.length;
@@ -784,14 +715,6 @@ public class RepresentationBuilderImpl extends AbstractList<Container> implement
         return theTrack.getSamples().subList(l2i(startSample) - 1, l2i(endSample) - 1);
     }
 
-    public String getCodec() {
-        LinkedHashSet<String> codecs = new LinkedHashSet<>();
-        for (SampleEntry sampleEntry : theTrack.getSampleEntries()) {
-            codecs.add(DashHelper2.getRfc6381Codec(sampleEntry));
-        }
-        return StringUtils.join(codecs.toArray(), ",");
-    }
-
 
     public static long getBandwidth(Track track) {
         long size = 0;
@@ -812,119 +735,10 @@ public class RepresentationBuilderImpl extends AbstractList<Container> implement
         return getBandwidth(theTrack);
     }
 
-    public RepresentationType getLiveRepresentation() {
-        RepresentationType representation = getBaseRepresentation();
-        SegmentTemplateType segmentTemplate = representation.addNewSegmentTemplate();
-        SegmentTimelineType segmentTimeline = segmentTemplate.addNewSegmentTimeline();
 
 
-        TrackRunBox firstTrun = Path.getPath(this.get(0), "moof/traf/trun");
-
-        long[] ptss = getPtss(firstTrun);
-        Arrays.sort(ptss); // index 0 has now the earliest presentation time stamp!
-        long timeMappingEdit = getTimeMappingEditTime(getInitSegment());
-        long startTime = ptss[0] - timeMappingEdit;
-
-        SegmentTimelineType.S lastSegmentTimelineS = null;
-        for (Container container : this) {
-            long duration = 0;
-            List<TrackRunBox> truns = Path.getPaths(container, "moof/traf/trun");
-            for (TrackRunBox trun : truns) {
-                duration += getDuration(trun);
-            }
-
-            if (lastSegmentTimelineS != null && lastSegmentTimelineS.getD().equals(BigInteger.valueOf(duration))) {
-                if (lastSegmentTimelineS.isSetR()) {
-                    lastSegmentTimelineS.setR(lastSegmentTimelineS.getR().add(BigInteger.ONE));
-                } else {
-                    lastSegmentTimelineS.setR(BigInteger.ONE);
-                }
-
-            } else {
-                SegmentTimelineType.S s = segmentTimeline.addNewS();
-                s.setD((BigInteger.valueOf(duration)));
-                s.setT(BigInteger.valueOf(startTime));
-                lastSegmentTimelineS = s;
-            }
-
-            startTime += duration;
-        }
 
 
-        return representation;
-    }
 
-    public RepresentationType getBaseRepresentation() {
-        RepresentationType representation = RepresentationType.Factory.newInstance();
-        representation.setProfiles("urn:mpeg:dash:profile:isoff-on-demand:2011");
-        if (theTrack.getHandler().equals("vide")) {
-
-            long videoHeight = (long) theTrack.getTrackMetaData().getHeight();
-            long videoWidth = (long) theTrack.getTrackMetaData().getWidth();
-            double framesPerSecond = (double) (theTrack.getSamples().size() * theTrack.getTrackMetaData().getTimescale()) / theTrack.getDuration();
-
-
-            representation.setMimeType("video/mp4");
-            representation.setCodecs(getCodec());
-            representation.setWidth(videoWidth);
-            representation.setHeight(videoHeight);
-            representation.setFrameRate(convertFramerate(framesPerSecond));
-            representation.setSar("1:1");
-            // too hard to find it out. Ignoring even though it should be set according to DASH-AVC-264-v2.00-hd-mca.pdf
-        } else if (theTrack.getHandler().equals("soun")) {
-            representation.setMimeType("audio/mp4");
-
-            AudioSampleEntry ase = (AudioSampleEntry) theTrack.getSampleEntries().get(0);
-
-            representation.setCodecs(DashHelper2.getRfc6381Codec(ase));
-            representation.setAudioSamplingRate("" + DashHelper2.getAudioSamplingRate(ase));
-
-            DescriptorType audio_channel_conf = representation.addNewAudioChannelConfiguration();
-            DashHelper2.ChannelConfiguration cc = DashHelper2.getChannelConfiguration(ase);
-            audio_channel_conf.setSchemeIdUri(cc.schemeIdUri);
-            audio_channel_conf.setValue(cc.value);
-
-
-        } else if (theTrack.getHandler().equals("subt") || theTrack.getHandler().equals("text")) {
-            representation.setMimeType("application/mp4");
-            representation.setCodecs(getCodec());
-
-            representation.setStartWithSAP(1);
-
-        }
-
-
-        representation.setBandwidth(getBandwidth());
-
-        addContentProtection(representation);
-
-        return representation;
-    }
-
-    public RepresentationType getOnDemandRepresentation() {
-        RepresentationType representation = getBaseRepresentation();
-
-        SegmentBaseType segBaseType = representation.addNewSegmentBase();
-
-        segBaseType.setTimescale(theTrack.getTrackMetaData().getTimescale());
-        segBaseType.setIndexRangeExact(true);
-
-        long initSize = 0;
-        for (Box b : getInitSegment().getBoxes()) {
-            initSize += b.getSize();
-        }
-        URLType initialization = segBaseType.addNewInitialization();
-        long indexSize = 0;
-        for (Box b : getIndexSegment().getBoxes()) {
-            indexSize += b.getSize();
-        }
-
-        segBaseType.setIndexRange(String.format("%s-%s", initSize, initSize + indexSize - 1));
-        initialization.setRange(String.format("0-%s", initSize - 1));
-
-        return representation;
-
-
-    }
 
 }

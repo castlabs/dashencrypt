@@ -8,6 +8,7 @@ import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Localizable;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.UuidOptionHandler;
+import org.mp4parser.tools.Hex;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -123,20 +124,20 @@ public abstract class AbstractEncryptOrNotCommand implements Command {
         }
 
         if (this.encKeySecretKeyVideo != null) {
-            videoKey = new SecretKeySpec(com.coremedia.iso.Hex.decodeHex(this.encKeySecretKeyVideo), "AES");
+            videoKey = new SecretKeySpec(Hex.decodeHex(this.encKeySecretKeyVideo), "AES");
         } else if (this.encKeySecretKeyFileVideo != null) {
             try {
-                videoKey = new SecretKeySpec(com.coremedia.iso.Hex.decodeHex(FileUtils.readFileToString(this.encKeySecretKeyFileVideo)), "AES");
+                videoKey = new SecretKeySpec(Hex.decodeHex(FileUtils.readFileToString(this.encKeySecretKeyFileVideo)), "AES");
             } catch (IOException e) {
                 throw new CmdLineException(cmdLineParser, new Message("Content Encryption Key file " + this.encKeySecretKeyFileAudio.getAbsolutePath() + " could not be read"));
             }
         }
 
         if (this.encKeySecretKeyAudio != null) {
-            audioKey = new SecretKeySpec(com.coremedia.iso.Hex.decodeHex(this.encKeySecretKeyAudio), "AES");
+            audioKey = new SecretKeySpec(Hex.decodeHex(this.encKeySecretKeyAudio), "AES");
         } else if (this.encKeySecretKeyFileAudio != null) {
             try {
-                audioKey = new SecretKeySpec(com.coremedia.iso.Hex.decodeHex(FileUtils.readFileToString((this.encKeySecretKeyFileAudio))), "AES");
+                audioKey = new SecretKeySpec(Hex.decodeHex(FileUtils.readFileToString((this.encKeySecretKeyFileAudio))), "AES");
             } catch (IOException e) {
                 throw new CmdLineException(cmdLineParser, new Message("Content Encryption Key file " + this.encKeySecretKeyFileAudio.getAbsolutePath() + " could not be read"));
             }

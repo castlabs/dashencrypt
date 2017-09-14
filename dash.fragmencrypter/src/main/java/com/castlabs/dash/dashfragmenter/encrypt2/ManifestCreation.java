@@ -1,5 +1,6 @@
 package com.castlabs.dash.dashfragmenter.encrypt2;
 
+import com.castlabs.dash.dashfragmenter.Main;
 import com.castlabs.dash.dashfragmenter.representation.RepresentationBuilderImpl;
 import com.castlabs.dash.helpers.DashHelper2;
 import mpegCenc2013.DefaultKIDAttribute;
@@ -13,12 +14,16 @@ import org.mp4parser.Container;
 import org.mp4parser.boxes.iso14496.part12.MovieHeaderBox;
 import org.mp4parser.boxes.iso14496.part12.OriginalFormatBox;
 import org.mp4parser.boxes.iso14496.part15.AvcConfigurationBox;
+import org.mp4parser.boxes.iso14496.part15.HevcConfigurationBox;
+import org.mp4parser.boxes.iso14496.part15.HevcDecoderConfigurationRecord;
 import org.mp4parser.boxes.iso23001.part7.ProtectionSystemSpecificHeaderBox;
 import org.mp4parser.boxes.iso23001.part7.TrackEncryptionBox;
 import org.mp4parser.boxes.sampleentry.AudioSampleEntry;
 import org.mp4parser.boxes.sampleentry.SampleEntry;
 import org.mp4parser.muxer.Track;
+import org.mp4parser.muxer.tracks.CleanInputStream;
 import org.mp4parser.muxer.tracks.h264.parsing.model.SeqParameterSet;
+import org.mp4parser.muxer.tracks.h265.SequenceParameterSetRbsp;
 import org.mp4parser.tools.Path;
 import org.mp4parser.tools.UUIDConverter;
 import org.w3c.dom.Document;
@@ -30,8 +35,10 @@ import javax.imageio.ImageReader;
 import javax.imageio.stream.FileImageInputStream;
 import javax.imageio.stream.ImageInputStream;
 import java.awt.*;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.List;
@@ -218,7 +225,7 @@ public class ManifestCreation {
                 }
             }
         }
-        prefix = prefix.split(File.separator)[prefix.split(File.separator).length-1];
+        prefix = prefix.split(File.separator)[prefix.split(File.separator).length - 1];
         assert dRef != null;
         File targetDir = new File(outputDirectory, prefix);
         long thumbsize = 0;
@@ -251,17 +258,17 @@ public class ManifestCreation {
 
     public static PeriodType getPeriod(MPDtype mpd, String periodId) {
         return Arrays
-                            .stream(mpd.getPeriodArray())
-                            .filter(x -> x.getId().equals(periodId))
-                            .findFirst()
-                            .orElseGet(() -> {
-                                PeriodType p = mpd.addNewPeriod();
-                                p.setId(periodId);
-                                if (mpd.getPeriodArray().length == 1) {
-                                    p.setStart(new GDuration(1, 0, 0, 0, 0, 0, 0, BigDecimal.ZERO));
-                                }
-                                return p;
-                            });
+                .stream(mpd.getPeriodArray())
+                .filter(x -> x.getId().equals(periodId))
+                .findFirst()
+                .orElseGet(() -> {
+                    PeriodType p = mpd.addNewPeriod();
+                    p.setId(periodId);
+                    if (mpd.getPeriodArray().length == 1) {
+                        p.setStart(new GDuration(1, 0, 0, 0, 0, 0, 0, BigDecimal.ZERO));
+                    }
+                    return p;
+                });
     }
 
     public static RepresentationType addAudioRepresentation(AdaptationSetType adaptationSetType, Track t, String representationId, Map<String, String> outOptions) {
@@ -315,20 +322,68 @@ public class ManifestCreation {
         representationType.setHeight(videoHeight);
         representationType.setFrameRate(convertFramerate(framesPerSecond));
         for (SampleEntry se : t.getSampleEntries()) {
-            OriginalFormatBox frma = Path.getPath((Box) se, "sinf/frma");
-            String type;
-            if (frma != null) {
-                type = frma.getDataFormat();
-            } else {
-                type = se.getType();
-            }
-            if (type.startsWith("avc")) {
-                AvcConfigurationBox avcConfigurationBox = Path.getPath((Box) se, "avcC");
+            AvcConfigurationBox avcC = Path.getPath((Box) se, "avcC");
+            if (avcC != null) {
                 SeqParameterSet sps = null;
                 try {
-                    sps = SeqParameterSet.read(avcConfigurationBox.getSequenceParameterSets().get(0).array());
+                    sps = SeqParameterSet.read(avcC.getSequenceParameterSets().get(0).array());
                 } catch (IOException e) {
                     e.printStackTrace();
+                }
+            }
+            HevcConfigurationBox hvcC = Path.getPath((Box) se, "hvcC");
+            if (hvcC != null) {
+                for (HevcDecoderConfigurationRecord.Array array : hvcC.getArrays()) {
+                    if (array.nal_unit_type == 33) {
+                        for (byte[] nalUnit : array.nalUnits) {
+                            InputStream bais = new CleanInputStream(new ByteArrayInputStream(nalUnit));
+                            try {
+                                bais.read(); // nal unit header
+                                bais.read(); // nal unit header
+                                SequenceParameterSetRbsp sps = new SequenceParameterSetRbsp(bais);
+
+                                if (sps.vuiParameters.colour_description_present_flag) {
+                                    DescriptorType cp = representationType.addNewSupplementalProperty();
+                                    cp.setSchemeIdUri("urn:mpeg:mpegB:cicp:ColourPrimaries");
+                                    cp.setValue("" + sps.vuiParameters.colour_primaries);
+                                    try (final InputStream stream =
+                                                 ManifestCreation.class.getResourceAsStream("/com/castlabs/dash/dashfragmenter/encrypt2/color-primaries.properties")) {
+                                        Properties properties = new Properties();
+                                        properties.load(stream);
+                                        if (properties.containsKey("" + sps.vuiParameters.colour_primaries)) {
+                                            cp.newCursor().insertComment(properties.getProperty("" + sps.vuiParameters.colour_primaries));
+                                        }
+                                    }
+
+                                    DescriptorType tc = representationType.addNewSupplementalProperty();
+                                    tc.setSchemeIdUri("urn:mpeg:mpegB:cicp:TransferCharacteristics");
+                                    tc.setValue("" + sps.vuiParameters.transfer_characteristics);
+                                    try (final InputStream stream =
+                                                 ManifestCreation.class.getResourceAsStream("/com/castlabs/dash/dashfragmenter/encrypt2/transfer-characteristics.properties")) {
+                                        Properties properties = new Properties();
+                                        properties.load(stream);
+                                        if (properties.containsKey("" + sps.vuiParameters.transfer_characteristics)) {
+                                            tc.newCursor().insertComment(properties.getProperty("" + sps.vuiParameters.transfer_characteristics));
+                                        }
+                                    }
+
+                                    DescriptorType mc = representationType.addNewSupplementalProperty();
+                                    mc.setSchemeIdUri("urn:mpeg:mpegB:cicp:MatrixCoefficients");
+                                    mc.setValue("" + sps.vuiParameters.matrix_coeffs);
+                                    try (final InputStream stream =
+                                                 ManifestCreation.class.getResourceAsStream("/com/castlabs/dash/dashfragmenter/encrypt2/matrix-coefficient.properties")) {
+                                        Properties properties = new Properties();
+                                        properties.load(stream);
+                                        if (properties.containsKey("" + sps.vuiParameters.matrix_coeffs)) {
+                                            mc.newCursor().insertComment(properties.getProperty("" + sps.vuiParameters.matrix_coeffs));
+                                        }
+                                    }
+                                }
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
                 }
 
             }

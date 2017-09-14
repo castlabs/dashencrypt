@@ -1,16 +1,15 @@
 package com.castlabs.dash.dashfragmenter.cmdlines;
 
 import com.castlabs.dash.dashfragmenter.Command;
-import com.coremedia.iso.Hex;
-import com.coremedia.iso.IsoFile;
-import com.coremedia.iso.boxes.Box;
-import com.googlecode.mp4parser.FileDataSourceImpl;
-import com.googlecode.mp4parser.util.Path;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.FileOptionHandler;
+import org.mp4parser.Box;
+import org.mp4parser.IsoFile;
+import org.mp4parser.tools.Hex;
+import org.mp4parser.tools.Path;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -31,7 +30,7 @@ public class DumpBox implements Command {
 
 
     public int run() {
-        try (IsoFile isoFile = new IsoFile(new FileDataSourceImpl(inputFile))){
+        try (IsoFile isoFile = new IsoFile(inputFile)){
             List<Box> boxes = Path.getPaths(isoFile, path);
             for (Box box : boxes) {
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();

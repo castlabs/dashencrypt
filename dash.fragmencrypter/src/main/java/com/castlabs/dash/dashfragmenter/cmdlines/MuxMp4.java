@@ -7,19 +7,22 @@
 package com.castlabs.dash.dashfragmenter.cmdlines;
 
 import com.castlabs.dash.dashfragmenter.Command;
-import com.coremedia.iso.boxes.Container;
-import com.googlecode.mp4parser.FileDataSourceImpl;
-import com.googlecode.mp4parser.authoring.Movie;
-import com.googlecode.mp4parser.authoring.Track;
-import com.googlecode.mp4parser.authoring.builder.DefaultMp4Builder;
-import com.googlecode.mp4parser.authoring.builder.Mp4Builder;
-import com.googlecode.mp4parser.authoring.tracks.*;
-import com.googlecode.mp4parser.authoring.tracks.h264.H264TrackImpl;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.spi.FileOptionHandler;
+import org.mp4parser.Container;
+import org.mp4parser.muxer.FileDataSourceImpl;
+import org.mp4parser.muxer.Movie;
+import org.mp4parser.muxer.Track;
+import org.mp4parser.muxer.builder.DefaultMp4Builder;
+import org.mp4parser.muxer.builder.Mp4Builder;
+import org.mp4parser.muxer.tracks.AACTrackImpl;
+import org.mp4parser.muxer.tracks.AC3TrackImpl;
+import org.mp4parser.muxer.tracks.DTSTrackImpl;
+import org.mp4parser.muxer.tracks.EC3TrackImpl;
+import org.mp4parser.muxer.tracks.h264.H264TrackImpl;
 
 import java.io.File;
 import java.io.FileOutputStream;
