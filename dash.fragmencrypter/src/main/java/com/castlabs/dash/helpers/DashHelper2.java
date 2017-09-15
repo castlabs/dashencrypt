@@ -462,7 +462,7 @@ public final class DashHelper2 {
                 return "stpp";
             }
 
-        } else if (type.equals("dvav") && type.equals("dva1") && type.equals("dvhe") && type.equals("dvh1")) {
+        } else if (type.equals("dvav") || type.equals("dva1") || type.equals("dvhe") || type.equals("dvh1")) {
             DoViConfigurationBox dvcC = Path.getPath((Box) se, "dvcC");
             return type + String.format(".%02d.%02d", dvcC.getDvProfile(), dvcC.getDvLevel());
         } else {
