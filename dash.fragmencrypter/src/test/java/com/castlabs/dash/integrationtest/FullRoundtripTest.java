@@ -64,28 +64,6 @@ public class FullRoundtripTest {
     }
 
     @Test
-    public void testOnDemandPlain() throws Exception {
-        File outputDir = File.createTempFile("FullRoundtrip", "testOnDemandPlain");
-        outputDir.delete();
-        outputDir.mkdir();
-
-        Main.main(new String[]{
-                "dash",
-                "-o", outputDir.getAbsolutePath(),
-                new File(tos, "tears_of_steel/Tears_Of_Steel_1000000.mp4").getAbsolutePath(),
-                new File(tos, "tears_of_steel/Tears_Of_Steel_1400000.mp4").getAbsolutePath(),
-                new File(tos, "tears_of_steel/Tears_Of_Steel_800000.mp4").getAbsolutePath(),
-                new File(tos, "tears_of_steel/Tears_Of_Steel_600000.mp4").getAbsolutePath(),
-                new File(tos, "tears_of_steel/Tears_Of_Steel_128000_eng.mp4").getAbsolutePath(),
-                new File(tos, "tears_of_steel/Tears_Of_Steel_128000_ita.mp4").getAbsolutePath(),
-        });
-
-        XMLUnit.setIgnoreWhitespace(true);
-        XMLAssert.assertXMLEqual(new InputSource(getClass().getResourceAsStream("testOnDemandPlain.mpd")), new InputSource(new FileInputStream(new File(outputDir, "Manifest.mpd"))));
-        FileUtils.deleteDirectory(outputDir);
-    }
-
-    @Test
     public void testEncrypt2_plain() throws Exception {
         File outputDir = File.createTempFile("FullRoundtrip", "testEncrypt2");
         outputDir.delete();

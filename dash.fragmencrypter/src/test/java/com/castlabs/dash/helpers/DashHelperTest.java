@@ -20,7 +20,7 @@ public class DashHelperTest extends TestCase {
     public void testGetRfc6381Codec() throws Exception {
         IsoFile isoFile = new IsoFile(DashHelperTest.class.getProtectionDomain().getCodeSource().getLocation().getFile() + "/foreman-hevc-384.mp4");
 
-        SampleEntry sampleEntry = Path.getPath(isoFile, "/moov[0]/trak[0]/mdia[0]/minf[0]/stbl[0]/stsd[0]/hev1[0]");
+        SampleEntry sampleEntry = Path.getPath(isoFile, "moov[0]/trak[0]/mdia[0]/minf[0]/stbl[0]/stsd[0]/hev1[0]");
 
         Assert.assertEquals("hev1.1.6.L93.80", DashHelper2.getRfc6381Codec(sampleEntry));
 
