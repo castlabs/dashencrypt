@@ -87,16 +87,14 @@ public class InputOutputSelector {
         return files;
     }
 
-    public InputOutputSelector(Map<String, String> in, String filePattern, Map<String, String> out) throws IOException {
-
-
+    public InputOutputSelector(Map<String, String> in, String filePattern, Map<String, String> outputOptions) throws IOException {
+        this.outputOptions = outputOptions;
         this.files = Glob.get(new File(""), filePattern);
         if (files.isEmpty()) {
             throw new IllegalArgumentException("The file pattern " + filePattern + " doesn't yield any results.");
         }
 
-
-        if (files.stream().map(f -> FilenameUtils.getExtension(f.getName()).toLowerCase()).count() > 1) {
+        if (files.stream().map(f -> FilenameUtils.getExtension(f.getName()).toLowerCase()).distinct().count() > 1) {
             throw new IllegalArgumentException("The pattern " + filePattern + " includes multiple filetypes: " +
                     files.stream().map(f -> FilenameUtils.getExtension(f.getName()).toLowerCase()).distinct().collect(Collectors.joining(", ")) +
                     ". All files captured by the pattern need to have the same extension!");
@@ -106,7 +104,7 @@ public class InputOutputSelector {
         for (File f : files) {
             Matcher m = periodPattern.matcher(f.getAbsolutePath());
             if (m.find()) {
-                if (out.containsKey("period")) {
+                if (outputOptions.containsKey("period")) {
                     throw new IllegalArgumentException("Period must be either specified via out-property or filename");
                 }
                 outputOptions.put("period", m.group(1));
@@ -114,17 +112,28 @@ public class InputOutputSelector {
 
 
             String fileExt = FilenameUtils.getExtension(f.getName()).toLowerCase();
+
+            if (!inputOptionsPerExt.containsKey(fileExt)) {
+                throw new IllegalArgumentException("File Extension of " + f + " is not supported.");
+            }
             if (in.keySet().stream().anyMatch(s -> !inputOptionsPerExt.get(fileExt).contains(s))) {
                 String wrong = in.keySet().stream().filter(s -> !inputOptionsPerExt.get(fileExt).contains(s)).collect(Collectors.joining(", "));
                 throw new IllegalArgumentException("The input options " + wrong + " are invalid for input files with extension " + fileExt + ". Valid input options are: " + inputOptionsPerExt.get(fileExt));
             }
 
-            if (out.keySet().stream().anyMatch(s -> !outputOptionsPerExt.get(fileExt).contains(s))) {
-                String wrong = out.keySet().stream().filter(s -> !outputOptionsPerExt.get(fileExt).contains(s)).collect(Collectors.joining(", "));
+
+            if (!outputOptionsPerExt.containsKey(fileExt)) {
+                throw new IllegalArgumentException("File Extension of " + f + " is not supported.");
+            }
+            if (outputOptions.keySet().stream().anyMatch(s -> !outputOptionsPerExt.get(fileExt).contains(s))) {
+                String wrong = outputOptions.keySet().stream().filter(s -> !outputOptionsPerExt.get(fileExt).contains(s)).collect(Collectors.joining(", "));
                 throw new IllegalArgumentException("The output options " + wrong + " are invalid for input files with extension " + fileExt + ". Valid output options are: " + outputOptionsPerExt.get(fileExt));
             }
 
-            if (mandatoryOutputOptionsPerExt.get(fileExt).stream().anyMatch(opt -> !out.containsKey(opt))) {
+            if (!mandatoryOutputOptionsPerExt.containsKey(fileExt)) {
+                throw new IllegalArgumentException("File Extension of " + f + " is not supported.");
+            }
+            if (mandatoryOutputOptionsPerExt.get(fileExt).stream().anyMatch(opt -> !outputOptions.containsKey(opt))) {
                 String req = mandatoryOutputOptionsPerExt.get(fileExt).stream().collect(Collectors.joining(", "));
                 throw new IllegalArgumentException("The output options " + req + " are required for input files with extension " + fileExt);
             }
