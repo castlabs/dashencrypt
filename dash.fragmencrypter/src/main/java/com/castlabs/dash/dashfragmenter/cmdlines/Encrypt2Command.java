@@ -243,7 +243,7 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
             File manifest1 = new File(outputDirectory, "Manifest.mpd");
             XmlOptions xmlOptions = getXmlOptions();
             Map<String, String> ns = (Map<String, String>) xmlOptions.get(XmlOptions.SAVE_SUGGESTED_PREFIXES);
-            ns.put("urn:microsoft:playready", "mspro");
+            ns.put("urn:microsoft:playready", "mspr");
             LOG.info("Writing " + manifest1.getAbsolutePath());
             mdd.save(manifest1, xmlOptions);
 
