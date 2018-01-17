@@ -44,6 +44,7 @@ import java.util.*;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static com.castlabs.dash.helpers.BoxHelper.boxToBytes;
@@ -225,7 +226,7 @@ public class ManifestCreation {
                 }
             }
         }
-        prefix = prefix.split(File.separator)[prefix.split(File.separator).length - 1];
+        prefix = prefix.split(Pattern.quote(File.separator))[prefix.split(Pattern.quote(File.separator)).length - 1];
         assert dRef != null;
         File targetDir = new File(outputDirectory, prefix);
         long thumbsize = 0;

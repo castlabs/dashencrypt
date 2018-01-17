@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * Created by sannies on 25.07.17.
@@ -12,7 +13,7 @@ public class Glob {
     static public List<File> get(File base, String pattern) {
         Path p = Paths.get(pattern);
         List<Path> ff;
-        List<String> segments = new ArrayList<>(Arrays.asList(pattern.split(File.separator)));
+        List<String> segments = new ArrayList<>(Arrays.asList(pattern.split(Pattern.quote(File.separator))));
         if ( p.isAbsolute() ) {
             Path absStart = Paths.get(segments.remove(0) + File.separator);
             assert Files.isDirectory(absStart);
