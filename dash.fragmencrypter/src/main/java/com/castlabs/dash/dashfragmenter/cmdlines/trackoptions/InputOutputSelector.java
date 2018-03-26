@@ -150,24 +150,26 @@ public class InputOutputSelector {
 
                 for (TrackBox trackBox : trackBoxes) {
                     boolean include = true;
+                    String handler = trackBox.getMediaBox().getHandlerBox().getHandlerType();
                     if (language != null && !trackBox.getMediaBox().getMediaHeaderBox().getLanguage().equals(language)) {
-                        LOG.info("Excluding track " + trackBox.getTrackHeaderBox().getTrackId() + " of " + f + " from processing as language is " + trackBox.getMediaBox().getMediaHeaderBox().getLanguage() + " but not " + language + ".");
+                        LOG.info(f.getName() + ": Excluding track " + trackBox.getTrackHeaderBox().getTrackId() + " from processing as language is " + trackBox.getMediaBox().getMediaHeaderBox().getLanguage() + " but not " + language + ".");
                         include = false;
                     }
                     if (type != null) {
-                        String handler = trackBox.getMediaBox().getHandlerBox().getHandlerType();
+
                         if (!handlerToType.computeIfAbsent(handler, e -> e).equals(type)) {
-                            LOG.info("Excluding track " + trackBox.getTrackHeaderBox().getTrackId() + " of " + f + " from processing as type is " + handlerToType.computeIfAbsent(handler, e -> e) + " but not " + type + ".");
+                            LOG.info(f.getName() + ": Excluding track " + trackBox.getTrackHeaderBox().getTrackId() + " from processing as type is " + handlerToType.computeIfAbsent(handler, e -> e) + " but not " + type + ".");
                             include = false;
                         }
                     }
                     if (trackNo != null) {
                         if (Integer.parseInt(trackNo) != no) {
-                            LOG.info("Excluding track no. " + no + " as only " + trackNo + " is included");
+                            LOG.info(f.getName() + ": Excluding track " + no + "("+ handler +") as only " + trackNo + " is included");
                             include = false;
                         }
                     }
                     if (include) {
+                        LOG.info(f.getName() + ": Selecting track " + no + " (" + handler + ")");
                         tracks.add(new Mp4TrackImpl(trackBox.getTrackHeaderBox().getTrackId(), isoFile, new FileRandomAccessSourceImpl(new RandomAccessFile(f, "r")), f.getName()));
                     }
                 }
