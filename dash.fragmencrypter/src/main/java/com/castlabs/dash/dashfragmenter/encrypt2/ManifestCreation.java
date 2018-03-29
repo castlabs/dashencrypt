@@ -3,12 +3,10 @@ package com.castlabs.dash.dashfragmenter.encrypt2;
 import com.castlabs.dash.dashfragmenter.Main;
 import com.castlabs.dash.dashfragmenter.representation.RepresentationBuilderImpl;
 import com.castlabs.dash.helpers.DashHelper2;
-import mpegCenc2013.DefaultKIDAttribute;
-import mpegDashSchemaMpd2011.*;
+import mpeg.dash.schema.mpd._2011.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.xmlbeans.GDuration;
 import org.mp4parser.Box;
 import org.mp4parser.Container;
 import org.mp4parser.boxes.iso14496.part12.MovieHeaderBox;
@@ -34,6 +32,13 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.FileImageInputStream;
 import javax.imageio.stream.ImageInputStream;
+import javax.xml.datatype.DatatypeConfigurationException;
+import javax.xml.datatype.DatatypeFactory;
+import javax.xml.datatype.Duration;
+import javax.xml.namespace.QName;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import java.awt.*;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -52,14 +57,33 @@ import static com.castlabs.dash.helpers.ManifestHelper.convertFramerate;
 
 public class ManifestCreation {
     private static Logger LOG = java.util.logging.Logger.getLogger(ManifestCreation.class.getName());
+    static DatatypeFactory datatypeFactory = null;
+
+    static {
+        try {
+            datatypeFactory = DatatypeFactory.newInstance();
+        } catch (DatatypeConfigurationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
     public static void addTextTrack(PeriodType periodType, List<File> inFiles, File outputDirectory, Map<String, String> outOptions) throws IOException {
         String role = outOptions.getOrDefault("role", "subtitle");
         String lang = outOptions.get("lang");
-        AdaptationSetType adaptationSet = periodType.addNewAdaptationSet();
+
+
+        AdaptationSetType adaptationSet = new AdaptationSetType();
+        periodType.getAdaptationSet().add(adaptationSet);
+
         adaptationSet.setLang(lang);
-        RepresentationType representation = adaptationSet.addNewRepresentation();
-        DescriptorType textTrackRole = adaptationSet.addNewRole();
+
+        RepresentationType representation = new RepresentationType();
+        adaptationSet.getRepresentation().add(representation);
+
+        DescriptorType textTrackRole = new DescriptorType();
+        adaptationSet.getRole().add(textTrackRole);
+
         textTrackRole.setSchemeIdUri("urn:mpeg:dash:role");
         textTrackRole.setValue(role);
         representation.setId(role + "-" + lang);
@@ -77,8 +101,9 @@ public class ManifestCreation {
         for (File inFile : inFiles) {
             FileUtils.copyFile(inFile, new File(outputDirectory, inFile.getName()));
         }
-        BaseURLType baseURL = representation.addNewBaseURL();
-        baseURL.setStringValue(inFiles.get(0).getName());
+        BaseURLType baseURL = new BaseURLType();
+        representation.getBaseURL().add(baseURL);
+        baseURL.setValue(inFiles.get(0).getName());
     }
 
     public static void addContentProtection(RepresentationType representation, Track theTrack, Map<UUID, List<ProtectionSystemSpecificHeaderBox>> psshMap) {
@@ -94,37 +119,45 @@ public class ManifestCreation {
         }
 
         if (!keyIds.isEmpty()) {
-            DescriptorType contentProtection = representation.addNewContentProtection();
-            final DefaultKIDAttribute defaultKIDAttribute = DefaultKIDAttribute.Factory.newInstance();
-            defaultKIDAttribute.setDefaultKID(keyIds);
-            contentProtection.set(defaultKIDAttribute);
+            DescriptorType contentProtection = new DescriptorType();
+            representation.getContentProtection().add(contentProtection);
+            contentProtection.getOtherAttributes().put(QName.valueOf("cenc:default_KID"), String.join(",", keyIds));
             contentProtection.setSchemeIdUri("urn:mpeg:dash:mp4protection:2011");
             contentProtection.setValue("cenc");
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = null;
+            try {
+                builder = dbf.newDocumentBuilder();
+            } catch (ParserConfigurationException e) {
+                throw new RuntimeException(e);
+            }
+
+            Document d = builder.newDocument();
+
             for (ProtectionSystemSpecificHeaderBox pssh : psshs) {
-                DescriptorType dt = representation.addNewContentProtection();
+
+                DescriptorType dt = new DescriptorType();
+                representation.getContentProtection().add(dt);
                 byte[] psshContent = pssh.getContent();
                 dt.setSchemeIdUri("urn:uuid:" + UUIDConverter.convert(pssh.getSystemId()).toString());
                 if (Arrays.equals(ProtectionSystemSpecificHeaderBox.PLAYREADY_SYSTEM_ID, pssh.getSystemId())) {
                     dt.setValue("MSPR 2.0");
-                    Node playReadyCPN = dt.getDomNode();
-                    Document d = playReadyCPN.getOwnerDocument();
+
+
                     Element pro = d.createElementNS("urn:microsoft:playready", "pro");
                     Element prPssh = d.createElementNS("urn:mpeg:cenc:2013", "pssh");
 
                     pro.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(psshContent)));
                     prPssh.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(boxToBytes(pssh))));
 
-                    playReadyCPN.appendChild(pro);
-                    playReadyCPN.appendChild(prPssh);
+                    dt.getAny().add(pro);
+                    dt.getAny().add(prPssh);
                 }
                 if (Arrays.equals(ProtectionSystemSpecificHeaderBox.WIDEVINE, pssh.getSystemId())) {
                     // Widevvine
-                    Node widevineCPN = dt.getDomNode();
-                    Document d = widevineCPN.getOwnerDocument();
                     Element wvPssh = d.createElementNS("urn:mpeg:cenc:2013", "pssh");
                     wvPssh.appendChild(d.createTextNode(Base64.getEncoder().encodeToString(boxToBytes(pssh))));
-
-                    widevineCPN.appendChild(wvPssh);
+                    dt.getAny().add(wvPssh);
                 }
             }
         }
@@ -155,7 +188,8 @@ public class ManifestCreation {
     }
 
     public static void addSegmentBase(RepresentationBuilderImpl rb, RepresentationType representationType) {
-        SegmentBaseType segBaseType = representationType.addNewSegmentBase();
+        SegmentBaseType segBaseType = new SegmentBaseType();
+        representationType.setSegmentBase(segBaseType);
         segBaseType.setTimescale(((MovieHeaderBox) Path.getPath(rb.getInitSegment(), "moov[0]/mvhd[0]")).getTimescale());
         segBaseType.setIndexRangeExact(true);
         long initSize = 0;
@@ -167,16 +201,17 @@ public class ManifestCreation {
             indexSize += b.getSize();
         }
         segBaseType.setIndexRange(String.format("%s-%s", initSize, initSize + indexSize - 1));
-        URLType initialization = segBaseType.addNewInitialization();
+        URLType initialization = new URLType();
+        segBaseType.setInitElement(initialization);
         initialization.setRange(String.format("0-%s", initSize - 1));
     }
 
     public static String findRepresentationId(Track track, MPDtype mpd) {
         HashSet<String> ids = new HashSet<>();
 
-        for (PeriodType periodType : mpd.getPeriodArray()) {
-            for (AdaptationSetType adaptationSetType : periodType.getAdaptationSetArray()) {
-                for (RepresentationType representationType : adaptationSetType.getRepresentationArray()) {
+        for (PeriodType periodType : mpd.getPeriod()) {
+            for (AdaptationSetType adaptationSetType : periodType.getAdaptationSet()) {
+                for (RepresentationType representationType : adaptationSetType.getRepresentation()) {
                     ids.add(representationType.getId());
                 }
             }
@@ -190,13 +225,12 @@ public class ManifestCreation {
     }
 
     public static void updateDuration(PeriodType periodType, double duration) {
-        GDuration gd = new GDuration(
-                1, 0, 0, 0, (int) (duration / 3600),
+        Duration d = datatypeFactory.newDuration(true, 0, 0, 0, (int) (duration / 3600),
                 (int) ((duration % 3600) / 60),
-                (int) (duration % 60), BigDecimal.ZERO);
-        GDuration gdOld = periodType.getDuration();
-        if (gdOld == null || gdOld.compareToGDuration(gd) > 0) {
-            periodType.setDuration(gd);
+                (int) (duration % 60));
+
+        if (periodType.getDuration() == null || periodType.getDuration().compare(d) > 0) {
+            periodType.setDuration(d);
         }
     }
 
@@ -239,45 +273,51 @@ public class ManifestCreation {
         double thduration = Integer.parseInt(outOptions.get("thduration"));
 
 
-        AdaptationSetType adaptationSet = periodType.addNewAdaptationSet();
+        AdaptationSetType adaptationSet = new AdaptationSetType();
+        periodType.getAdaptationSet().add(adaptationSet);
         adaptationSet.setMimeType("image/jpeg");
         adaptationSet.setContentType("image");
-        SegmentTemplateType segmentTemplateType = adaptationSet.addNewSegmentTemplate();
-        segmentTemplateType.setStartNumber(1);
+        SegmentTemplateType segmentTemplateType = new SegmentTemplateType();
+        adaptationSet.setSegmentTemplate(segmentTemplateType);
+        segmentTemplateType.setStartNumber(1L);
         segmentTemplateType.setMedia("$RepresentationID$/" + prefix + "$Number$." + FilenameUtils.getExtension(files.get(0).getName()));
         segmentTemplateType.setDuration((long) (vtiles * htiles * thduration));
-        RepresentationType representation = adaptationSet.addNewRepresentation();
+        RepresentationType representation = new RepresentationType();
+        adaptationSet.getRepresentation().add(representation);
         representation.setId(prefix);
         representation.setBandwidth((long) ((thumbsize * 8) / (files.size() * vtiles * htiles * thduration)));
-        representation.setWidth(dRef.width / htiles);
-        representation.setHeight(dRef.height / vtiles);
+        representation.setWidth((long) (dRef.width / htiles));
+        representation.setHeight((long) (dRef.height / vtiles));
 
-        DescriptorType essentialPropery = representation.addNewEssentialProperty();
+        DescriptorType essentialPropery = new DescriptorType();
+        representation.getEssentialProperty().add(essentialPropery);
         essentialPropery.setSchemeIdUri("http://dashif.org/guidelines/thumbnail_tile");
         essentialPropery.setValue("" + htiles + "x" + vtiles);
     }
 
     public static PeriodType getPeriod(MPDtype mpd, String periodId) {
-        return Arrays
-                .stream(mpd.getPeriodArray())
+        return mpd.getPeriod().stream()
                 .filter(x -> x.getId().equals(periodId))
                 .findFirst()
                 .orElseGet(() -> {
-                    PeriodType p = mpd.addNewPeriod();
+                    PeriodType p = new PeriodType();
+                    mpd.getPeriod().add(p);
                     p.setId(periodId);
-                    if (mpd.getPeriodArray().length == 1) {
-                        p.setStart(new GDuration(1, 0, 0, 0, 0, 0, 0, BigDecimal.ZERO));
+                    if (mpd.getPeriod().size() == 1) {
+                        p.setStart(datatypeFactory.newDuration(true, 0, 0, 0, 0, 0, 0));
                     }
                     return p;
                 });
     }
 
     public static RepresentationType addAudioRepresentation(AdaptationSetType adaptationSetType, Track t, String representationId, Map<String, String> outOptions) {
-        RepresentationType representationType = adaptationSetType.addNewRepresentation();
+        RepresentationType representationType = new RepresentationType();
+        adaptationSetType.getRepresentation().add(representationType);
         representationType.setProfiles("urn:mpeg:dash:profile:isoff-on-demand:2011");
         adaptationSetType.setMimeType("audio/mp4");
         if (outOptions.containsKey("role")) {
-            DescriptorType role = adaptationSetType.addNewRole();
+            DescriptorType role =  new DescriptorType();
+            adaptationSetType.getRole().add(role);
             role.setSchemeIdUri("urn:mpeg:dash:role");
             role.setValue(outOptions.get("role"));
         }
@@ -295,20 +335,23 @@ public class ManifestCreation {
         representationType.setBandwidth(RepresentationBuilderImpl.getBandwidth(t));
 
         representationType.setId(representationId);
-        BaseURLType baseURLType = representationType.addNewBaseURL();
-        baseURLType.set(representationType.getId() + ".mp4");
+        BaseURLType baseURLType = new BaseURLType();
+        representationType.getBaseURL().add(baseURLType);
+        baseURLType.setValue(representationType.getId() + ".mp4");
 
         DashHelper2.ChannelConfiguration cc = DashHelper2.getChannelConfiguration(ase);
         if (cc != null) {
-            DescriptorType audio_channel_conf = representationType.addNewAudioChannelConfiguration();
-            audio_channel_conf.setSchemeIdUri(cc.schemeIdUri);
-            audio_channel_conf.setValue(cc.value);
+            DescriptorType audioChannelConf = new DescriptorType();
+            representationType.getAudioChannelConfiguration().add(audioChannelConf);
+            audioChannelConf.setSchemeIdUri(cc.schemeIdUri);
+            audioChannelConf.setValue(cc.value);
         }
         return representationType;
     }
 
     public static RepresentationType addVideoRepresentation(AdaptationSetType adaptationSetType, String representationId, Track t) {
-        RepresentationType representationType = adaptationSetType.addNewRepresentation();
+        RepresentationType representationType = new RepresentationType();
+        adaptationSetType.getRepresentation().add(representationType);
         representationType.setProfiles("urn:mpeg:dash:profile:isoff-on-demand:2011");
         long videoHeight = (long) t.getTrackMetaData().getHeight();
         long videoWidth = (long) t.getTrackMetaData().getWidth();
@@ -344,41 +387,45 @@ public class ManifestCreation {
                                 SequenceParameterSetRbsp sps = new SequenceParameterSetRbsp(bais);
 
                                 if (sps.vuiParameters.colour_description_present_flag) {
-                                    DescriptorType cp = representationType.addNewSupplementalProperty();
+                                    DescriptorType cp = new DescriptorType();
+
+                                    representationType.getSupplementalProperty().add(cp);
                                     cp.setSchemeIdUri("urn:mpeg:mpegB:cicp:ColourPrimaries");
                                     cp.setValue("" + sps.vuiParameters.colour_primaries);
-                                    try (final InputStream stream =
+/*                                    try (final InputStream stream =
                                                  ManifestCreation.class.getResourceAsStream("/com/castlabs/dash/dashfragmenter/encrypt2/color-primaries.properties")) {
                                         Properties properties = new Properties();
                                         properties.load(stream);
                                         if (properties.containsKey("" + sps.vuiParameters.colour_primaries)) {
                                             cp.newCursor().insertComment(properties.getProperty("" + sps.vuiParameters.colour_primaries));
                                         }
-                                    }
+                                    }*/
 
-                                    DescriptorType tc = representationType.addNewSupplementalProperty();
+                                    DescriptorType tc = new DescriptorType();
+                                    representationType.getSupplementalProperty().add(tc);
                                     tc.setSchemeIdUri("urn:mpeg:mpegB:cicp:TransferCharacteristics");
                                     tc.setValue("" + sps.vuiParameters.transfer_characteristics);
-                                    try (final InputStream stream =
+/*                                    try (final InputStream stream =
                                                  ManifestCreation.class.getResourceAsStream("/com/castlabs/dash/dashfragmenter/encrypt2/transfer-characteristics.properties")) {
                                         Properties properties = new Properties();
                                         properties.load(stream);
                                         if (properties.containsKey("" + sps.vuiParameters.transfer_characteristics)) {
                                             tc.newCursor().insertComment(properties.getProperty("" + sps.vuiParameters.transfer_characteristics));
                                         }
-                                    }
+                                    }*/
 
-                                    DescriptorType mc = representationType.addNewSupplementalProperty();
+                                    DescriptorType mc = new DescriptorType();
+                                    representationType.getSupplementalProperty().add(mc);
                                     mc.setSchemeIdUri("urn:mpeg:mpegB:cicp:MatrixCoefficients");
                                     mc.setValue("" + sps.vuiParameters.matrix_coeffs);
-                                    try (final InputStream stream =
+/*                                    try (final InputStream stream =
                                                  ManifestCreation.class.getResourceAsStream("/com/castlabs/dash/dashfragmenter/encrypt2/matrix-coefficient.properties")) {
                                         Properties properties = new Properties();
                                         properties.load(stream);
                                         if (properties.containsKey("" + sps.vuiParameters.matrix_coeffs)) {
                                             mc.newCursor().insertComment(properties.getProperty("" + sps.vuiParameters.matrix_coeffs));
                                         }
-                                    }
+                                    }*/
                                 }
                             } catch (IOException e) {
                                 e.printStackTrace();
@@ -392,8 +439,9 @@ public class ManifestCreation {
         representationType.setSar("1:1");
         representationType.setBandwidth(RepresentationBuilderImpl.getBandwidth(t));
         representationType.setId(representationId);
-        BaseURLType baseURLType = representationType.addNewBaseURL();
-        baseURLType.set(representationType.getId() + ".mp4");
+        BaseURLType baseURLType = new BaseURLType();
+        representationType.getBaseURL().add(baseURLType);
+        baseURLType.setValue(representationType.getId() + ".mp4");
         return representationType;
     }
 }

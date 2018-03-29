@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <groupId>com.castlabs.dash</groupId>
         <artifactId>dash.encrypt</artifactId>
@@ -19,23 +20,36 @@
         <defaultGoal>install</defaultGoal>
 
         <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>xmlbeans-maven-plugin</artifactId>
-                <version>2.3.3</version>
+        <!--    <plugin>
+                <groupId>org.apache.cxf</groupId>
+                <artifactId>cxf-xjc-plugin</artifactId>
+                <version>2.3.0</version>
+                <configuration>
+                    <extensions>
+                        <extension>org.apache.cxf.xjcplugins:cxf-xjc-dv:2.3.0</extension>
+                    </extensions>
+                </configuration>
                 <executions>
                     <execution>
+                        <id>generate-sources</id>
+                        <phase>generate-sources</phase>
                         <goals>
-                            <goal>xmlbeans</goal>
+                            <goal>xsdtojava</goal>
                         </goals>
+                        <configuration>
+                            <sourceRoot>${basedir}/target/generated/src/main/java</sourceRoot>
+                            <xsdOptions>
+                                <xsdOption>
+                                    <xsd>src/main/xsd/DASH.xsd</xsd>
+                                </xsdOption>
+                            </xsdOptions>
+                        </configuration>
                     </execution>
                 </executions>
-                <configuration>
-                    <catalogLocation>src/main/resources/xsd/DASH-MPD.xsd</catalogLocation>
-                    <download>false</download>
-                    <schemaDirectory>src/main/resources/xsd</schemaDirectory>
-                </configuration>
             </plugin>
+            Not working as plugin but sources are easily generate with xjc DASH.xsd xlink.xsd cenc.xsd
+
+            -->
             <plugin>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>2.9.1</version>
@@ -48,9 +62,19 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.apache.xmlbeans</groupId>
-            <artifactId>xmlbeans</artifactId>
-            <version>2.6.0</version>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-core</artifactId>
+            <version>2.3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-impl</artifactId>
+            <version>2.3.0</version>
         </dependency>
     </dependencies>
 </project>

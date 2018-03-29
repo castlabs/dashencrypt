@@ -41,34 +41,6 @@
                     <skip>true</skip>
                 </configuration>
             </plugin>
-            <plugin>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.2</version>
-                <configuration>
-                    <source>8</source>
-                    <target>8</target>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>xmlbeans-maven-plugin</artifactId>
-                <version>2.3.3</version>
-                <executions>
-                    <execution>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>xmlbeans</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <inherited>true</inherited>
-                <configuration>
-                    <!--                    <catalogLocation>src/main/resources/catalog/xsdownload.xml</catalogLocation>-->
-                    <download>false</download>
-                    <schemaDirectory>src/main/xsd</schemaDirectory>
-
-                </configuration>
-            </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -126,6 +98,7 @@
             <artifactId>slf4j-simple</artifactId>
             <version>1.7.24</version>
         </dependency>
+
 
         <dependency>
             <groupId>junit</groupId>

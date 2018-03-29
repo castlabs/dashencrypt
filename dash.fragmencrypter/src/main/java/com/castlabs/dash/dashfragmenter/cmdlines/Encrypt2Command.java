@@ -1,6 +1,5 @@
 package com.castlabs.dash.dashfragmenter.cmdlines;
 
-import com.castlabs.dash.dashfragmenter.Main;
 import com.castlabs.dash.dashfragmenter.cmdlines.trackoptions.InputOutputSelector;
 import com.castlabs.dash.dashfragmenter.cmdlines.trackoptions.InputOutputSelectorOptionHandler;
 import com.castlabs.dash.dashfragmenter.encrypt2.ManifestCreation;
@@ -8,12 +7,9 @@ import com.castlabs.dash.dashfragmenter.representation.ManifestOptimizer;
 import com.castlabs.dash.dashfragmenter.representation.RepresentationBuilderImpl;
 import com.castlabs.dash.helpers.DashHelper2;
 import com.castlabs.dash.helpers.RepresentationBuilderToFile;
-import mpegDashSchemaMpd2011.*;
-import org.apache.xmlbeans.GDuration;
-import org.apache.xmlbeans.XmlOptions;
+import mpeg.dash.schema.mpd._2011.*;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.Option;
-import org.mp4parser.Version;
 import org.mp4parser.boxes.iso23001.part7.ProtectionSystemSpecificHeaderBox;
 import org.mp4parser.muxer.Track;
 import org.mp4parser.muxer.builder.DefaultFragmenterImpl;
@@ -21,18 +17,37 @@ import org.mp4parser.muxer.tracks.encryption.CencEncryptingTrackImpl;
 import org.mp4parser.tools.RangeStartMap;
 
 import javax.crypto.SecretKey;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBElement;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import javax.xml.datatype.DatatypeConfigurationException;
+import javax.xml.datatype.DatatypeFactory;
+import javax.xml.namespace.QName;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static com.castlabs.dash.helpers.ManifestHelper.getXmlOptions;
+
 import static org.mp4parser.tools.CastUtils.l2i;
 
 public class Encrypt2Command extends AbstractEncryptOrNotCommand {
+    static DatatypeFactory datatypeFactory = null;
+
+    static {
+        try {
+            datatypeFactory = DatatypeFactory.newInstance();
+        } catch (DatatypeConfigurationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+
     private static final Logger LOG = Logger.getLogger(Encrypt2Command.class.getName());
 
     @Argument(required = true, multiValued = true, handler = InputOutputSelectorOptionHandler.class, usage = "MP4 input files", metaVar = "vid1.mp4, aud1.mp4 ...")
@@ -124,18 +139,21 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
             DefaultFragmenterImpl videoFragmenter = new DefaultFragmenterImpl(minVideoSegmentDuration);
             DefaultFragmenterImpl audioFragmenter = new DefaultFragmenterImpl(minAudioSegmentDuration);
 
-            MPDDocument mdd = MPDDocument.Factory.newInstance();
-            MPDtype mpd = mdd.addNewMPD();
-            mpd.newCursor().insertComment(Main.TOOL);
-            mpd.newCursor().insertComment(Version.VERSION);
 
-            ProgramInformationType programInformationType = mpd.addNewProgramInformation();
+            MPDtype mpd = new MPDtype();
+
+/*           @todo
+  mpd.newCursor().insertComment(Main.TOOL);
+            mpd.newCursor().insertComment(Version.VERSION);*/
+
+            ProgramInformationType programInformationType = new ProgramInformationType();
+            mpd.getProgramInformation().add(programInformationType);
             programInformationType.setMoreInformationURL("www.castLabs.com");
 
             mpd.setProfiles("urn:mpeg:dash:profile:isoff-on-demand:2011");
             mpd.setType(PresentationType.STATIC);
 
-            mpd.setMinBufferTime(new GDuration(1, 0, 0, 0, 0, 0, 4, BigDecimal.ZERO));
+            mpd.setMinBufferTime(datatypeFactory.newDuration(true, 0, 0, 0, 0, 0, 4));
 
             for (InputOutputSelector inputSource : inputs) {
                 List<Track> tracks = inputSource.getSelectedTracks();
@@ -155,16 +173,17 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
                     int tracksWritten = 0;
 
                     if (hasTrack(tracks, "hvc1", "hev1", "avc1", "avc3")) {
-                        AdaptationSetType adaptationSetType =
-                                Arrays.stream(periodType.getAdaptationSetArray()).filter(
+                        AdaptationSetType adaptationSetType = periodType.getAdaptationSet().stream().filter(
                                         a -> a.getMimeType().equals("video/mp4") &&
-                                                Arrays.stream(a.getRoleArray()).allMatch(
+                                                a.getRole().stream().allMatch(
                                                         r -> outOptions.containsKey("role") &&
                                                                 outOptions.get("role").equals(r.getValue()))).findFirst().orElseGet(() -> {
-                                    AdaptationSetType as = periodType.addNewAdaptationSet();
+                                    AdaptationSetType as = new AdaptationSetType();
+                                    periodType.getAdaptationSet().add(as);
                                     as.setMimeType("video/mp4");
                                     if (outOptions.containsKey("role")) {
-                                        DescriptorType role = as.addNewRole();
+                                        DescriptorType role = new DescriptorType();
+                                        as.getRole().add(role);
                                         role.setSchemeIdUri("urn:mpeg:dash:role");
                                         role.setValue(outOptions.get("role"));
                                     }
@@ -198,7 +217,8 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
                     }
 
                     for (Track track : getTrack(tracks, "dtsl", "dtse", "ec-3", "ac-3", "mlpa", "mp4a")) {
-                        AdaptationSetType adaptationSetType = periodType.addNewAdaptationSet();
+                        AdaptationSetType adaptationSetType = new AdaptationSetType();
+                        periodType.getAdaptationSet().add(adaptationSetType);
                         String representationId = ManifestCreation.findRepresentationId(track, mpd);
                         long[] fragStartSamples = audioFragmenter.sampleNumbers(track);
                         Track t = encryptIfNeeded(track, fragStartSamples[(int) (clearLead / minAudioSegmentDuration)]);
@@ -239,19 +259,29 @@ public class Encrypt2Command extends AbstractEncryptOrNotCommand {
                 }
             }
 
-            ManifestOptimizer.optimize(mdd);
+            ManifestOptimizer.optimize(mpd);
             File manifest1 = new File(outputDirectory, "Manifest.mpd");
-            XmlOptions xmlOptions = getXmlOptions();
-            Map<String, String> ns = (Map<String, String>) xmlOptions.get(XmlOptions.SAVE_SUGGESTED_PREFIXES);
-            ns.put("urn:microsoft:playready", "mspr");
+
+            FileWriter writer = new FileWriter(manifest1);
+
+            JAXBContext context = JAXBContext.newInstance(MPDtype.class);
+
+            Marshaller m = context.createMarshaller();
+            m.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
             LOG.info("Writing " + manifest1.getAbsolutePath());
-            mdd.save(manifest1, xmlOptions);
+            JAXBElement<MPDtype> jaxbMPD = new ObjectFactory().createMPD(mpd);
+            m.marshal(jaxbMPD, writer);
+           // System.out.println(writer.toString());
+
 
             LOG.info(String.format("Finished fragmenting of %dMB in %.1fs", totalSize / 1024 / 1024, (double) (System.currentTimeMillis() - startTime) / 1000));
 
         } catch (IOException e) {
             LOG.log(Level.SEVERE, e.getMessage(), e);
             return 365;
+        } catch (JAXBException e) {
+            LOG.log(Level.SEVERE, e.getMessage(), e);
+            return 366;
         }
 
         return 0;

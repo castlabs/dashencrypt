@@ -2,7 +2,6 @@ package com.castlabs.dash.dashfragmenter.cmdlines;
 
 import com.castlabs.dash.dashfragmenter.Command;
 import org.apache.commons.io.FileUtils;
-import org.apache.xmlbeans.XmlOptions;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Localizable;

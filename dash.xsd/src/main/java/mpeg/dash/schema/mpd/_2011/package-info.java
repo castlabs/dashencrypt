@@ -1,0 +1,19 @@
+//
+// Diese Datei wurde mit der JavaTM Architecture for XML Binding(JAXB) Reference Implementation, v2.3.0-b170531.0717 generiert 
+// Siehe <a href="https://jaxb.java.net/">https://jaxb.java.net/</a> 
+// xc4nderungen an dieser Datei gehen bei einer Neukompilierung des Quellschemas verloren. 
+// Generiert: 2018.03.28 um 10:20:11 AM CEST 
+//
+
+
+@javax.xml.bind.annotation.XmlSchema(
+        namespace = "urn:mpeg:dash:schema:mpd:2011",
+        elementFormDefault = XmlNsForm.QUALIFIED,
+        xmlns = {
+                @XmlNs(prefix = "cenc", namespaceURI ="urn:mpeg:cenc:2013"),
+                @XmlNs(prefix = "", namespaceURI ="urn:mpeg:dash:schema:mpd:2011"),
+        })
+package mpeg.dash.schema.mpd._2011;
+
+import javax.xml.bind.annotation.XmlNs;
+import javax.xml.bind.annotation.XmlNsForm;

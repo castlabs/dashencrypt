@@ -7,7 +7,6 @@
 package com.castlabs.dash.helpers;
 
 import org.apache.commons.lang.math.Fraction;
-import org.apache.xmlbeans.XmlOptions;
 import org.mp4parser.Box;
 import org.mp4parser.Container;
 import org.mp4parser.boxes.iso14496.part12.SegmentIndexBox;
@@ -82,19 +81,6 @@ public class ManifestHelper {
         return rv;
     }
 
-    public static XmlOptions getXmlOptions() {
-        XmlOptions xmlOptions = new XmlOptions();
-        //xmlOptions.setUseDefaultNamespace();
-        HashMap<String, String> ns = new HashMap<String, String>();
-        //ns.put("urn:mpeg:DASH:schema:MPD:2011", "");
-        ns.put("urn:mpeg:cenc:2013", "cenc");
-        ns.put("urn:mpeg:drmtdoday:cenc:2014", "drmtoday");
-        ns.put("urn:microsoft:playready", "mspr");
-        xmlOptions.setSaveSuggestedPrefixes(ns);
-        xmlOptions.setSaveAggressiveNamespaces();
-        xmlOptions.setUseDefaultNamespace();
-        xmlOptions.setSavePrettyPrint();
-        return xmlOptions;
-    }
+
 
 }

@@ -3,8 +3,9 @@ package com.castlabs.dash.helpers;
 import com.castlabs.dash.dashfragmenter.representation.Mp4RepresentationBuilder;
 import com.castlabs.dash.dashfragmenter.representation.RawFileRepresentationBuilder;
 import com.castlabs.dash.dashfragmenter.representation.RepresentationBuilder;
-import mpegDashSchemaMpd2011.RepresentationType;
-import mpegDashSchemaMpd2011.SegmentTimelineType;
+
+
+import mpeg.dash.schema.mpd._2011.RepresentationType;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
@@ -21,11 +22,11 @@ public class RepresentationBuilderToFile {
     private static Logger LOG = Logger.getLogger(RepresentationBuilderToFile.class.getName());
 
     public static long writeOnDemand(RepresentationBuilder representationBuilder, RepresentationType representation, File outputDir) throws IOException {
-        assert representation.getBaseURLArray().length == 1;
-        assert representation.getBaseURLArray()[0].getStringValue() != null && !"".equals(representation.getBaseURLArray()[0].getStringValue());
+        assert representation.getBaseURL().size() == 1;
+        assert representation.getBaseURL().get(0).getValue() != null && !"".equals(representation.getBaseURL().get(0).getValue());
 
         if (representationBuilder instanceof Mp4RepresentationBuilder) {
-            File outFile = new File(outputDir, representation.getBaseURLArray()[0].getStringValue());
+            File outFile = new File(outputDir, representation.getBaseURL().get(0).getValue());
             Mp4RepresentationBuilder mp4RepresentationBuilder = (Mp4RepresentationBuilder)representationBuilder;
 
             LOG.info("Writing " + outFile.getAbsolutePath());
@@ -41,7 +42,7 @@ public class RepresentationBuilderToFile {
             wbc.close();
             return outFile.length();
         } else if (representationBuilder instanceof RawFileRepresentationBuilder) {
-            File outFile = new File(outputDir, representation.getBaseURLArray()[0].getStringValue());
+            File outFile = new File(outputDir, representation.getBaseURL().get(0).getValue());
             FileUtils.copyFile(((RawFileRepresentationBuilder) representationBuilder).getFile(), outFile);
             return outFile.length();
         }

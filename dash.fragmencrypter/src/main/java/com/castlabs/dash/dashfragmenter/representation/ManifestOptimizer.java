@@ -1,140 +1,135 @@
 package com.castlabs.dash.dashfragmenter.representation;
 
-import mpegDashSchemaMpd2011.*;
+import mpeg.dash.schema.mpd._2011.*;
 import org.apache.commons.lang.math.Fraction;
-import org.apache.xmlbeans.GDuration;
-import org.w3c.dom.Attr;
-import org.w3c.dom.Node;
 
+import javax.xml.datatype.DatatypeConfigurationException;
+import javax.xml.datatype.DatatypeFactory;
+import javax.xml.datatype.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.ObjLongConsumer;
 
 /**
  * Pushes common attributes and elements down to the parent element.
  */
 public class ManifestOptimizer {
-    public static void optimize(MPDDocument mpdDocument) {
-        adjustDuration(mpdDocument);
-        for (PeriodType periodType : mpdDocument.getMPD().getPeriodArray()) {
-            for (AdaptationSetType adaptationSetType : periodType.getAdaptationSetArray()) {
+    static DatatypeFactory datatypeFactory = null;
+
+    static {
+        try {
+            datatypeFactory = DatatypeFactory.newInstance();
+        } catch (DatatypeConfigurationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    public static void optimize(MPDtype mpd) {
+        adjustDuration(mpd);
+        for (PeriodType periodType : mpd.getPeriod()) {
+            for (AdaptationSetType adaptationSetType : periodType.getAdaptationSet()) {
                 optimize(adaptationSetType);
-                adjustMinMax(adaptationSetType, "width");
-                adjustMinMax(adaptationSetType, "height");
-                adjustMinMax(adaptationSetType, "bandwidth");
+                adjustMinMax(adaptationSetType, RepresentationType::getWidth, AdaptationSetType::setMinWidth, AdaptationSetType::setMaxWidth);
+                adjustMinMax(adaptationSetType, RepresentationType::getHeight, AdaptationSetType::setMinHeight, AdaptationSetType::setMaxHeight);
+                adjustMinMax(adaptationSetType, RepresentationType::getBandwidth, AdaptationSetType::setMinBandwidth, AdaptationSetType::setMaxBandwidth);
                 adjustMinMaxFrameRate(adaptationSetType); // special handling cause the type is special (fraction)
             }
         }
     }
 
-    public static void adjustDuration(MPDDocument mpdDocument) {
-        GDuration total = new GDuration();
-        for (PeriodType periodType : mpdDocument.getMPD().getPeriodArray()) {
+    public static void adjustDuration(MPDtype mpd) {
+        Duration total = datatypeFactory.newDuration(0);
+        for (PeriodType periodType : mpd.getPeriod()) {
             total = total.add(periodType.getDuration());
         }
-        mpdDocument.getMPD().setMediaPresentationDuration(total);
+        mpd.setMediaPresentationDuration(total);
     }
 
     public static void adjustMinMaxFrameRate(AdaptationSetType adaptationSetType) {
-        RepresentationType representationArray[] = adaptationSetType.getRepresentationArray();
+        List<RepresentationType> representations = adaptationSetType.getRepresentation();
         Fraction min = null, max = null;
-        for (RepresentationType representationType : representationArray) {
-            Node attr = representationType.getDomNode().getAttributes().getNamedItem("frameRate");
-            if (attr != null) {
-                Fraction f = Fraction.getFraction(attr.getNodeValue());
+        for (RepresentationType representationType : representations) {
+            String frameRate = representationType.getFrameRate();
+            if (frameRate != null) {
+                Fraction f = Fraction.getFraction(frameRate);
 
                 min = min == null || f.compareTo(min) < 0 ? f : min;
                 max = max == null || f.compareTo(max) > 0 ? f : max;
             }
         }
         if (max != null && !min.equals(max)) { // min/max doesn't make sense when both values are the same
-            Node adaptationSet = adaptationSetType.getDomNode();
-            Node minAttr =  adaptationSet.getOwnerDocument().createAttribute("minFrameRate");
-            minAttr.setNodeValue(min.toString());
-            adaptationSet.getAttributes().setNamedItem(minAttr);
-            Node maxAttr =  adaptationSet.getOwnerDocument().createAttribute("maxFrameRate");
-            maxAttr.setNodeValue(max.toString());
-            adaptationSet.getAttributes().setNamedItem(maxAttr);
-
+            adaptationSetType.setMinFrameRate(min.toString());
+            adaptationSetType.setMaxFrameRate(max.toString());
         }
     }
 
-    public static void adjustMinMax(AdaptationSetType adaptationSetType, String attrName) {
-        RepresentationType representationArray[] = adaptationSetType.getRepresentationArray();
+    public static void adjustMinMax(AdaptationSetType adaptationSetType, Function<RepresentationType, Long> get, ObjLongConsumer<AdaptationSetType> setMin, ObjLongConsumer<AdaptationSetType> setMax) {
+        List<RepresentationType> representations = adaptationSetType.getRepresentation();
         long min = Integer.MAX_VALUE, max = Integer.MIN_VALUE;
-        for (RepresentationType representationType : representationArray) {
-            Node attr = representationType.getDomNode().getAttributes().getNamedItem(attrName);
-            if (attr != null) {
-                int n = Integer.parseInt(attr.getNodeValue());
+        for (RepresentationType representationType : representations) {
+            Long n = get.apply(representationType);
+            if (n != null) {
                 min = Math.min(n, min);
                 max = Math.max(n, max);
             }
         }
         if (min != Integer.MAX_VALUE && min != max) {
-            Node adaptationSet = adaptationSetType.getDomNode();
-            Node minAttr =  adaptationSet.getOwnerDocument().createAttribute("min" + attrName.substring(0, 1).toUpperCase() + attrName.substring(1));
-            minAttr.setNodeValue("" + min);
-            adaptationSet.getAttributes().setNamedItem(minAttr);
-            Node maxAttr =  adaptationSet.getOwnerDocument().createAttribute("max" + attrName.substring(0, 1).toUpperCase() + attrName.substring(1));
-            maxAttr.setNodeValue("" + max);
-            adaptationSet.getAttributes().setNamedItem(maxAttr);
-
+            setMax.accept(adaptationSetType, max);
+            setMin.accept(adaptationSetType, min);
         }
     }
 
     public static void optimize(AdaptationSetType adaptationSetType) {
-        optimizeContentProtection(adaptationSetType, adaptationSetType.getRepresentationArray());
-        optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "mimeType");
+        optimizeContentProtection(adaptationSetType);
+        optimizeAttribute(adaptationSetType, RepresentationType::getMimeType, (RepresentationType r) -> r.setMimeType(null), (adaptationSetType2, value1) -> adaptationSetType2.setMimeType((String) value1));
         // This is commented out as customer P0132's chromecast player doesn't look for the codecs attribute on AdaptationSetBuilder level
         // The deal is to update the player before 2016. If you see this here in 2016 you can remove the comment and optimize
         // the codecs attribute as well.
         // optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "codecs");
-        optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "profiles");
-        optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "width");
-        optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "height");
-        optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "frameRate");
-        optimizeAttribute(adaptationSetType, adaptationSetType.getRepresentationArray(), "sar");
+        optimizeAttribute(adaptationSetType, RepresentationType::getProfiles, (RepresentationType r) -> r.setProfiles(null), (adaptationSetType1, value) -> adaptationSetType1.setProfiles((String) value));
+        optimizeAttribute(adaptationSetType, RepresentationType::getWidth, (RepresentationType r) -> r.setWidth(null), (adaptationSetType1, value) -> adaptationSetType1.setWidth((Long) value));
+        optimizeAttribute(adaptationSetType, RepresentationType::getHeight, (RepresentationType r) -> r.setHeight(null), (adaptationSetType1, value) -> adaptationSetType1.setHeight((Long) value));
+        optimizeAttribute(adaptationSetType, RepresentationType::getFrameRate, (RepresentationType r) -> r.setFrameRate(null), (adaptationSetType1, value) -> adaptationSetType1.setFrameRate((String) value));
+        optimizeAttribute(adaptationSetType, RepresentationType::getSar, (RepresentationType r) -> r.setSar(null), (adaptationSetType1, value) -> adaptationSetType1.setSar((String) value));
     }
 
-    private static void optimizeAttribute(AdaptationSetType adaptationSetType, RepresentationType[] representationArray, String attrName) {
-        String value = null;
-        for (RepresentationType representationType : representationArray) {
-            Node attr = representationType.getDomNode().getAttributes().getNamedItem(attrName);
-            if (attr == null) {
+
+    private static void optimizeAttribute(AdaptationSetType adaptationSetType, Function<RepresentationType, Object> get, Consumer<RepresentationType> remove, BiConsumer<AdaptationSetType, Object> set) {
+        Object v = null;
+        for (RepresentationType representationType : adaptationSetType.getRepresentation()) {
+            Object _v = get.apply(representationType);
+            if (_v == null) {
                 return; // no need to move it around when it doesn't exist
             }
-            String _value = attr.getNodeValue();
-            if (value == null || value.equals(_value)) {
-                value = _value;
+            if (v == null || v.equals(_v)) {
+                v = _v;
             } else {
                 return;
             }
         }
-        Node as = adaptationSetType.getDomNode();
-        Attr attr = as.getOwnerDocument().createAttribute(attrName);
-        attr.setValue(value);
-        as.getAttributes().setNamedItem(attr);
-        for (RepresentationType representationType : representationArray) {
-            representationType.getDomNode().getAttributes().removeNamedItem(attrName);
+        set.accept(adaptationSetType, v);
+        for (RepresentationType representationType : adaptationSetType.getRepresentation()) {
+            remove.accept(representationType);
         }
     }
 
-    public static void optimizeContentProtection(RepresentationBaseType parent, RepresentationBaseType[] children) {
-        mpegDashSchemaMpd2011.DescriptorType[] contentProtection = new mpegDashSchemaMpd2011.DescriptorType[0];
-        for (RepresentationBaseType representationType : children) {
-            if (contentProtection.length == 0) {
-                List<DescriptorType> cpa = new ArrayList<DescriptorType>();
-                for (DescriptorType descriptorType : representationType.getContentProtectionArray()) {
-                    cpa.add((DescriptorType) descriptorType.copy());
-                }
-                contentProtection = cpa.toArray(new DescriptorType[representationType.getContentProtectionArray().length]);
+    public static void optimizeContentProtection(AdaptationSetType parent) {
+        List<DescriptorType> contentProtection = new ArrayList<>();
+        for (RepresentationBaseType representationType : parent.getRepresentation()) {
+            if (contentProtection.isEmpty()) {
+                contentProtection.addAll(representationType.getContentProtection());
             } else {
-                DescriptorType[] currentCP = representationType.getContentProtectionArray();
-                if (contentProtection.length == currentCP.length) {
-                    for (int i = 0; i < currentCP.length; i++) {
-                        DescriptorType a = currentCP[i];
-                        DescriptorType b = contentProtection[i];
-                        if (!a.xmlText().equals(b.xmlText())) {
+                List<DescriptorType> currentCP = representationType.getContentProtection();
+                if (contentProtection.size() == currentCP.size()) {
+                    for (int i = 0; i < currentCP.size(); i++) {
+                        DescriptorType a = currentCP.get(i);
+                        DescriptorType b = contentProtection.get(i);
+                        if (!(Objects.equals(a.getValue(), b.getValue()) && Objects.equals(a.getSchemeIdUri(), b.getSchemeIdUri()) && Objects.equals(a.getId(), b.getId()))) {
                             return;
                         }
 
@@ -142,11 +137,11 @@ public class ManifestOptimizer {
                 }
             }
         }
-        if (contentProtection.length != 0) {
-            for (RepresentationBaseType representationType : children) {
-                representationType.setContentProtectionArray(new DescriptorType[0]);
+        if (!contentProtection.isEmpty()) {
+            for (RepresentationBaseType representationType : parent.getRepresentation()) {
+                representationType.getContentProtection().clear();
             }
-            parent.setContentProtectionArray(contentProtection);
+            parent.getContentProtection().addAll(contentProtection);
         }
 
     }

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--com.castlabs.dash dash.fragmencrypter 1.7.53-SNAPSHOT-->
 <!--isoparser-1.9.29-->
-<MPD profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static" minBufferTime="PT4S" mediaPresentationDuration="PT12M14S" xmlns="urn:mpeg:dash:schema:mpd:2011" xmlns:cenc="urn:mpeg:cenc:2013">
+<MPD profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" type="static" minBufferTime="P0Y0M0DT0H0M4S" mediaPresentationDuration="P0Y0M0DT0H12M14S" xmlns="urn:mpeg:dash:schema:mpd:2011" xmlns:cenc="urn:mpeg:cenc:2013">
     <ProgramInformation moreInformationURL="www.castLabs.com"/>
-    <Period id="period-0" start="PT0S" duration="PT12M14S">
+    <Period id="period-0" start="P0Y0M0DT0H0M0S" duration="P0Y0M0DT0H12M14S">
     <AdaptationSet mimeType="video/mp4" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011" frameRate="24000/1000" sar="1:1" minWidth="500" maxWidth="1152" minHeight="208" maxHeight="480" minBandwidth="564200" maxBandwidth="1356600">
             <ContentProtection cenc:default_KID="550e8400-e29b-11d4-a716-446655440000" schemeIdUri="urn:mpeg:dash:mp4protection:2011" value="cenc"/>
             <Representation codecs="avc1.64001e" width="768" height="320" bandwidth="958200" id="Tears_Of_Steel_1000000">
