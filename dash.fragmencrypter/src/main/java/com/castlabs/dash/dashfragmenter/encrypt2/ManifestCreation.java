@@ -84,7 +84,7 @@ public class ManifestCreation {
         DescriptorType textTrackRole = new DescriptorType();
         adaptationSet.getRole().add(textTrackRole);
 
-        textTrackRole.setSchemeIdUri("urn:mpeg:dash:role");
+        textTrackRole.setSchemeIdUri("urn:mpeg:dash:role:2011");
         textTrackRole.setValue(role);
         representation.setId(role + "-" + lang);
         representation.setBandwidth(0); // pointless - just invent a small number
