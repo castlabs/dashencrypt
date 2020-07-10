@@ -318,7 +318,7 @@ public class ManifestCreation {
         if (outOptions.containsKey("role")) {
             DescriptorType role =  new DescriptorType();
             adaptationSetType.getRole().add(role);
-            role.setSchemeIdUri("urn:mpeg:dash:role");
+            role.setSchemeIdUri("urn:mpeg:dash:role:2011");
             role.setValue(outOptions.get("role"));
         }
         LinkedHashSet<String> codecs = new LinkedHashSet<>();
