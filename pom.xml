@@ -43,6 +43,7 @@
                                 --add-modules java.xml.bind
                                 --illegal-access=deny
                             </argLine>
+                        	<forkCount>1.5C</forkCount>
                         </configuration>
                     </plugin>
                     <plugin>
