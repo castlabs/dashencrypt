@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.net.URI;
+import java.nio.file.Files;
 
 /**
  * Created by sannies on 27.08.2015.
@@ -65,9 +66,7 @@ public class FullRoundtripTest {
 
     @Test
     public void testEncrypt2_plain() throws Exception {
-        File outputDir = File.createTempFile("FullRoundtrip", "testEncrypt2");
-        outputDir.delete();
-        outputDir.mkdir();
+        File outputDir = Files.createTempDirectory("FullRoundtrip" + "testEncrypt2").toFile();
 
         Main.main(new String[]{
                 "encrypt2",
@@ -87,9 +86,7 @@ public class FullRoundtripTest {
 
     @Test
     public void testEncrypt2_encrypted1() throws Exception {
-        File outputDir = File.createTempFile("FullRoundtrip", "testEncrypt2");
-        outputDir.delete();
-        outputDir.mkdir();
+        File outputDir = Files.createTempDirectory("FullRoundtrip" + "testEncrypt2").toFile();
 
         Main.main(new String[]{
                 "encrypt2",
@@ -112,9 +109,7 @@ public class FullRoundtripTest {
 
     @Test
     public void testEncrypt2_encrypted1_clearlead() throws Exception {
-        File outputDir = File.createTempFile("FullRoundtrip", "testEncrypt2");
-        outputDir.delete();
-        outputDir.mkdir();
+        File outputDir = Files.createTempDirectory("FullRoundtrip" + "testEncrypt2").toFile();
 
         Main.main(new String[]{
                 "encrypt2",
@@ -137,9 +132,7 @@ public class FullRoundtripTest {
 
     @Test
     public void testEncrypt2_encrypted2() throws Exception {
-        File outputDir = File.createTempFile("FullRoundtrip", "testEncrypt2");
-        outputDir.delete();
-        outputDir.mkdir();
+        File outputDir = Files.createTempDirectory("FullRoundtrip" + "testEncrypt2").toFile();
 
         Main.main(new String[]{
                 "encrypt2",
