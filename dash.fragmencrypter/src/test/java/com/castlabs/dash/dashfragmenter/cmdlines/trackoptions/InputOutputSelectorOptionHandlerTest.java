@@ -8,6 +8,7 @@ import org.kohsuke.args4j.CmdLineParser;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 
 public class InputOutputSelectorOptionHandlerTest {
 
@@ -20,7 +21,7 @@ public class InputOutputSelectorOptionHandlerTest {
     public void test1() throws CmdLineException, IOException {
         Main m = new Main();
         CmdLineParser cmdLineParser = new CmdLineParser(m);
-        File f = File.createTempFile("aaa", ".jpg");
+        File f = Files.createTempFile("aaa", ".jpg").toFile();
         cmdLineParser.parseArgument(f.getParent() + "/*.jpg[vtiles=5,htiles=6,thduration=7]");
         Assert.assertEquals("5", m.i.getOutputOptions().get("vtiles"));
         Assert.assertEquals("6", m.i.getOutputOptions().get("htiles"));
@@ -33,7 +34,7 @@ public class InputOutputSelectorOptionHandlerTest {
     public void test2() throws CmdLineException, IOException {
         Main m = new Main();
         CmdLineParser cmdLineParser = new CmdLineParser(m);
-        File f = File.createTempFile("aaa", ".jpghhh");
+        File f = Files.createTempFile("aaa", ".jpghhh").toFile();
         cmdLineParser.parseArgument(f.getParent() + "/*.jpghhh[vtiles=5,htiles=6,thduration=7]");
     }
 
